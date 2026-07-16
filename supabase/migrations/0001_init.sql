@@ -207,6 +207,24 @@ create or replace function public.is_admin() returns boolean
   select coalesce((select role = 'admin' from profiles where id = auth.uid()), false);
 $$;
 
+-- Cross-table access checks. SECURITY DEFINER so they bypass RLS on the
+-- referenced table and DON'T create mutually-recursive policies between
+-- financing_applications and application_banks.
+create or replace function public.is_app_owner(app uuid) returns boolean
+  language sql stable security definer set search_path = public as $$
+  select exists (select 1 from financing_applications a where a.id = app and a.buyer_id = auth.uid());
+$$;
+
+create or replace function public.is_app_dealer(app uuid) returns boolean
+  language sql stable security definer set search_path = public as $$
+  select exists (select 1 from financing_applications a where a.id = app and a.dealer_id = auth_dealer_id());
+$$;
+
+create or replace function public.bank_on_app(app uuid) returns boolean
+  language sql stable security definer set search_path = public as $$
+  select exists (select 1 from application_banks ab where ab.application_id = app and ab.bank_id = auth_bank_id());
+$$;
+
 -- Auto-create a profile row when a new auth user signs up
 create or replace function public.handle_new_user() returns trigger
   language plpgsql security definer set search_path = public as $$
@@ -272,7 +290,7 @@ create policy vphotos_write on vehicle_photos for all
 create policy apps_read on financing_applications for select using (
   buyer_id = auth.uid()
   or dealer_id = auth_dealer_id()
-  or exists (select 1 from application_banks ab where ab.application_id = id and ab.bank_id = auth_bank_id())
+  or bank_on_app(id)
   or is_admin()
 );
 create policy apps_insert on financing_applications for insert
@@ -285,29 +303,24 @@ create policy apps_update on financing_applications for update using (
 
 -- application_financials : buyer + routed bank + admin (NOT dealer)
 create policy fin_read on application_financials for select using (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or exists (select 1 from application_banks ab where ab.application_id = application_id and ab.bank_id = auth_bank_id())
-  or is_admin()
+  is_app_owner(application_id) or bank_on_app(application_id) or is_admin()
 );
 create policy fin_write on application_financials for all using (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or is_admin()
+  is_app_owner(application_id) or is_admin()
 ) with check (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or is_admin()
+  is_app_owner(application_id) or is_admin()
 );
 
 -- application_banks : buyer of app / dealer of app / the bank itself / admin can read;
 -- only the bank (or admin) can update its own response row.
 create policy appbanks_read on application_banks for select using (
   bank_id = auth_bank_id()
-  or exists (select 1 from financing_applications a where a.id = application_id
-       and (a.buyer_id = auth.uid() or a.dealer_id = auth_dealer_id()))
+  or is_app_owner(application_id)
+  or is_app_dealer(application_id)
   or is_admin()
 );
 create policy appbanks_insert on application_banks for insert with check (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or is_admin()
+  is_app_owner(application_id) or is_admin()
 );
 create policy appbanks_update on application_banks for update
   using (bank_id = auth_bank_id() or is_admin())
@@ -321,16 +334,10 @@ create policy kyc_owner_write on kyc_verifications for all
 
 -- documents : buyer of app / routed bank / admin
 create policy docs_read on documents for select using (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or requested_by_bank = auth_bank_id()
-  or is_admin()
+  is_app_owner(application_id) or requested_by_bank = auth_bank_id() or is_admin()
 );
 create policy docs_write on documents for all using (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or requested_by_bank = auth_bank_id()
-  or is_admin()
+  is_app_owner(application_id) or requested_by_bank = auth_bank_id() or is_admin()
 ) with check (
-  exists (select 1 from financing_applications a where a.id = application_id and a.buyer_id = auth.uid())
-  or requested_by_bank = auth_bank_id()
-  or is_admin()
+  is_app_owner(application_id) or requested_by_bank = auth_bank_id() or is_admin()
 );
