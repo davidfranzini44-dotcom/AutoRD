@@ -125,7 +125,7 @@ export default function VehicleDetail() {
                 </div>
               </div>
 
-              <Link to="/financiamiento" className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
+              <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
                 Solicitar financiamiento
               </Link>
               <button className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Ver cálculo de cuota</button>
@@ -171,7 +171,7 @@ export default function VehicleDetail() {
           <div className="tiny muted">Desde</div>
           <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{fmtRD(v.monthly)}/mes</div>
         </div>
-        <Link to="/financiamiento" className="btn btn-primary" style={{ flex: 1.4 }}>Solicitar financiamiento</Link>
+        <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }}>Solicitar financiamiento</Link>
       </div>
     </main>
   )

@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
-  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X,
+  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
 } from 'lucide-react'
-import { banks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus } from '../data/api'
+import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
+import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug } from '../data/api'
+import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 
 const CONSENT = 'Autorizo a AutoRD a compartir mi información personal, datos de identidad verificados, documentos suministrados y solicitud de financiamiento con las entidades financieras seleccionadas por mí para fines de evaluación crediticia. Autorizo expresamente a dichas entidades financieras a consultar mi historial crediticio exclusivamente para evaluar esta solicitud de financiamiento de vehículo.'
@@ -19,19 +20,53 @@ const STEPS = [
 ]
 
 export default function Financing() {
+  const [params] = useSearchParams()
+  const vehiculoSlug = params.get('vehiculo')
+  const { profile } = useAuth() || {}
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
-    nombre: 'Juan Pérez', cedula: '', telefono: '', email: '',
+    nombre: '', cedula: '', telefono: '', email: '',
     ingreso: '', empleo: 'Asalariado', inicial: '', plazo: '7',
   })
   const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
   const [session, setSession] = useState(null) // { url, session_id }
   const [consent, setConsent] = useState(false)
-  const [selBanks, setSelBanks] = useState(banks.map((b) => b.id))
+  const [bankList, setBankList] = useState(demoBanks)
+  const [selBanks, setSelBanks] = useState(demoBanks.map((b) => b.id))
   const [notify, setNotify] = useState('ambos')
+  const [vehicle, setVehicle] = useState(null)
   const pollRef = useRef(null)
 
   useEffect(() => () => clearInterval(pollRef.current), [])
+
+  // Load the real bank list (with DB ids) and the vehicle being financed.
+  useEffect(() => {
+    let alive = true
+    listBanks().then((bs) => {
+      if (!alive || !bs?.length) return
+      setBankList(bs)
+      setSelBanks(bs.map((b) => b.id))
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    if (!vehiculoSlug) return
+    let alive = true
+    getVehicleBySlug(vehiculoSlug).then((v) => { if (alive) setVehicle(v) }).catch(() => {})
+    return () => { alive = false }
+  }, [vehiculoSlug])
+
+  // Prefill contact details from the logged-in buyer's profile.
+  useEffect(() => {
+    if (!profile) return
+    setForm((f) => ({
+      ...f,
+      nombre: f.nombre || profile.full_name || '',
+      email: f.email || profile.email || '',
+      telefono: f.telefono || profile.phone || '',
+    }))
+  }, [profile])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
@@ -64,8 +99,18 @@ export default function Financing() {
   }
 
   const submitToBanks = async () => {
+    // Map selected bank ids (slugs) to real DB uuids for routing.
+    const bankDbIds = selBanks.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
     try {
-      await createApplication({ ...form, requestedAmount: null, consentText: CONSENT, notify, bankDbIds: selBanks })
+      await createApplication({
+        ...form,
+        consentText: CONSENT,
+        notify,
+        bankDbIds,
+        vehicleDbId: vehicle?.dbId || null,
+        dealerDbId: vehicle?.dealerDbId || null,
+        requestedAmount: vehicle ? vehicle.price - (parseInt(String(form.inicial).replace(/[^\d]/g, ''), 10) || 0) : null,
+      })
     } catch (_) { /* demo/offline */ }
     next()
   }
@@ -80,6 +125,20 @@ export default function Financing() {
         <p className="muted small" style={{ marginBottom: 20 }}>
           Verificamos tu identidad y enviamos tu solicitud a los bancos que elijas. AutoRD no realiza la consulta de crédito: los bancos evalúan y deciden.
         </p>
+
+        {vehicle && (
+          <div className="card card-pad row center gap-12" style={{ marginBottom: 14 }}>
+            <div className="verify-ic ok" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Car size={20} /></div>
+            <div className="grow">
+              <div className="tiny muted">Financiando</div>
+              <div className="strong">{vehicle.make} {vehicle.model} {vehicle.year}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="tiny muted">{vehicle.dealer}</div>
+              <div className="strong">{fmtRD(vehicle.price)}</div>
+            </div>
+          </div>
+        )}
 
         <div className="card card-pad" style={{ marginBottom: 18 }}>
           <div className="stepper">
@@ -100,8 +159,8 @@ export default function Financing() {
           {step === 0 && <StepDatos form={form} set={set} />}
           {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
           {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
-          {step === 3 && <StepEnviar banks={banks} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} />}
-          {step === 4 && <StepRespuestas />}
+          {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} />}
+          {step === 4 && <StepRespuestas banks={bankList} />}
 
           {step < 4 && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
@@ -240,7 +299,7 @@ function StepConsent({ consent, setConsent }) {
 }
 
 /* ---------------- Step 4: Enviar ---------------- */
-function StepEnviar({ banks, sel, toggle, notify, setNotify, form }) {
+function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle }) {
   return (
     <>
       <StepHead icon={Send} title="Enviar solicitud a bancos" sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
@@ -264,6 +323,8 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form }) {
 
       <div className="card" style={{ background: 'var(--surface-2)', marginTop: 18, padding: 14 }}>
         <div className="small strong" style={{ marginBottom: 8 }}>Resumen de la solicitud</div>
+        {vehicle && <div className="kv"><span className="k">Vehículo</span><span className="v">{vehicle.make} {vehicle.model} {vehicle.year}</span></div>}
+        {vehicle && <div className="kv"><span className="k">Precio</span><span className="v">{fmtRD(vehicle.price)}</span></div>}
         <div className="kv"><span className="k">Solicitante</span><span className="v">{form.nombre || '—'}</span></div>
         <div className="kv"><span className="k">Inicial disponible</span><span className="v">{form.inicial || '—'}</span></div>
         <div className="kv"><span className="k">Plazo preferido</span><span className="v">{form.plazo} años</span></div>
@@ -275,7 +336,7 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form }) {
 }
 
 /* ---------------- Step 5: Respuestas ---------------- */
-function StepRespuestas() {
+function StepRespuestas({ banks }) {
   return (
     <>
       <div className="col center" style={{ alignItems: 'center', textAlign: 'center', padding: '6px 0 18px' }}>

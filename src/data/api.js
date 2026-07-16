@@ -12,12 +12,20 @@ import {
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
 
+// Parse a free-text money field ("RD$ 85,000") into a number, or null.
+export function parseMoney(s) {
+  if (s == null) return null
+  const n = Number(String(s).replace(/[^\d]/g, ''))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 // Map a DB vehicle row (+ joined dealer) to the shape the UI components expect.
 function mapVehicle(r) {
   const dealer = r.dealer || {}
   return {
     id: r.slug,
     dbId: r.id,
+    dealerDbId: r.dealer_id,
     make: r.make, model: r.model, year: r.year, trim: r.trim,
     transmission: r.transmission, fuel: r.fuel, engine: r.engine,
     mileage: r.mileage, color: r.color, bodyType: r.body_type,
@@ -101,14 +109,16 @@ export async function createApplication(payload) {
   }
   const { data: userRes } = await supabase.auth.getUser()
   const uid = userRes?.user?.id
+  const inicial = parseMoney(payload.inicial)
+  const requested = payload.requestedAmount != null ? Number(payload.requestedAmount) : null
   const { data: app, error } = await supabase.from('financing_applications').insert({
     buyer_id: uid,
     buyer_name: payload.nombre, buyer_phone: payload.telefono, buyer_email: payload.email,
     vehicle_id: payload.vehicleDbId || null,
     dealer_id: payload.dealerDbId || null,
-    requested_amount: payload.requestedAmount,
-    down_payment: payload.inicial,
-    term_years: Number(payload.plazo),
+    requested_amount: requested,
+    down_payment: inicial,
+    term_years: Number(payload.plazo) || null,
     notify: payload.notify,
     status: 'enviada',
     kyc_status: 'aprobado',
@@ -119,11 +129,13 @@ export async function createApplication(payload) {
   if (error) throw error
 
   await supabase.from('application_financials').insert({
-    application_id: app.id, income: payload.ingreso, employment_type: payload.empleo,
+    application_id: app.id, income: parseMoney(payload.ingreso), employment_type: payload.empleo,
   })
-  if (payload.bankDbIds?.length) {
+  // bankDbIds are real bank UUIDs; skip any falsy (demo slugs without a dbId).
+  const bankIds = (payload.bankDbIds || []).filter(Boolean)
+  if (bankIds.length) {
     await supabase.from('application_banks').insert(
-      payload.bankDbIds.map((bank_id) => ({ application_id: app.id, bank_id })),
+      bankIds.map((bank_id) => ({ application_id: app.id, bank_id })),
     )
   }
   return app
@@ -140,17 +152,27 @@ export async function getMyFinancing() {
     .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(*, bank:banks(name, slug, color, initials))')
     .eq('buyer_id', uid).order('created_at', { ascending: false }).limit(1).single()
   if (!app) return null
+  const responses = (app.responses || []).map((r) => ({
+    bankId: r.bank?.slug, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
+    apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
+  }))
+  const hasOffer = responses.some((r) => r.status === 'offer')
+  const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
+  const timeline = [
+    { key: 'kyc', name: 'KYC aprobado', sub: 'Identidad verificada', state: app.kyc_status === 'aprobado' ? 'done' : 'current' },
+    { key: 'consent', name: 'Consentimiento firmado', sub: 'Autorización de consulta crediticia', state: app.consent_signed ? 'done' : 'pending' },
+    { key: 'sent', name: 'Solicitud enviada a bancos', sub: `${responses.length} banco(s) seleccionado(s)`, state: 'done' },
+    { key: 'eval', name: 'Bancos evaluando', sub: 'Los bancos revisan tu solicitud', state: hasOffer || evaluating ? 'done' : 'current' },
+    { key: 'offers', name: 'Ofertas recibidas', sub: hasOffer ? 'Tienes ofertas disponibles' : 'Aún sin ofertas', state: hasOffer ? 'current' : 'pending' },
+  ]
   return {
     code: app.code,
     vehicle: app.vehicle ? mapVehicle(app.vehicle) : null,
     requestedAmount: Number(app.requested_amount),
     down: Number(app.down_payment),
     term: app.term_years,
-    responses: (app.responses || []).map((r) => ({
-      bankId: r.bank?.slug, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
-      apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
-    })),
-    timeline: financingCase.timeline, // derived client-side for now
+    responses,
+    timeline,
   }
 }
 
@@ -159,14 +181,18 @@ export async function getDealerData(dealerDbId) {
   if (!LIVE) return { inventory: dealerInventory, leads: dealerLeads }
   const [{ data: inv }, { data: leads }] = await Promise.all([
     supabase.from('vehicles').select(VEHICLE_SELECT).eq('dealer_id', dealerDbId),
-    supabase.from('financing_applications').select('*, responses:application_banks(status)').eq('dealer_id', dealerDbId),
+    supabase.from('financing_applications')
+      .select('*, vehicle:vehicles(make, model, year), responses:application_banks(status)')
+      .eq('dealer_id', dealerDbId).order('created_at', { ascending: false }),
   ])
   return {
     inventory: (inv || []).map(mapVehicle),
     leads: (leads || []).map((a) => ({
-      customer: a.buyer_name, vehicle: '', amount: Number(a.requested_amount),
+      customer: a.buyer_name,
+      vehicle: a.vehicle ? `${a.vehicle.make} ${a.vehicle.model} ${a.vehicle.year}` : '—',
+      amount: Number(a.requested_amount),
       kyc: a.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente',
-      bank: (a.responses || [])[0]?.status || 'pending', salesperson: a.salesperson || 'Sin asignar',
+      bank: mapBankStatus((a.responses || [])[0]?.status), salesperson: a.salesperson || 'Sin asignar',
     })),
   }
 }
