@@ -160,7 +160,7 @@ export default function Financing() {
           {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
           {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
           {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} />}
-          {step === 4 && <StepRespuestas banks={bankList} />}
+          {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
 
           {step < 4 && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
@@ -347,16 +347,13 @@ function StepRespuestas({ banks }) {
         </p>
       </div>
       <div className="col gap-8" style={{ maxWidth: 520, margin: '0 auto' }}>
-        {financingCase.responses.map((r) => {
-          const b = banks.find((x) => x.id === r.bankId)
-          return (
-            <div className="bank-card" key={r.bankId}>
-              <span className="bank-mark" style={{ background: b.color }}>{b.initials}</span>
-              <div className="grow"><div className="strong small">{b.name}</div><div className="tiny muted">{r.label}</div></div>
-              <StatusChip status={r.status} />
-            </div>
-          )
-        })}
+        {banks.map((b) => (
+          <div className="bank-card" key={b.id}>
+            <span className="bank-mark" style={{ background: b.color }}>{b.initials}</span>
+            <div className="grow"><div className="strong small">{b.name}</div><div className="tiny muted">Solicitud enviada · esperando respuesta</div></div>
+            <StatusChip status="pending" />
+          </div>
+        ))}
       </div>
       <div className="row" style={{ justifyContent: 'center', marginTop: 20 }}>
         <Link to="/mi-financiamiento" className="btn btn-primary btn-lg">Ver ofertas recibidas <ChevronRight size={17} /></Link>

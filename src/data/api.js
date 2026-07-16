@@ -167,6 +167,7 @@ export async function getMyFinancing() {
   ]
   return {
     code: app.code,
+    createdAt: app.created_at,
     vehicle: app.vehicle ? mapVehicle(app.vehicle) : null,
     requestedAmount: Number(app.requested_amount),
     down: Number(app.down_payment),
@@ -228,15 +229,18 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
-  return (data || []).map((r) => ({
-    id: r.app?.code, customer: r.app?.buyer_name, cedula: '—',
-    vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
-    dealer: r.app?.dealer?.name, amount: Number(r.app?.requested_amount),
-    down: Number(r.app?.down_payment), term: r.app?.term_years,
-    income: r.app?.financials?.[0]?.income, employment: r.app?.financials?.[0]?.employment_type,
-    kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
-    status: filterFromResponse(r.status), responseId: r.id,
-  }))
+  return (data || []).map((r) => {
+    const fin = Array.isArray(r.app?.financials) ? r.app.financials[0] : r.app?.financials
+    return {
+      id: r.app?.code, customer: r.app?.buyer_name, cedula: '—',
+      vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
+      dealer: r.app?.dealer?.name, amount: Number(r.app?.requested_amount),
+      down: Number(r.app?.down_payment), term: r.app?.term_years,
+      income: fin?.income, employment: fin?.employment_type,
+      kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
+      status: filterFromResponse(r.status), responseId: r.id,
+    }
+  })
 }
 
 export async function submitBankResponse(responseId, body) {

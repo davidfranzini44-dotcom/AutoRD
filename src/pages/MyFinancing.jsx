@@ -41,7 +41,7 @@ export default function MyFinancing() {
         <div className="row between center wrap gap-12" style={{ marginBottom: 8 }}>
           <div>
             <h1 style={{ fontSize: 24 }}>Mi financiamiento</h1>
-            <p className="muted small" style={{ marginTop: 4 }}>Solicitud #AP-2041 · Enviada el 12 jul 2026</p>
+            <p className="muted small" style={{ marginTop: 4 }}>Solicitud #{c.code}{c.createdAt ? ` · Enviada el ${new Date(c.createdAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
           </div>
           <div className="row gap-8">
             <StatusChip status="aprobado">KYC aprobado</StatusChip>
