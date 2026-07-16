@@ -150,7 +150,7 @@ export default function VehicleDetail() {
                   </div>
                   <div className="tiny muted">{v.dealerVerified ? 'Concesionario verificado' : 'Vendedor particular'}</div>
                 </div>
-                <Link to="/dealer" className="link-teal">Ver perfil <ChevronRight size={14} /></Link>
+                <Link to="/ingresar" className="link-teal">Contactar <ChevronRight size={14} /></Link>
               </div>
             </div>
           </aside>

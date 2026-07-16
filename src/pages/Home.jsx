@@ -1,50 +1,45 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search, LayoutGrid, Car, Truck, CheckCircle2, ChevronRight, ArrowRight,
-  IdCard, ScanFace, ShieldCheck, Building2, FileCheck2, Lock, Landmark, Clock,
-  BadgeCheck, CircleDollarSign, Users, MonitorSmartphone, Percent, Zap,
+  Search, Car, BadgeCheck, ShieldCheck, ArrowRight, ChevronRight,
+  FileCheck2, Clock, MonitorSmartphone, Lock, MonitorSmartphone as Monitor,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import { listVehicles } from '../data/api'
-import { banks } from '../data/demo'
+import { banks, fmtRD } from '../data/demo'
 
-const CHIPS = [
-  { id: 'todos', label: 'Todos', icon: LayoutGrid },
-  { id: 'SUV', label: 'SUV', icon: Car },
-  { id: 'Sedán', label: 'Sedán', icon: Car },
-  { id: 'Pickup', label: 'Pickup', icon: Truck },
-  { id: 'fin', label: 'Financiamiento disponible', icon: CheckCircle2 },
+const SEARCH_TABS = [
+  { id: 'todos', label: 'Todos los vehículos', icon: Car },
+  { id: 'nuevos', label: 'Nuevos', icon: BadgeCheck },
+  { id: 'certificados', label: 'Usados certificados', icon: ShieldCheck },
 ]
-const STEPS = [
-  { n: 1, icon: IdCard, t: 'Verificar identidad', d: 'Cédula' },
-  { n: 2, icon: ScanFace, t: 'Prueba de vida', d: 'Validamos que eres tú' },
-  { n: 3, icon: ShieldCheck, t: 'Consentimiento', d: 'Autorizas la consulta a burós y bancos' },
-  { n: 4, icon: Building2, t: 'Enviar a bancos', d: 'Compartimos tu perfil con bancos aliados' },
-  { n: 5, icon: FileCheck2, t: 'Recibir ofertas', d: 'Compara y elige la mejor opción' },
+const YEAR_RANGES = [
+  { value: '2015-2024', label: '2015 - 2024' },
+  { value: '2020-2024', label: '2020 - 2024' },
+  { value: '2022-2024', label: '2022 - 2024' },
+  { value: '2018-2021', label: '2018 - 2021' },
+  { value: '', label: 'Todos los años' },
 ]
-const FEATURES = [
-  { icon: BadgeCheck, t: 'Transparencia total', d: 'Sin letras pequeñas' },
-  { icon: CircleDollarSign, t: 'Sin pago inicial oculto', d: 'Información clara desde el inicio' },
-  { icon: Users, t: 'Acompañamiento', d: 'Te ayudamos en cada paso' },
-  { icon: MonitorSmartphone, t: '100% online', d: 'Desde donde estés' },
-]
-const BOTTOM_TRUST = [
-  { icon: ShieldCheck, t: 'Financiamiento real', d: 'Ofertas de bancos regulados en la República Dominicana.' },
-  { icon: Percent, t: 'Mejores tasas', d: 'Compara opciones y elige la que más te convenga.' },
-  { icon: Zap, t: 'Aprobación más rápida', d: 'Respuestas en minutos, no en días.' },
-  { icon: Lock, t: 'Tus datos seguros', d: 'Cumplimos con los más altos estándares de seguridad.' },
+const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000]
+const TRUST = [
+  { icon: FileCheck2, t: 'Financiamiento real', d: 'con múltiples bancos' },
+  { icon: Clock, t: 'Respuesta rápida', d: 'En minutos' },
+  { icon: Monitor, t: '100% online', d: 'Sin filas, sin papeleos' },
+  { icon: ShieldCheck, t: 'Seguridad y privacidad', d: 'Tus datos protegidos' },
 ]
 
 export default function Home() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
-  const [q, setQ] = useState('')
+  const [segment, setSegment] = useState('todos')
   const [tipo, setTipo] = useState('todos')
-  const [precioMax, setPrecioMax] = useState('')
-  const [anioMin, setAnioMin] = useState('')
-  const [tab, setTab] = useState('buscar')
+  const [marca, setMarca] = useState('')
+  const [modelo, setModelo] = useState('')
+  const [anioRange, setAnioRange] = useState('2015-2024')
+  const [precioMax, setPrecioMax] = useState('2450000')
+  const [ubicacion, setUbicacion] = useState('Santo Domingo')
+  const [sort, setSort] = useState('relevancia')
 
   useEffect(() => {
     let alive = true
@@ -55,154 +50,164 @@ export default function Home() {
     return () => { alive = false }
   }, [])
 
-  const list = useMemo(() => all.filter((v) => {
-    if (tipo === 'SUV' || tipo === 'Sedán' || tipo === 'Pickup') { if (v.bodyType !== tipo) return false }
-    if (tipo === 'fin' && !v.financing) return false
-    if (precioMax && v.price > Number(precioMax)) return false
-    if (anioMin && v.year < Number(anioMin)) return false
-    if (q.trim()) {
-      const s = `${v.make} ${v.model} ${v.year} ${v.trim || ''}`.toLowerCase()
-      if (!s.includes(q.trim().toLowerCase())) return false
+  const options = useMemo(() => {
+    const unique = (items) => [...new Set(items.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es-DO'))
+    return {
+      types: unique(all.map((v) => v.bodyType)),
+      makes: unique(all.map((v) => v.make)),
+      models: unique(all.filter((v) => !marca || v.make === marca).map((v) => v.model)),
+      locations: unique(all.map((v) => v.location)),
     }
-    return true
-  }), [all, tipo, precioMax, anioMin, q])
+  }, [all, marca])
+
+  const list = useMemo(() => {
+    let r = all.filter((v) => {
+      if (segment === 'nuevos' && !(v.condition === 'Nuevo' || v.year >= 2024 || v.mileage === 0)) return false
+      if (segment === 'certificados' && !v.certified) return false
+      if (tipo !== 'todos' && v.bodyType !== tipo) return false
+      if (marca && v.make !== marca) return false
+      if (modelo && v.model !== modelo) return false
+      if (ubicacion && v.location !== ubicacion) return false
+      if (precioMax && v.price > Number(precioMax)) return false
+      if (anioRange) {
+        const [min, max] = anioRange.split('-').map(Number)
+        if (v.year < min || v.year > max) return false
+      }
+      return true
+    })
+    r = [...r].sort((a, b) => {
+      if (sort === 'menor') return a.price - b.price
+      if (sort === 'mayor') return b.price - a.price
+      if (sort === 'nuevo') return b.year - a.year
+      return 0
+    })
+    return r
+  }, [all, segment, tipo, marca, modelo, ubicacion, precioMax, anioRange, sort])
+
+  const resetFilters = () => {
+    setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
+    setAnioRange(''); setPrecioMax(''); setUbicacion('')
+  }
+  const runSearch = () => document.getElementById('vehiculos-destacados')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   return (
     <main className="page">
       <div className="container">
-        <div className="home-layout">
-          {/* ---------------- LEFT: marketplace ---------------- */}
-          <div>
-            <section className="hero2">
-              <div className="hero2-photo"><CarImage make="Toyota" model="RAV4" bodyType="SUV" seed="hero" label="Vehículo" /></div>
-              <div className="hero2-text">
-                <h1>Compra tu vehículo<br />con financiamiento real</h1>
-                <p>Encuentra tu próximo vehículo y obtén ofertas de los mejores bancos de la República Dominicana.</p>
-              </div>
-            </section>
-
-            <div className="search-panel">
-              <div className="sp-tabs">
-                <button className={`sp-tab ${tab === 'buscar' ? 'active' : ''}`} onClick={() => setTab('buscar')}><Search size={15} /> Buscar vehículos</button>
-                <button className={`sp-tab ${tab === 'fin' ? 'active' : ''}`} onClick={() => setTab('fin')}><Landmark size={15} /> Financiamiento</button>
-              </div>
-              <div className="sp-fields">
-                <div className="sp-search"><Search size={17} className="muted" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por marca, modelo o año" /></div>
-                <select className="select" value={tipo === 'fin' ? 'todos' : tipo} onChange={(e) => setTipo(e.target.value)}>
-                  <option value="todos">Todos</option><option value="SUV">SUV</option><option value="Sedán">Sedán</option><option value="Pickup">Pickup</option>
-                </select>
-                <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)}>
-                  <option value="">Precio máx.</option><option value="900000">RD$ 900,000</option><option value="1300000">RD$ 1,300,000</option><option value="1800000">RD$ 1,800,000</option><option value="2500000">RD$ 2,500,000</option>
-                </select>
-                <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)}>
-                  <option value="">Año mín.</option><option value="2024">2024</option><option value="2022">2022</option><option value="2020">2020</option><option value="2018">2018</option>
-                </select>
-                <button className="btn btn-navy sp-btn"><Search size={17} /> Buscar</button>
-              </div>
-            </div>
-
-            <div className="chips-row">
-              {CHIPS.map((c) => {
-                const Icon = c.icon
-                const on = tipo === c.id
-                return (
-                  <button key={c.id} className={`cat-chip ${on ? 'on' : ''} ${c.id === 'fin' ? 'fin' : ''}`} onClick={() => setTipo(c.id)}>
-                    <Icon size={16} /> {c.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="section-title" style={{ marginTop: 22 }}>
-              <h2>Vehículos destacados</h2>
-              <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="vcard" style={{ height: 340, background: 'var(--surface-2)' }} />)}</div>
-            ) : list.length === 0 ? (
-              <div className="card card-pad muted" style={{ textAlign: 'center' }}>Sin resultados. <button className="link-teal" onClick={() => { setQ(''); setTipo('todos'); setPrecioMax(''); setAnioMin('') }}>Limpiar filtros</button></div>
-            ) : (
-              <div className="grid grid-3">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
-            )}
-
-            <div className="bottom-trust">
-              {BOTTOM_TRUST.map((t) => {
-                const Icon = t.icon
-                return (
-                  <div className="bt-item" key={t.t}>
-                    <div className="bt-ic"><Icon size={18} /></div>
-                    <div><div className="bt-t">{t.t}</div><div className="bt-d">{t.d}</div></div>
-                  </div>
-                )
-              })}
+        {/* ---------------- Hero ---------------- */}
+        <section className="hero2">
+          <div className="hero2-photo"><CarImage make="Toyota" model="RAV4" bodyType="SUV" seed="hero" label="Vehículo" /></div>
+          <div className="hero2-text">
+            <h1>Compra tu vehículo<br />con financiamiento real</h1>
+            <p>Encuentra tu próximo vehículo y obtén ofertas de los mejores bancos de la República Dominicana.</p>
+            <div className="hero2-trust">
+              <span><MonitorSmartphone size={15} /> 100% Online</span>
+              <span><ShieldCheck size={15} /> Respuesta de bancos</span>
+              <span><Lock size={15} /> Seguridad y transparencia</span>
             </div>
           </div>
+        </section>
 
-          {/* ---------------- RIGHT: customer financing ---------------- */}
-          <aside className="col gap-16" style={{ minWidth: 0 }}>
-            <div className="card card-pad fin-panel">
-              <h2 style={{ fontSize: 20 }}>Tu camino al financiamiento</h2>
-              <p className="muted small" style={{ marginTop: 4, marginBottom: 16 }}>Un proceso 100% digital, seguro y confiable.</p>
-              <div className="fin-steps">
-                {STEPS.map((s) => {
-                  const Icon = s.icon
-                  return (
-                    <div className="fin-step" key={s.n}>
-                      <div className="fin-step-ic"><Icon size={18} /></div>
-                      <div className="fin-step-body">
-                        <div className="fin-step-t"><span className="fin-step-n">{s.n}</span> {s.t}</div>
-                        <div className="fin-step-d">{s.d}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+        {/* ---------------- Advanced search ---------------- */}
+        <div className="search-bar">
+          <div className="search-tabs">
+            {SEARCH_TABS.map((item) => {
+              const Icon = item.icon
+              return (
+                <button key={item.id} className={`search-tab ${segment === item.id ? 'active' : ''}`} onClick={() => setSegment(item.id)}>
+                  <Icon size={15} /> {item.label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="search-fields">
+            <SearchSelect label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="todos">Todos</option>
+              {options.types.map((t) => <option key={t} value={t}>{t}</option>)}
+            </SearchSelect>
+            <SearchSelect label="Marca" value={marca} onChange={(e) => { setMarca(e.target.value); setModelo('') }}>
+              <option value="">Todas</option>
+              {options.makes.map((m) => <option key={m} value={m}>{m}</option>)}
+            </SearchSelect>
+            <SearchSelect label="Modelo" value={modelo} onChange={(e) => setModelo(e.target.value)}>
+              <option value="">Todos</option>
+              {options.models.map((m) => <option key={m} value={m}>{m}</option>)}
+            </SearchSelect>
+            <SearchSelect label="Año" value={anioRange} onChange={(e) => setAnioRange(e.target.value)}>
+              {YEAR_RANGES.map((r) => <option key={r.label} value={r.value}>{r.label}</option>)}
+            </SearchSelect>
+            <SearchSelect label="Precio máx." value={precioMax} onChange={(e) => setPrecioMax(e.target.value)}>
+              <option value="">Sin límite</option>
+              {PRICE_OPTIONS.map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
+            </SearchSelect>
+            <SearchSelect label="Ubicación" value={ubicacion} onChange={(e) => setUbicacion(e.target.value)}>
+              <option value="">Todas</option>
+              {options.locations.map((l) => <option key={l} value={l}>{l}</option>)}
+            </SearchSelect>
+            <button className="btn sp-btn" type="button" onClick={runSearch}>Buscar</button>
+          </div>
+        </div>
 
-              <div className="fin-trust">
-                <div className="ft"><div className="ft-ic"><Lock size={16} /></div><div><div className="ft-t">KYC seguro</div><div className="ft-d">Tus datos protegidos</div></div></div>
-                <div className="ft"><div className="ft-ic"><Landmark size={16} /></div><div><div className="ft-t">Bancos aliados</div><div className="ft-d">Entidades reguladas</div></div></div>
-                <div className="ft"><div className="ft-ic"><Clock size={16} /></div><div><div className="ft-t">Respuesta rápida</div><div className="ft-d">Ofertas en minutos</div></div></div>
-              </div>
+        {/* ---------------- Results row ---------------- */}
+        <div className="results-strip">
+          <span>{loading ? 'Cargando inventario…' : `${list.length.toLocaleString('es-DO')} vehículos disponibles`}</span>
+          <label className="results-sort">Ordenar por:
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="relevancia">Más relevantes</option>
+              <option value="menor">Menor precio</option>
+              <option value="mayor">Mayor precio</option>
+              <option value="nuevo">Año más reciente</option>
+            </select>
+          </label>
+        </div>
 
-              <Link to="/financiamiento" className="btn btn-navy btn-block btn-lg" style={{ marginTop: 16 }}>Solicitar financiamiento</Link>
-              <div className="row center gap-6" style={{ justifyContent: 'center', marginTop: 10 }}>
-                <Lock size={13} className="muted" /><span className="tiny muted">Es gratis y no afecta tu historial de crédito</span>
-              </div>
-            </div>
+        <div className="section-title" id="vehiculos-destacados">
+          <h2>Vehículos destacados</h2>
+          <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+        </div>
 
-            <div className="card card-pad">
-              <div className="row between center" style={{ marginBottom: 14 }}>
-                <h3 style={{ fontSize: 15 }}>Bancos aliados</h3>
-                <Link to="/como-funciona" className="link-teal">Ver todos <ArrowRight size={14} /></Link>
-              </div>
-              <div className="banks-grid">
-                {banks.map((b) => (
-                  <div className="bank-chip" key={b.id}>
-                    <span className="bank-mark" style={{ width: 26, height: 26, fontSize: 10, background: b.color }}>{b.initials}</span>
-                    <span className="bank-name">{b.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+        {loading ? (
+          <div className="grid grid-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="vcard" style={{ height: 320, background: 'var(--surface-2)' }} />)}</div>
+        ) : list.length === 0 ? (
+          <div className="card card-pad muted" style={{ textAlign: 'center' }}>Sin resultados. <button className="link-teal" onClick={resetFilters}>Limpiar filtros</button></div>
+        ) : (
+          <div className="grid grid-4">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
+        )}
 
-            <div className="card card-pad">
-              <div className="features-grid">
-                {FEATURES.map((f) => {
-                  const Icon = f.icon
-                  return (
-                    <div className="feat" key={f.t}>
-                      <div className="feat-ic"><Icon size={18} /></div>
-                      <div className="feat-t">{f.t}</div>
-                      <div className="feat-d">{f.d}</div>
-                    </div>
-                  )
-                })}
+        {/* ---------------- Trust strip ---------------- */}
+        <div className="trust-strip" style={{ marginTop: 22 }}>
+          {TRUST.map((t) => {
+            const Icon = t.icon
+            return (
+              <div className="t" key={t.t}>
+                <div className="trust-ic"><Icon size={19} /></div>
+                <div><div className="lbl">{t.t}</div><div className="sub">{t.d}</div></div>
               </div>
-            </div>
-          </aside>
+            )
+          })}
+        </div>
+
+        {/* ---------------- Financing banner ---------------- */}
+        <div className="fin-banner" style={{ marginTop: 22 }}>
+          <div className="shield"><ShieldCheck size={28} color="#9fe0d4" /></div>
+          <div>
+            <h3>Financiamiento seguro, rápido y transparente</h3>
+            <p>Nuestro proceso 100% digital te conecta con los mejores bancos de la República Dominicana.</p>
+          </div>
+          <div className="banks-row">
+            {banks.map((b) => <span key={b.id} className="bank-logo">{b.name}</span>)}
+            <Link to="/como-funciona" className="link-teal" style={{ color: '#bfe7e0' }}>Ver todos los bancos <ChevronRight size={14} /></Link>
+          </div>
         </div>
       </div>
     </main>
+  )
+}
+
+function SearchSelect({ label, value, onChange, children }) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <select className="select" value={value} onChange={onChange}>{children}</select>
+    </div>
   )
 }

@@ -23,11 +23,10 @@ export default function Layout() {
 
   const links = [
     { to: '/', label: 'Comprar', end: true },
+    { to: '/ingresar', label: 'Vender' },
     { to: '/financiamiento', label: 'Financiamiento' },
-    { to: '/ingresar', label: 'Vender mi vehículo' },
     { to: '/como-funciona', label: 'Cómo funciona' },
-    { to: '/como-funciona', label: 'Nosotros' },
-    { to: '/como-funciona', label: 'Ayuda' },
+    { to: '/como-funciona', label: 'Blog' },
   ]
 
   const consoleLink = profile?.role === 'dealer' ? '/dealer'
@@ -58,10 +57,7 @@ export default function Layout() {
                 <LogOut size={15} /> Salir
               </button>
             ) : (
-              <>
-                <Link to="/ingresar" className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }}>Iniciar sesión</Link>
-                <Link to="/ingresar" className="btn btn-navy btn-sm hide-mobile" style={{ height: 40 }}>Registrarse</Link>
-              </>
+              <Link to="/ingresar" className="btn btn-primary btn-sm hide-mobile" style={{ height: 40, background: 'var(--teal-800)' }}>Ingresar / Registrar</Link>
             )}
           </div>
         </div>

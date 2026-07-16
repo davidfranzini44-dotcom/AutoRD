@@ -24,7 +24,7 @@ Otros comandos: `npm run build` (producción) · `npm run preview` (previsualiza
 
 | Ruta | Pantalla |
 |------|----------|
-| `/` | Marketplace (home) con buscador, filtros, panel lateral de financiamiento/dealer/banco |
+| `/` | Marketplace público con buscador, filtros, vehículos destacados y panel de financiamiento para compradores |
 | `/vehiculo/:id` | Detalle del vehículo, estimado de cuota, CTA de financiamiento, similares |
 | `/financiamiento` | Flujo KYC de 6 pasos (datos, cédula, prueba de vida, consentimiento, envío, respuestas) |
 | `/mi-financiamiento` | Estado de la solicitud: timeline + respuestas de bancos con condiciones |
