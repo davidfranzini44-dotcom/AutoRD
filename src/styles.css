@@ -379,6 +379,96 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .mk-scrim { display: none; }
 
 /* ============================================================
+   Reference homepage (corrected)
+   ============================================================ */
+.home-layout { grid-template-columns: 1fr 380px; }
+.nav { gap: 19px; }
+
+/* header right cluster */
+.icon-round { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.icon-round:hover { border-color: #cdd5df; color: var(--teal-700); }
+.loc-pill { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 22px; background: #fff; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.loc-pill:hover { border-color: #cdd5df; }
+
+/* hero */
+.hero2 { position: relative; border-radius: 14px; overflow: hidden; min-height: 300px; background: linear-gradient(120deg, #e9f1f2, #d7e6e9); display: flex; align-items: center; }
+.hero2-photo { position: absolute; right: 0; top: 0; bottom: 0; width: 62%; }
+.hero2-photo .vphoto { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; border-radius: 0; background: none; }
+.hero2-photo .vphoto-img { height: 100%; }
+.hero2-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #e9f1f2 8%, rgba(233,241,242,.55) 32%, rgba(233,241,242,0) 60%); z-index: 1; }
+.hero2-text { position: relative; z-index: 2; padding: 30px 36px; max-width: 500px; }
+.hero2-text h1 { font-size: 37px; line-height: 1.08; color: var(--ink); letter-spacing: -0.02em; }
+.hero2-text p { font-size: 15px; color: var(--ink-2); margin-top: 12px; max-width: 360px; line-height: 1.5; }
+
+/* search panel */
+.search-panel { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-md); padding: 6px 8px 8px; margin-top: -42px; position: relative; z-index: 5; }
+.sp-tabs { display: flex; gap: 4px; padding: 2px 4px 0; }
+.sp-tab { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border: none; background: transparent; border-radius: 9px 9px 0 0; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.sp-tab.active { background: var(--surface-2); color: var(--teal-800); }
+.sp-fields { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr auto; gap: 10px; padding: 10px; align-items: center; }
+.sp-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; height: 48px; background: #fff; }
+.sp-search input { border: none; outline: none; flex: 1; font-size: 14px; background: transparent; color: var(--ink); }
+.sp-fields .select { height: 48px; }
+.sp-btn { height: 48px; padding: 0 26px; }
+
+/* category chips */
+.chips-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.cat-chip { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.cat-chip:hover { border-color: #cbd5e1; }
+.cat-chip.on { border-color: var(--teal-600); background: var(--teal-50); color: var(--teal-800); }
+.cat-chip svg { color: var(--muted); }
+.cat-chip.on svg { color: var(--teal-700); }
+.cat-chip.fin svg { color: var(--green); }
+
+/* vehicle card (reference) */
+.vphoto-wrap { position: relative; }
+.vphoto { aspect-ratio: 16 / 11; }
+.vphoto-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fin-badge { position: absolute; bottom: 10px; left: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.95); color: var(--green); border: 1px solid var(--green-bd); font-size: 11.5px; font-weight: 700; padding: 5px 9px; border-radius: 8px; }
+.vtitle { font-size: 16px; font-weight: 700; }
+.vprice { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.vspecs { font-size: 12.5px; color: var(--muted); margin-top: 0; }
+.monthly-pill { flex: none; background: var(--surface-2); color: var(--ink-2); font-size: 11.5px; font-weight: 700; padding: 5px 9px; border-radius: 7px; white-space: nowrap; }
+.vmeta { display: flex; gap: 16px; margin-top: 10px; }
+.vmeta span { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); }
+.vmeta svg { color: var(--muted-2); }
+.vcard-foot { border-top: 1px solid var(--line-2); margin-top: 12px; padding-top: 11px; }
+
+/* bottom trust strip */
+.bottom-trust { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-top: 22px; box-shadow: var(--shadow-sm); }
+.bt-item { display: flex; gap: 11px; align-items: flex-start; }
+.bt-ic { width: 36px; height: 36px; border-radius: 9px; background: var(--teal-50); color: var(--teal-700); display: flex; align-items: center; justify-content: center; flex: none; }
+.bt-t { font-size: 13.5px; font-weight: 700; }
+.bt-d { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+
+/* right financing panel */
+.fin-steps { display: flex; flex-direction: column; }
+.fin-step { display: flex; gap: 12px; padding-bottom: 16px; position: relative; }
+.fin-step:last-child { padding-bottom: 0; }
+.fin-step-ic { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--teal-100); background: var(--teal-50); color: var(--teal-700); display: flex; align-items: center; justify-content: center; flex: none; z-index: 2; }
+.fin-step::before { content: ''; position: absolute; left: 19px; top: 40px; bottom: -2px; width: 2px; background: repeating-linear-gradient(var(--teal-100) 0 4px, transparent 4px 8px); }
+.fin-step:last-child::before { display: none; }
+.fin-step-t { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.fin-step-n { color: var(--teal-700); font-weight: 800; font-size: 13px; }
+.fin-step-d { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.fin-trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; border-top: 1px solid var(--line); margin-top: 16px; padding-top: 16px; }
+.ft { display: flex; gap: 8px; align-items: flex-start; }
+.ft-ic { width: 30px; height: 30px; border-radius: 8px; background: var(--surface-2); color: var(--teal-700); display: flex; align-items: center; justify-content: center; flex: none; }
+.ft-t { font-size: 12px; font-weight: 700; }
+.ft-d { font-size: 10.5px; color: var(--muted); line-height: 1.3; }
+
+/* bancos aliados */
+.banks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.bank-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+.bank-name { font-size: 12.5px; font-weight: 700; color: var(--navy-800); }
+
+/* feature cards */
+.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.feat-ic { width: 34px; height: 34px; border-radius: 9px; background: var(--navy-800); color: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+.feat-t { font-size: 13px; font-weight: 700; }
+.feat-d { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+/* ============================================================
    Console (dealer / bank portals)
    ============================================================ */
 .console { display: flex; min-height: 100vh; background: var(--page); }
@@ -471,6 +561,18 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   }
   .mk-filters.open { transform: translateX(0); }
   .mk-scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(12,32,51,.45); }
+
+  /* homepage (reference) mobile */
+  .hero2 { min-height: 220px; }
+  .hero2-text { padding: 22px 22px; }
+  .hero2-text h1 { font-size: 25px; }
+  .hero2-text p { font-size: 13.5px; max-width: 240px; }
+  .hero2-photo { width: 52%; }
+  .sp-fields { grid-template-columns: 1fr; }
+  .sp-search, .sp-btn { grid-column: auto; }
+  .bottom-trust { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .chips-row { gap: 8px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .cat-chip { flex: none; }
 
   /* console: sidebar becomes an off-canvas drawer */
   .console-topbar { display: flex; }

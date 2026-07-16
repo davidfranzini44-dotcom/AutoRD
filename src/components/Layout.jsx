@@ -24,8 +24,10 @@ export default function Layout() {
   const links = [
     { to: '/', label: 'Comprar', end: true },
     { to: '/financiamiento', label: 'Financiamiento' },
-    { to: '/mi-financiamiento', label: 'Mi financiamiento' },
+    { to: '/ingresar', label: 'Vender mi vehículo' },
     { to: '/como-funciona', label: 'Cómo funciona' },
+    { to: '/como-funciona', label: 'Nosotros' },
+    { to: '/como-funciona', label: 'Ayuda' },
   ]
 
   const consoleLink = profile?.role === 'dealer' ? '/dealer'
@@ -39,24 +41,27 @@ export default function Layout() {
           <Logo />
           <nav className="nav">
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => isActive ? 'active' : ''}>{l.label}</NavLink>
+              <NavLink key={l.label} to={l.to} end={l.end} className={({ isActive }) => isActive ? 'active' : ''}>{l.label}</NavLink>
             ))}
           </nav>
           <div className="header-right">
-            <button className="loc-pill"><MapPin size={16} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
-            <Link to="/favoritos" className="icon-btn"><Heart size={18} /><span>Favoritos</span></Link>
-            <button className="icon-btn"><Bell size={18} /><span className="dot-badge">3</span></button>
+            <button className="loc-pill"><MapPin size={15} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
+            <Link to="/favoritos" className="icon-round" aria-label="Favoritos"><Heart size={18} /></Link>
+            <button className="icon-round" aria-label="Notificaciones"><Bell size={18} /><span className="dot-badge">2</span></button>
             {consoleLink && (
-              <Link to={consoleLink} className="btn btn-outline btn-sm hide-mobile" style={{ height: 38 }}>
+              <Link to={consoleLink} className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }}>
                 <LayoutDashboard size={15} /> Mi panel
               </Link>
             )}
             {user ? (
-              <button className="btn btn-outline btn-sm hide-mobile" style={{ height: 38 }} onClick={signOut}>
+              <button className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }} onClick={signOut}>
                 <LogOut size={15} /> Salir
               </button>
             ) : (
-              <Link to="/ingresar" className="btn btn-navy btn-sm hide-mobile" style={{ height: 38 }}>Ingresar / Registrar</Link>
+              <>
+                <Link to="/ingresar" className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }}>Iniciar sesión</Link>
+                <Link to="/ingresar" className="btn btn-navy btn-sm hide-mobile" style={{ height: 40 }}>Registrarse</Link>
+              </>
             )}
           </div>
         </div>
@@ -73,7 +78,7 @@ export default function Layout() {
             </div>
             <nav className="col gap-4">
               {links.map((l) => (
-                <NavLink key={l.to} to={l.to} end={l.end}
+                <NavLink key={l.label} to={l.to} end={l.end}
                   className={({ isActive }) => isActive ? 'active' : ''}
                   style={{ padding: '12px 10px', borderRadius: 8, fontWeight: 600, fontSize: 15 }}>
                   {l.label}
