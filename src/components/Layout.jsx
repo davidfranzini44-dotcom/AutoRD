@@ -5,11 +5,12 @@ import {
   Home, Search, Landmark, User, LogOut, LayoutDashboard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import autordLogo from '../assets/autord-logo-reference.png'
 
 function Logo() {
   return (
     <Link to="/" className="logo" aria-label="AutoRD inicio">
-      <span className="a1">Auto</span><span className="a2">RD</span>
+      <img src={autordLogo} alt="AutoRD" />
     </Link>
   )
 }

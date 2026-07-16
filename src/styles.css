@@ -179,6 +179,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 }
 .logo .a1 { color: var(--navy-900); }
 .logo .a2 { color: var(--teal-700); }
+.logo img { display: block; width: auto; height: 31px; object-fit: contain; }
 .nav { display: flex; align-items: center; gap: 22px; }
 .nav a { font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 6px 0; position: relative; }
 .nav a:hover { color: var(--teal-700); }
