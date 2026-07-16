@@ -46,8 +46,8 @@ export default function Layout() {
           </nav>
           <div className="header-right">
             <button className="loc-pill"><MapPin size={15} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
-            <Link to="/favoritos" className="icon-round" aria-label="Favoritos"><Heart size={18} /></Link>
-            <button className="icon-round" aria-label="Notificaciones"><Bell size={18} /><span className="dot-badge">2</span></button>
+            <Link to="/favoritos" className="icon-label"><Heart size={18} /><span className="hide-mobile">Favoritos</span></Link>
+            <button className="icon-label" aria-label="Notificaciones"><Bell size={18} /><span className="dot-badge">3</span></button>
             {consoleLink && (
               <Link to={consoleLink} className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }}>
                 <LayoutDashboard size={15} /> Mi panel

@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight, ChevronRight,
-  FileCheck2, Clock, MonitorSmartphone, Lock, MonitorSmartphone as Monitor,
+  Clock, MonitorSmartphone, Landmark, Smartphone, Check,
+  MonitorSmartphone as Monitor,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import { listVehicles } from '../data/api'
-import { banks, fmtRD } from '../data/demo'
+import { fmtRD } from '../data/demo'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', icon: Car },
@@ -23,10 +24,16 @@ const YEAR_RANGES = [
 ]
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000]
 const TRUST = [
-  { icon: FileCheck2, t: 'Financiamiento real', d: 'con múltiples bancos' },
+  { icon: Landmark, t: 'Financiamiento real', d: 'con múltiples bancos' },
   { icon: Clock, t: 'Respuesta rápida', d: 'En minutos' },
   { icon: Monitor, t: '100% online', d: 'Sin filas, sin papeleos' },
   { icon: ShieldCheck, t: 'Seguridad y privacidad', d: 'Tus datos protegidos' },
+]
+const BANK_BOXES = [
+  { cls: 'b-popular', label: 'POPULAR' },
+  { cls: 'b-bhd', label: 'BHD' },
+  { cls: 'b-banreservas', label: 'BANRESERVAS' },
+  { cls: 'b-scotiabank', label: 'Scotiabank' },
 ]
 
 export default function Home() {
@@ -100,9 +107,9 @@ export default function Home() {
             <h1>Compra tu vehículo<br />con financiamiento real</h1>
             <p>Encuentra tu próximo vehículo y obtén ofertas de los mejores bancos de la República Dominicana.</p>
             <div className="hero2-trust">
-              <span><MonitorSmartphone size={15} /> 100% Online</span>
-              <span><ShieldCheck size={15} /> Respuesta de bancos</span>
-              <span><Lock size={15} /> Seguridad y transparencia</span>
+              <span><i className="ht-ic"><MonitorSmartphone size={17} /></i> 100% Online</span>
+              <span><i className="ht-ic"><Landmark size={17} /></i> Respuesta de bancos</span>
+              <span><i className="ht-ic"><ShieldCheck size={17} /></i> Seguridad y transparencia</span>
             </div>
           </div>
         </section>
@@ -143,13 +150,13 @@ export default function Home() {
               <option value="">Todas</option>
               {options.locations.map((l) => <option key={l} value={l}>{l}</option>)}
             </SearchSelect>
-            <button className="btn sp-btn" type="button" onClick={runSearch}>Buscar</button>
+            <button className="btn sp-btn" type="button" onClick={runSearch}><Search size={17} /> Buscar</button>
           </div>
         </div>
 
         {/* ---------------- Results row ---------------- */}
         <div className="results-strip">
-          <span>{loading ? 'Cargando inventario…' : `${list.length.toLocaleString('es-DO')} vehículos disponibles`}</span>
+          <span>{loading ? 'Cargando inventario…' : <><strong>{list.length.toLocaleString('es-DO')}</strong> vehículos disponibles</>}</span>
           <label className="results-sort">Ordenar por:
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="relevancia">Más relevantes</option>
@@ -160,18 +167,20 @@ export default function Home() {
           </label>
         </div>
 
-        <div className="section-title" id="vehiculos-destacados">
-          <h2>Vehículos destacados</h2>
-          <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
-        </div>
+        <section className="featured-panel" id="vehiculos-destacados">
+          <div className="section-title">
+            <h2>Vehículos destacados</h2>
+            <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+          </div>
 
-        {loading ? (
-          <div className="grid grid-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="vcard" style={{ height: 320, background: 'var(--surface-2)' }} />)}</div>
-        ) : list.length === 0 ? (
-          <div className="card card-pad muted" style={{ textAlign: 'center' }}>Sin resultados. <button className="link-teal" onClick={resetFilters}>Limpiar filtros</button></div>
-        ) : (
-          <div className="grid grid-4">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
-        )}
+          {loading ? (
+            <div className="grid grid-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="vcard" style={{ height: 320, background: 'var(--surface-2)' }} />)}</div>
+          ) : list.length === 0 ? (
+            <div className="card card-pad muted" style={{ textAlign: 'center', boxShadow: 'none' }}>Sin resultados. <button className="link-teal" onClick={resetFilters}>Limpiar filtros</button></div>
+          ) : (
+            <div className="grid grid-4">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
+          )}
+        </section>
 
         {/* ---------------- Trust strip ---------------- */}
         <div className="trust-strip" style={{ marginTop: 22 }}>
@@ -187,15 +196,18 @@ export default function Home() {
         </div>
 
         {/* ---------------- Financing banner ---------------- */}
-        <div className="fin-banner" style={{ marginTop: 22 }}>
-          <div className="shield"><ShieldCheck size={28} color="#9fe0d4" /></div>
+        <div className="fin-banner-lt" style={{ marginTop: 22 }}>
+          <div className="fin-illus" aria-hidden="true">
+            <div className="fi-phone"><Smartphone size={22} /></div>
+            <div className="fi-shield"><Check size={20} strokeWidth={3.5} /></div>
+          </div>
           <div>
             <h3>Financiamiento seguro, rápido y transparente</h3>
             <p>Nuestro proceso 100% digital te conecta con los mejores bancos de la República Dominicana.</p>
           </div>
-          <div className="banks-row">
-            {banks.map((b) => <span key={b.id} className="bank-logo">{b.name}</span>)}
-            <Link to="/como-funciona" className="link-teal" style={{ color: '#bfe7e0' }}>Ver todos los bancos <ChevronRight size={14} /></Link>
+          <div className="banks-boxes">
+            {BANK_BOXES.map((b) => <span key={b.cls} className={`bank-box ${b.cls}`}>{b.label}</span>)}
+            <Link to="/como-funciona" className="link-teal">Ver todos los bancos <ChevronRight size={14} /></Link>
           </div>
         </div>
       </div>
