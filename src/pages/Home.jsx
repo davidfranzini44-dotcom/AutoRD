@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
+import BodyTypeIcon from '../components/BodyTypeIcon'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 
@@ -34,6 +35,16 @@ const BANK_BOXES = [
   { cls: 'b-bhd', label: 'BHD' },
   { cls: 'b-banreservas', label: 'BANRESERVAS' },
   { cls: 'b-scotiabank', label: 'Scotiabank' },
+]
+const BODY_TYPES = [
+  { type: 'SUV', label: 'SUVs' },
+  { type: 'Pickup', label: 'Camionetas' },
+  { type: 'Sedán', label: 'Sedanes' },
+  { type: 'Coupé', label: 'Coupés' },
+  { type: 'Minivan', label: 'Minivans' },
+  { type: 'Hatchback', label: 'Hatchbacks' },
+  { type: 'Convertible', label: 'Convertibles' },
+  { type: 'Wagon', label: 'Familiares' },
 ]
 
 export default function Home() {
@@ -153,6 +164,31 @@ export default function Home() {
             <button className="btn sp-btn" type="button" onClick={runSearch}><Search size={17} /> Buscar</button>
           </div>
         </div>
+
+        {/* ---------------- Browse by body type ---------------- */}
+        <section className="bodytype-section">
+          <div className="section-title" style={{ marginBottom: 12 }}>
+            <h2>Explorar por tipo de vehículo</h2>
+          </div>
+          <div className="bodytype-row">
+            {BODY_TYPES.map((b) => (
+              <button
+                key={b.type}
+                className={`bt-item ${tipo === b.type ? 'active' : ''}`}
+                onClick={() => {
+                  const next = tipo === b.type ? 'todos' : b.type
+                  setTipo(next)
+                  // Browse-by-type shows all of that type: broaden the other filters.
+                  if (next !== 'todos') { setUbicacion(''); setPrecioMax(''); setAnioRange(''); setSegment('todos') }
+                  runSearch()
+                }}
+              >
+                <BodyTypeIcon type={b.type} />
+                <span className="bt-label">{b.label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {/* ---------------- Results row ---------------- */}
         <div className="results-strip">

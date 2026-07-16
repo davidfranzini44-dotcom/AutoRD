@@ -445,6 +445,17 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .bank-box.b-banreservas { color: #1552a0; font-size: 13px; letter-spacing: .04em; }
 .bank-box.b-scotiabank { color: #e0281f; }
 
+/* browse by body type (AutoTrader-style) */
+.bodytype-section { margin-top: 22px; }
+.bodytype-row { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.bt-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px 10px; border: 1px solid transparent; border-radius: var(--radius-lg); background: none; cursor: pointer; transition: .15s ease; }
+.bt-item:hover { background: #fff; border-color: var(--line); box-shadow: var(--shadow-sm); }
+.bt-item.active { background: var(--teal-50); border-color: var(--teal-100); }
+.bt-icon { width: 100%; max-width: 108px; height: auto; display: block; }
+.bt-label { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.bt-item:hover .bt-label { color: var(--teal-700); }
+.bt-item.active .bt-label { color: var(--teal-800); }
+
 /* search panel */
 .search-panel {
   background: linear-gradient(135deg, #063f46 0%, #07545a 62%, #0b6b70 100%);
@@ -641,6 +652,10 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .search-tab { height: 38px; padding: 0 14px; background: transparent; }
   .search-tab.active { box-shadow: none; }
   .sp-fields { grid-template-columns: 1fr; }
+  /* body-type row scrolls horizontally on mobile */
+  .bodytype-row { display: flex; overflow-x: auto; gap: 4px; padding-bottom: 6px; scrollbar-width: none; }
+  .bodytype-row::-webkit-scrollbar { display: none; }
+  .bt-item { flex: 0 0 96px; }
   .sp-search, .sp-btn { grid-column: auto; }
   .bottom-trust { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .chips-row { gap: 8px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
