@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { LogIn, UserPlus, ShieldCheck, Info } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const { signIn, signUp, configured } = useAuth()
@@ -18,7 +19,14 @@ export default function Login() {
     try {
       if (mode === 'login') {
         await signIn(form.email, form.password)
-        nav('/')
+        // Route each role to its home surface.
+        let dest = '/'
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+          dest = prof?.role === 'dealer' ? '/dealer' : prof?.role === 'bank' ? '/banco' : '/'
+        } catch (_) { /* default to home */ }
+        nav(dest)
       } else {
         await signUp(form.email, form.password, { full_name: form.full_name, role: form.role })
         setErr('Cuenta creada. Revisa tu correo si se requiere confirmación, luego inicia sesión.')

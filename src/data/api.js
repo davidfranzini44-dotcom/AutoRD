@@ -145,6 +145,27 @@ export async function getDealerData(dealerDbId) {
   }
 }
 
+export async function createVehicle(v) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { data: userRes } = await supabase.auth.getUser()
+  const uid = userRes?.user?.id
+  const { data: prof } = await supabase.from('profiles').select('dealer_id').eq('id', uid).single()
+  const slug = `${v.make}-${v.model}-${v.year}-${Math.random().toString(36).slice(2, 6)}`
+    .toLowerCase().replace(/[^a-z0-9-]/g, '-')
+  const { data, error } = await supabase.from('vehicles').insert({
+    dealer_id: prof?.dealer_id, slug,
+    make: v.make, model: v.model, year: Number(v.year), trim: v.trim,
+    transmission: v.transmission, fuel: v.fuel, engine: v.engine,
+    mileage: Number(v.mileage) || 0, color: v.color, body_type: v.bodyType,
+    price: Number(v.price), condition: v.condition, certified: !!v.certified,
+    location: v.location, description: v.description,
+    monthly: Math.round((Number(v.price) * 0.8 * 0.013) || 0), apr: 9.75, term_years: 7,
+    status: 'publicado',
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
 // ---------------- Bank panel ----------------
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {

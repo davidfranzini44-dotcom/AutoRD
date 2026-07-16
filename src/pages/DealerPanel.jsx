@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
-  Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal,
+  Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight,
 } from 'lucide-react'
 import { dealerMetrics, fmtRD } from '../data/demo'
 import { getDealerData } from '../data/api'
@@ -13,12 +14,16 @@ const bankLabel = {
   offer: ['chip-green', 'Oferta recibida'], evaluating: ['chip-amber', 'En evaluación'],
   pending: ['chip-blue', 'Pendiente'], docs: ['chip-amber', 'Pendiente docs'],
 }
+const TITLES = {
+  resumen: ['Resumen', 'Vista general de tu actividad'],
+  inventario: ['Inventario', 'Tus vehículos publicados'],
+  leads: ['Leads de financiamiento', 'Clientes interesados y su estado'],
+}
 
-export default function DealerPanel() {
-  const [tab, setTab] = useState('leads')
+export default function DealerPanel({ view = 'resumen' }) {
   const { profile } = useAuth() || {}
-  const [dealerInventory, setInventory] = useState([])
-  const [dealerLeads, setLeads] = useState([])
+  const [inventory, setInventory] = useState([])
+  const [leads, setLeads] = useState([])
 
   useEffect(() => {
     let alive = true
@@ -30,110 +35,73 @@ export default function DealerPanel() {
     return () => { alive = false }
   }, [profile?.dealer_id])
 
+  const [title, sub] = TITLES[view]
+
   return (
-    <main className="page">
-      <div className="container">
-        <div className="admin-head">
-          <div>
-            <div className="row center gap-8">
-              <div className="avatar" style={{ background: 'var(--navy-800)' }}>AA</div>
-              <div>
-                <h1 style={{ fontSize: 22 }}>Panel del dealer — Auto América</h1>
-                <p className="tiny muted">Gestiona tu inventario y tus leads de financiamiento</p>
-              </div>
+    <div>
+      <div className="admin-head">
+        <div>
+          <h1 style={{ fontSize: 22 }}>{title}</h1>
+          <p className="tiny muted">{sub}</p>
+        </div>
+        {view !== 'leads' && (
+          <Link to="/dealer/publicar" className="btn btn-primary"><Plus size={17} /> Publicar vehículo</Link>
+        )}
+      </div>
+
+      {view === 'resumen' && (
+        <>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 18 }}>
+            {dealerMetrics.map((m) => {
+              const Icon = METRIC_IC[m.icon]
+              return (
+                <div className="metric-card" key={m.label}>
+                  <div className="mc-ic"><Icon size={19} /></div>
+                  <div className="mc-v">{m.value}</div>
+                  <div className="mc-l">{m.label}</div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="card">
+            <div className="row between center" style={{ padding: '14px 16px 4px' }}>
+              <h3 style={{ fontSize: 15 }}>Leads recientes</h3>
+              <Link to="/dealer/leads" className="link-teal">Ver todos <ChevronRight size={14} /></Link>
             </div>
+            <LeadsTable leads={leads.slice(0, 5)} />
           </div>
-          <button className="btn btn-primary"><Plus size={17} /> Publicar vehículo</button>
-        </div>
+          <PrivacyNote />
+        </>
+      )}
 
-        {/* Metrics */}
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 18 }}>
-          {dealerMetrics.map((m) => {
-            const Icon = METRIC_IC[m.icon]
-            return (
-              <div className="metric-card" key={m.label}>
-                <div className="mc-ic"><Icon size={19} /></div>
-                <div className="mc-v">{m.value}</div>
-                <div className="mc-l">{m.label}</div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="row between center wrap gap-12" style={{ marginBottom: 14 }}>
-          <div className="tabbar">
-            <button className={tab === 'leads' ? 'active' : ''} onClick={() => setTab('leads')}>Leads de financiamiento</button>
-            <button className={tab === 'inv' ? 'active' : ''} onClick={() => setTab('inv')}>Inventario</button>
-          </div>
-          <div className="row center gap-8">
+      {view === 'leads' && (
+        <div className="card">
+          <div className="row between center" style={{ padding: '14px 16px' }}>
             <div className="row center" style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: 10, color: 'var(--muted)' }} />
-              <input className="input" placeholder="Buscar…" style={{ height: 38, paddingLeft: 32, width: 220 }} />
+              <input className="input" placeholder="Buscar cliente…" style={{ height: 38, paddingLeft: 32, width: 240 }} />
             </div>
           </div>
+          <LeadsTable leads={leads} full />
+          <PrivacyNote inset />
         </div>
+      )}
 
-        {tab === 'leads' && (
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Cliente</th><th>Vehículo</th><th className="num">Monto</th>
-                    <th>KYC</th><th>Estado banco</th><th>Vendedor</th><th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dealerLeads.map((l, i) => {
-                    const [cls, lbl] = bankLabel[l.bank] || ['chip', l.bank]
-                    return (
-                      <tr key={i}>
-                        <td>
-                          <div className="row center gap-8">
-                            <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>{l.customer.split(' ').map((w) => w[0]).slice(0, 2).join('')}</div>
-                            <span className="strong">{l.customer}</span>
-                          </div>
-                        </td>
-                        <td className="muted">{l.vehicle}</td>
-                        <td className="num strong">{fmtRD(l.amount)}</td>
-                        <td><StatusChip status={l.kyc} /></td>
-                        <td><span className={`chip ${cls}`}>{lbl}</span></td>
-                        <td className={l.salesperson === 'Sin asignar' ? 'muted' : ''}>{l.salesperson}</td>
-                        <td>
-                          <div className="row gap-4">
-                            <button className="btn btn-outline btn-sm" title="Contactar cliente"><Phone size={14} /></button>
-                            <button className="btn btn-outline btn-sm" title="Asignar vendedor"><UserPlus size={14} /></button>
-                            <button className="btn btn-outline btn-sm" title="Marcar vendido"><CheckCircle2 size={14} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="notice" style={{ margin: 14, borderStyle: 'solid' }}>
-              <ShieldCheck size={16} />
-              <span>El dealer ve el estado de KYC (aprobado / pendiente) pero <strong>nunca</strong> accede a datos biométricos, selfies ni al historial crediticio del cliente.</span>
-            </div>
-          </div>
-        )}
-
-        {tab === 'inv' && (
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Vehículo</th><th className="num">Precio</th><th>Estado</th>
-                    <th className="num">Vistas</th><th className="num">Leads</th><th className="num">Solicitudes fin.</th><th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dealerInventory.map((r) => {
-                    const name = r.vehicle || `${r.make} ${r.model} ${r.year}`
-                    const estado = r.status === 'reservado' ? 'Reservado' : r.status === 'Reservado' ? 'Reservado' : 'Publicado'
-                    return (
+      {view === 'inventario' && (
+        <div className="card">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Vehículo</th><th className="num">Precio</th><th>Estado</th>
+                  <th className="num">Vistas</th><th className="num">Leads</th><th className="num">Solicitudes fin.</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventory.map((r) => {
+                  const name = r.vehicle || `${r.make} ${r.model} ${r.year}`
+                  const estado = (r.status === 'reservado' || r.status === 'Reservado') ? 'Reservado' : 'Publicado'
+                  return (
                     <tr key={r.id}>
                       <td className="strong">{name}</td>
                       <td className="num">{fmtRD(r.price)}</td>
@@ -149,14 +117,65 @@ export default function DealerPanel() {
                         </div>
                       </td>
                     </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                  )
+                })}
+                {inventory.length === 0 && <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 26 }}>Aún no tienes vehículos publicados. <Link to="/dealer/publicar" className="link-teal">Publica el primero</Link>.</td></tr>}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LeadsTable({ leads, full }) {
+  return (
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Cliente</th><th>Vehículo</th><th className="num">Monto</th>
+            <th>KYC</th><th>Estado banco</th>{full && <th>Vendedor</th>}<th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((l, i) => {
+            const [cls, lbl] = bankLabel[l.bank] || ['chip', l.bank]
+            return (
+              <tr key={i}>
+                <td>
+                  <div className="row center gap-8">
+                    <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>{(l.customer || '?').split(' ').map((w) => w[0]).slice(0, 2).join('')}</div>
+                    <span className="strong">{l.customer}</span>
+                  </div>
+                </td>
+                <td className="muted">{l.vehicle || '—'}</td>
+                <td className="num strong">{fmtRD(l.amount)}</td>
+                <td><StatusChip status={l.kyc} /></td>
+                <td><span className={`chip ${cls}`}>{lbl}</span></td>
+                {full && <td className={l.salesperson === 'Sin asignar' ? 'muted' : ''}>{l.salesperson}</td>}
+                <td>
+                  <div className="row gap-4">
+                    <button className="btn btn-outline btn-sm" title="Contactar"><Phone size={14} /></button>
+                    <button className="btn btn-outline btn-sm" title="Asignar vendedor"><UserPlus size={14} /></button>
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+          {leads.length === 0 && <tr><td colSpan={full ? 7 : 6} className="muted" style={{ textAlign: 'center', padding: 26 }}>Sin leads todavía.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function PrivacyNote({ inset }) {
+  return (
+    <div className="notice" style={{ margin: inset ? 14 : '16px 0 0', borderStyle: 'solid' }}>
+      <ShieldCheck size={16} />
+      <span>Ves el estado de KYC (aprobado / pendiente) pero <strong>nunca</strong> los datos biométricos, selfies ni el historial crediticio del cliente.</span>
+    </div>
   )
 }

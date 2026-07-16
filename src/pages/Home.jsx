@@ -1,138 +1,172 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search, Car, BadgeCheck, ShieldCheck, Building2, Landmark, Clock,
-  FileCheck, Lock, ChevronRight, Check, MonitorSmartphone,
+  Search, ShieldCheck, Landmark, Clock, FileCheck, Lock, ChevronRight,
+  MonitorSmartphone, SlidersHorizontal, X, RotateCcw,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
-import StatusChip from '../components/StatusChip'
 import { listVehicles } from '../data/api'
-import {
-  banks, fmtRD, dealerLeads, bankApplications, bankStatusMeta,
-} from '../data/demo'
+import { banks } from '../data/demo'
 
-const TABS = [
-  { id: 'todos', label: 'Todos los vehículos', icon: Car },
-  { id: 'nuevos', label: 'Nuevos', icon: BadgeCheck },
-  { id: 'cert', label: 'Usados certificados', icon: ShieldCheck },
-  { id: 'fin', label: 'Financiamiento disponible', icon: Landmark },
+const CHIPS = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'nuevos', label: 'Nuevos' },
+  { id: 'cert', label: 'Usados certificados' },
+  { id: 'fin', label: 'Financiamiento disponible' },
 ]
+const EMPTY = { marca: '', tipo: '', anioMin: '', precioMax: '', ubicacion: '', transmision: '', combustible: '', condicion: '' }
 
 export default function Home() {
-  const [tab, setTab] = useState('todos')
-  const [sort, setSort] = useState('relevancia')
-  const [vehicles, setVehicles] = useState([])
+  const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
+  const [chip, setChip] = useState('todos')
+  const [sort, setSort] = useState('relevancia')
+  const [f, setF] = useState(EMPTY)
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     let alive = true
-    setLoading(true)
-    listVehicles({ tab })
-      .then((data) => { if (alive) setVehicles(data) })
-      .catch(() => { if (alive) setVehicles([]) })
+    listVehicles({ tab: 'todos' })
+      .then((d) => { if (alive) setAll(d) })
+      .catch(() => { if (alive) setAll([]) })
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
-  }, [tab])
+  }, [])
 
-  const list = [...vehicles].sort((a, b) => {
-    if (sort === 'menor') return a.price - b.price
-    if (sort === 'mayor') return b.price - a.price
-    return 0
-  })
+  const opts = useMemo(() => ({
+    marcas: [...new Set(all.map((v) => v.make))].sort(),
+    tipos: [...new Set(all.map((v) => v.bodyType))].sort(),
+    ubicaciones: [...new Set(all.map((v) => v.location))].sort(),
+  }), [all])
+
+  const list = useMemo(() => {
+    let r = all.filter((v) => {
+      if (chip === 'nuevos' && v.condition !== 'Nuevo') return false
+      if (chip === 'cert' && !v.certified) return false
+      if (chip === 'fin' && !v.financing) return false
+      if (f.marca && v.make !== f.marca) return false
+      if (f.tipo && v.bodyType !== f.tipo) return false
+      if (f.anioMin && v.year < Number(f.anioMin)) return false
+      if (f.precioMax && v.price > Number(f.precioMax)) return false
+      if (f.ubicacion && v.location !== f.ubicacion) return false
+      if (f.transmision && v.transmission !== f.transmision) return false
+      if (f.combustible && v.fuel !== f.combustible) return false
+      if (f.condicion === 'nuevo' && v.condition !== 'Nuevo') return false
+      if (f.condicion === 'usado' && v.condition !== 'Usado') return false
+      if (f.condicion === 'cert' && !v.certified) return false
+      if (q.trim()) {
+        const s = `${v.make} ${v.model} ${v.year} ${v.trim || ''}`.toLowerCase()
+        if (!s.includes(q.trim().toLowerCase())) return false
+      }
+      return true
+    })
+    r = [...r].sort((a, b) => {
+      if (sort === 'menor') return a.price - b.price
+      if (sort === 'mayor') return b.price - a.price
+      if (sort === 'nuevo') return b.year - a.year
+      return 0
+    })
+    return r
+  }, [all, chip, f, q, sort])
+
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+  const activeCount = Object.values(f).filter(Boolean).length + (chip !== 'todos' ? 1 : 0)
 
   return (
     <main className="page">
       <div className="container">
-        <div className="home-layout">
-          {/* ---------------- Main column ---------------- */}
-          <div>
-            <section className="hero">
-              <div className="hero-media" style={{ background: 'radial-gradient(circle at 75% 30%, rgba(255,255,255,.18), transparent 60%)' }} />
-              <div className="hero-inner">
-                <h1>Compra tu vehículo<br />con financiamiento real</h1>
-                <p className="lead">Encuentra tu carro, verifica tu identidad y recibe ofertas de varios bancos en un solo lugar.</p>
-                <div className="hero-trust">
-                  <div className="t"><MonitorSmartphone size={18} /> 100% Online</div>
-                  <div className="t"><Landmark size={18} /> Respuesta de bancos</div>
-                  <div className="t"><ShieldCheck size={18} /> Seguridad y transparencia</div>
-                </div>
-              </div>
-            </section>
+        <section className="hero" style={{ minHeight: 210, marginBottom: 20 }}>
+          <div className="hero-media" style={{ background: 'radial-gradient(circle at 78% 30%, rgba(255,255,255,.16), transparent 60%)' }} />
+          <div className="hero-inner" style={{ padding: '26px 32px' }}>
+            <h1 style={{ fontSize: 30 }}>Compra tu vehículo con financiamiento real</h1>
+            <p className="lead">Encuentra tu carro, verifica tu identidad y recibe ofertas de varios bancos en un solo lugar.</p>
+            <div className="hero-trust">
+              <div className="t"><MonitorSmartphone size={18} /> 100% Online</div>
+              <div className="t"><Landmark size={18} /> Respuesta de bancos</div>
+              <div className="t"><ShieldCheck size={18} /> Seguridad y transparencia</div>
+            </div>
+          </div>
+        </section>
 
-            {/* Search */}
-            <div className="search-bar">
-              <div className="search-tabs">
-                {TABS.slice(0, 3).map((t) => {
-                  const Icon = t.icon
-                  return (
-                    <button key={t.id} className={`search-tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>
-                      <Icon size={15} /> {t.label}
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="search-fields">
-                <Field label="Tipo"><select className="select" defaultValue=""><option value="">Todos</option><option>SUV</option><option>Sedán</option><option>Pickup</option></select></Field>
-                <Field label="Marca"><select className="select" defaultValue=""><option value="">Todas</option><option>Honda</option><option>Toyota</option><option>Kia</option><option>Mazda</option></select></Field>
-                <Field label="Modelo"><select className="select" defaultValue=""><option value="">Todos</option></select></Field>
-                <Field label="Año"><select className="select" defaultValue="2015-2024"><option>2015 - 2024</option><option>2020 - 2024</option></select></Field>
-                <Field label="Precio máx."><select className="select" defaultValue="2450000"><option value="2450000">RD$ 2,450,000</option><option>RD$ 1,500,000</option><option>RD$ 1,000,000</option></select></Field>
-                <Field label="Ubicación"><select className="select" defaultValue="sd"><option value="sd">Santo Domingo</option><option>Santiago</option><option>La Romana</option></select></Field>
-                <button className="btn btn-primary" style={{ height: 44 }}><Search size={17} /> Buscar</button>
+        {/* Search bar */}
+        <div className="mk-search">
+          <div className="mk-search-input">
+            <Search size={18} className="muted" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por marca, modelo o año…" />
+            {q && <button onClick={() => setQ('')} aria-label="Limpiar"><X size={16} /></button>}
+          </div>
+          <button className="btn btn-outline mk-filter-toggle" onClick={() => setShowFilters(true)}>
+            <SlidersHorizontal size={16} /> Filtros{activeCount ? ` (${activeCount})` : ''}
+          </button>
+        </div>
+
+        <div className="mk-layout">
+          {/* Filters */}
+          <aside className={`mk-filters ${showFilters ? 'open' : ''}`}>
+            <div className="mk-filters-head">
+              <span className="strong">Filtros</span>
+              <div className="row center gap-8">
+                {activeCount > 0 && <button className="link-teal" onClick={() => { setF(EMPTY); setChip('todos') }}><RotateCcw size={13} /> Limpiar</button>}
+                <button className="icon-btn show-mobile" onClick={() => setShowFilters(false)} aria-label="Cerrar"><X size={20} /></button>
               </div>
             </div>
+            <FField label="Marca"><select className="select" value={f.marca} onChange={set('marca')}><option value="">Todas</option>{opts.marcas.map((m) => <option key={m}>{m}</option>)}</select></FField>
+            <FField label="Tipo"><select className="select" value={f.tipo} onChange={set('tipo')}><option value="">Todos</option>{opts.tipos.map((m) => <option key={m}>{m}</option>)}</select></FField>
+            <FField label="Ubicación"><select className="select" value={f.ubicacion} onChange={set('ubicacion')}><option value="">Todas</option>{opts.ubicaciones.map((m) => <option key={m}>{m}</option>)}</select></FField>
+            <FField label="Año desde"><select className="select" value={f.anioMin} onChange={set('anioMin')}><option value="">Cualquiera</option>{[2024, 2022, 2020, 2018, 2015].map((y) => <option key={y} value={y}>{y}</option>)}</select></FField>
+            <FField label="Precio máximo"><select className="select" value={f.precioMax} onChange={set('precioMax')}><option value="">Sin límite</option><option value="900000">RD$ 900,000</option><option value="1300000">RD$ 1,300,000</option><option value="1800000">RD$ 1,800,000</option><option value="2500000">RD$ 2,500,000</option></select></FField>
+            <FField label="Transmisión"><select className="select" value={f.transmision} onChange={set('transmision')}><option value="">Todas</option><option>Automática</option><option>Manual</option></select></FField>
+            <FField label="Combustible"><select className="select" value={f.combustible} onChange={set('combustible')}><option value="">Todos</option><option>Gasolina</option><option>Diésel</option><option>Híbrido</option><option>Eléctrico</option></select></FField>
+            <FField label="Condición"><select className="select" value={f.condicion} onChange={set('condicion')}><option value="">Todas</option><option value="nuevo">Nuevo</option><option value="usado">Usado</option><option value="cert">Certificado</option></select></FField>
+            <button className="btn btn-primary btn-block show-mobile" style={{ marginTop: 6 }} onClick={() => setShowFilters(false)}>Ver {list.length} resultados</button>
+          </aside>
+          {showFilters && <div className="mk-scrim" onClick={() => setShowFilters(false)} />}
 
-            {/* Search bar text (mobile-friendly) */}
-            <div className="card card-pad show-mobile" style={{ marginTop: 14, display: 'none' }} />
-
-            <div className="row between center" style={{ margin: '18px 2px 14px' }}>
-              <div className="small muted"><strong style={{ color: 'var(--ink)' }}>{list.length}</strong> vehículos disponibles</div>
+          {/* Results */}
+          <div>
+            <div className="row between center wrap gap-8" style={{ marginBottom: 14 }}>
+              <div className="small muted"><strong style={{ color: 'var(--ink)' }}>{loading ? '…' : list.length}</strong> vehículo{list.length === 1 ? '' : 's'} {activeCount ? (list.length === 1 ? 'encontrado' : 'encontrados') : (list.length === 1 ? 'disponible' : 'disponibles')}</div>
               <label className="row center gap-8 small muted">
-                Ordenar por:
-                <select className="select" value={sort} onChange={(e) => setSort(e.target.value)} style={{ height: 34, width: 160 }}>
+                Ordenar:
+                <select className="select" value={sort} onChange={(e) => setSort(e.target.value)} style={{ height: 34, width: 168 }}>
                   <option value="relevancia">Más relevantes</option>
                   <option value="menor">Menor precio</option>
                   <option value="mayor">Mayor precio</option>
+                  <option value="nuevo">Año más reciente</option>
                 </select>
               </label>
             </div>
 
-            {/* Filter chips */}
             <div className="row gap-8 wrap" style={{ marginBottom: 16 }}>
-              {TABS.map((t) => (
-                <button key={t.id}
-                  className={`chip ${tab === t.id ? 'chip-teal' : ''}`}
-                  style={{ height: 32, cursor: 'pointer', border: tab === t.id ? undefined : '1px solid var(--line)', background: tab === t.id ? undefined : '#fff' }}
-                  onClick={() => setTab(t.id)}>
-                  {t.label}
-                </button>
+              {CHIPS.map((c) => (
+                <button key={c.id}
+                  className={`chip ${chip === c.id ? 'chip-teal' : ''}`}
+                  style={{ height: 32, cursor: 'pointer', border: chip === c.id ? undefined : '1px solid var(--line)', background: chip === c.id ? undefined : '#fff' }}
+                  onClick={() => setChip(c.id)}>{c.label}</button>
               ))}
             </div>
 
-            <div className="section-title">
-              <h2>Vehículos destacados</h2>
-              <Link to="/financiamiento" className="link-teal">Ver todos <ChevronRight size={15} /></Link>
-            </div>
-
-            <div className="grid grid-4">
-              {loading
-                ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="vcard" style={{ height: 300, background: 'var(--surface-2)' }} />)
-                : list.map((v) => <VehicleCard key={v.id} v={v} />)}
-            </div>
-            {!loading && list.length === 0 && (
-              <div className="card card-pad muted" style={{ textAlign: 'center' }}>No hay vehículos en esta categoría todavía.</div>
+            {loading ? (
+              <div className="grid mk-grid">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="vcard" style={{ height: 300, background: 'var(--surface-2)' }} />)}</div>
+            ) : list.length === 0 ? (
+              <div className="card card-pad" style={{ textAlign: 'center', padding: 40 }}>
+                <div className="strong" style={{ marginBottom: 6 }}>Sin resultados</div>
+                <p className="muted small" style={{ marginBottom: 14 }}>Prueba ampliando los filtros o cambiando la búsqueda.</p>
+                <button className="btn btn-outline" onClick={() => { setF(EMPTY); setChip('todos'); setQ('') }}>Limpiar todo</button>
+              </div>
+            ) : (
+              <div className="grid mk-grid">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
             )}
 
-            {/* Trust strip */}
-            <div className="trust-strip" style={{ marginTop: 22 }}>
+            <div className="trust-strip" style={{ marginTop: 26 }}>
               <Trust icon={FileCheck} lbl="Financiamiento real" sub="con múltiples bancos" />
               <Trust icon={Clock} lbl="Respuesta rápida" sub="en minutos" />
               <Trust icon={MonitorSmartphone} lbl="100% online" sub="sin filas, sin papeleo" />
               <Trust icon={Lock} lbl="Tus datos protegidos" sub="KYC seguro" />
             </div>
 
-            {/* Financing banner */}
-            <div className="fin-banner" style={{ marginTop: 22 }}>
+            <div className="fin-banner" style={{ marginTop: 20 }}>
               <div className="shield"><ShieldCheck size={28} color="#9fe0d4" /></div>
               <div>
                 <h3>Financiamiento seguro, rápido y transparente</h3>
@@ -140,25 +174,18 @@ export default function Home() {
               </div>
               <div className="banks-row">
                 {banks.map((b) => <span key={b.id} className="bank-logo">{b.name}</span>)}
-                <Link to="/financiamiento" className="link-teal" style={{ color: '#bfe7e0' }}>Ver todos los bancos <ChevronRight size={14} /></Link>
+                <Link to="/como-funciona" className="link-teal" style={{ color: '#bfe7e0' }}>Cómo funciona <ChevronRight size={14} /></Link>
               </div>
             </div>
           </div>
-
-          {/* ---------------- Right rail ---------------- */}
-          <aside className="side-panel col gap-16">
-            <FinancePathCard />
-            <DealerMiniCard />
-            <BankMiniCard />
-          </aside>
         </div>
       </div>
     </main>
   )
 }
 
-function Field({ label, children }) {
-  return <div className="field"><label>{label}</label>{children}</div>
+function FField({ label, children }) {
+  return <div className="field" style={{ marginBottom: 12 }}><label>{label}</label>{children}</div>
 }
 function Trust({ icon: Icon, lbl, sub }) {
   return (
@@ -167,111 +194,4 @@ function Trust({ icon: Icon, lbl, sub }) {
       <div><div className="lbl">{lbl}</div><div className="sub">{sub}</div></div>
     </div>
   )
-}
-
-function FinancePathCard() {
-  const steps = [
-    { n: 1, name: 'Verificar identidad', sub: 'Validación de cédula', state: 'done', chip: <StatusChip status="aprobado">KYC aprobado</StatusChip> },
-    { n: 2, name: 'Prueba de vida', sub: 'Validación biométrica', state: 'done', chip: <span className="chip chip-green"><Check size={13} strokeWidth={3} /></span> },
-    { n: 3, name: 'Autorización de buró de crédito', sub: 'Autorizas a bancos a consultar tu historial', state: 'done', chip: <span className="chip chip-green"><Check size={13} strokeWidth={3} /></span> },
-    { n: 4, name: 'Solicitud enviada a bancos', sub: 'Estamos procesando tu solicitud', state: 'active', chip: <span className="chip chip-amber">En proceso</span> },
-    { n: 5, name: 'Ofertas de bancos', sub: 'Recibe y compara ofertas', state: 'pending', chip: <span className="chip chip-blue">Pendiente</span> },
-  ]
-  return (
-    <div className="card card-pad">
-      <div className="panel-title">Tu camino al financiamiento</div>
-      <div className="steps">
-        {steps.map((s) => (
-          <div key={s.n} className={`step ${s.state}`}>
-            <div className="step-num">{s.state === 'done' ? <Check size={14} strokeWidth={3} /> : s.n}</div>
-            <div className="grow">
-              <div className="row between center gap-8">
-                <div className="st-name">{s.name}</div>
-                {s.chip}
-              </div>
-              <div className="st-sub">{s.sub}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <Link to="/financiamiento" className="btn btn-primary btn-block" style={{ marginTop: 14 }}>Solicitar financiamiento</Link>
-    </div>
-  )
-}
-
-function DealerMiniCard() {
-  const m = [
-    { v: 128, l: 'Inventario', s: 'Activos' },
-    { v: 24, l: 'Solicitudes', s: 'En proceso' },
-    { v: 8, l: 'Aprobadas', s: 'Este mes' },
-    { v: 15, l: 'Ventas', s: 'Este mes' },
-  ]
-  return (
-    <div className="card card-pad">
-      <div className="row between center" style={{ marginBottom: 12 }}>
-        <div className="panel-title" style={{ margin: 0 }}>Dealer panel</div>
-        <Link to="/dealer" className="link-teal">Ir al panel <ChevronRight size={14} /></Link>
-      </div>
-      <div className="metric-row" style={{ marginBottom: 12 }}>
-        {m.map((x) => <div key={x.l} className="metric"><div className="mv">{x.v}</div><div className="ml">{x.l}</div><div className="ms">{x.s}</div></div>)}
-      </div>
-      <div className="small strong" style={{ margin: '4px 0 6px' }}>Solicitudes recientes</div>
-      <table className="table">
-        <thead><tr><th>Cliente</th><th>Vehículo</th><th className="num">Monto</th><th>Estado</th></tr></thead>
-        <tbody>
-          {dealerLeads.slice(0, 3).map((l, i) => (
-            <tr key={i}>
-              <td>{l.customer}</td>
-              <td className="muted">{l.vehicle}</td>
-              <td className="num">{fmtRD(l.amount)}</td>
-              <td><MiniBankChip s={l.bank} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function BankMiniCard() {
-  const m = [
-    { v: 56, l: 'Solicitudes', s: 'Hoy' },
-    { v: 18, l: 'En evaluación', s: 'Hoy' },
-    { v: 22, l: 'Pre-aprobadas', s: 'Hoy' },
-    { v: 16, l: 'Aprobadas', s: 'Hoy' },
-  ]
-  return (
-    <div className="card card-pad">
-      <div className="row between center" style={{ marginBottom: 12 }}>
-        <div className="panel-title" style={{ margin: 0 }}>Bank panel</div>
-        <Link to="/banco" className="link-teal">Ir al panel <ChevronRight size={14} /></Link>
-      </div>
-      <div className="metric-row" style={{ marginBottom: 12 }}>
-        {m.map((x) => <div key={x.l} className="metric"><div className="mv">{x.v}</div><div className="ml">{x.l}</div><div className="ms">{x.s}</div></div>)}
-      </div>
-      <div className="small strong" style={{ margin: '4px 0 6px' }}>Solicitudes para evaluar</div>
-      <table className="table">
-        <thead><tr><th>Cliente</th><th>Dealer</th><th className="num">Monto</th><th>Estado</th></tr></thead>
-        <tbody>
-          {bankApplications.slice(0, 3).map((a) => (
-            <tr key={a.id}>
-              <td>{a.customer}</td>
-              <td className="muted">{a.dealer}</td>
-              <td className="num">{fmtRD(a.amount)}</td>
-              <td><span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function MiniBankChip({ s }) {
-  const map = {
-    offer: ['chip-green', 'Aprobada'], evaluating: ['chip-amber', 'En evaluación'],
-    pending: ['chip-blue', 'Pendiente'], docs: ['chip-amber', 'Docs'],
-  }
-  const [cls, lbl] = map[s] || ['chip', s]
-  return <span className={`chip ${cls}`}>{lbl}</span>
 }

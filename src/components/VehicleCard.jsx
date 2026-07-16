@@ -3,9 +3,10 @@ import { Heart, MapPin, BadgeCheck } from 'lucide-react'
 import { useState } from 'react'
 import CarImage from './CarImage'
 import { fmtRD } from '../data/demo'
+import { isFavorite, toggleFavorite } from '../data/favorites'
 
 export default function VehicleCard({ v }) {
-  const [fav, setFav] = useState(false)
+  const [fav, setFav] = useState(() => isFavorite(v.id))
   const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : ''
   const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
   return (
@@ -15,7 +16,7 @@ export default function VehicleCard({ v }) {
         <button
           className={`fav-btn ${fav ? 'active' : ''}`}
           aria-label="Guardar en favoritos"
-          onClick={(e) => { e.preventDefault(); setFav(!fav) }}
+          onClick={(e) => { e.preventDefault(); setFav(toggleFavorite(v.id)) }}
         >
           <Heart size={17} />
         </button>

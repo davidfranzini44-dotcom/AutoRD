@@ -1,8 +1,8 @@
-import { NavLink, Link, useLocation } from 'react-router-dom'
+import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   MapPin, Heart, Bell, Menu, X, ChevronDown,
-  Home, Search, Landmark, User, LogOut,
+  Home, Search, Landmark, User, LogOut, LayoutDashboard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -14,7 +14,8 @@ function Logo() {
   )
 }
 
-export default function Layout({ children }) {
+// Buyer-facing shell: marketplace header + mobile bottom nav + footer.
+export default function Layout() {
   const [menu, setMenu] = useState(false)
   const { user, profile, signOut } = useAuth() || {}
   const loc = useLocation()
@@ -24,9 +25,11 @@ export default function Layout({ children }) {
     { to: '/', label: 'Comprar', end: true },
     { to: '/financiamiento', label: 'Financiamiento' },
     { to: '/mi-financiamiento', label: 'Mi financiamiento' },
-    { to: '/dealer', label: 'Panel dealer' },
-    { to: '/banco', label: 'Panel banco' },
+    { to: '/como-funciona', label: 'Cómo funciona' },
   ]
+
+  const consoleLink = profile?.role === 'dealer' ? '/dealer'
+    : profile?.role === 'bank' ? '/banco' : null
 
   return (
     <div className="app">
@@ -41,11 +44,16 @@ export default function Layout({ children }) {
           </nav>
           <div className="header-right">
             <button className="loc-pill"><MapPin size={16} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
-            <button className="icon-btn"><Heart size={18} /><span>Favoritos</span></button>
+            <Link to="/favoritos" className="icon-btn"><Heart size={18} /><span>Favoritos</span></Link>
             <button className="icon-btn"><Bell size={18} /><span className="dot-badge">3</span></button>
+            {consoleLink && (
+              <Link to={consoleLink} className="btn btn-outline btn-sm hide-mobile" style={{ height: 38 }}>
+                <LayoutDashboard size={15} /> Mi panel
+              </Link>
+            )}
             {user ? (
               <button className="btn btn-outline btn-sm hide-mobile" style={{ height: 38 }} onClick={signOut}>
-                <LogOut size={15} /> Salir{profile?.role ? ` (${profile.role})` : ''}
+                <LogOut size={15} /> Salir
               </button>
             ) : (
               <Link to="/ingresar" className="btn btn-navy btn-sm hide-mobile" style={{ height: 38 }}>Ingresar / Registrar</Link>
@@ -71,22 +79,25 @@ export default function Layout({ children }) {
                   {l.label}
                 </NavLink>
               ))}
-              <Link to="/ingresar" className="btn btn-navy btn-block" style={{ marginTop: 12 }}>Ingresar / Registrar</Link>
+              {consoleLink && <Link to={consoleLink} className="btn btn-outline btn-block" style={{ marginTop: 8 }}><LayoutDashboard size={15} /> Mi panel</Link>}
+              {user
+                ? <button className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={signOut}><LogOut size={15} /> Salir</button>
+                : <Link to="/ingresar" className="btn btn-navy btn-block" style={{ marginTop: 8 }}>Ingresar / Registrar</Link>}
             </nav>
           </div>
         </div>
       )}
 
-      {children}
+      <Outlet />
 
       <Footer />
 
       <nav className="bottom-nav">
         <NavLink to="/" end><Home size={20} /> Inicio</NavLink>
-        <NavLink to="/?buscar=1"><Search size={20} /> Buscar</NavLink>
+        <NavLink to="/buscar"><Search size={20} /> Buscar</NavLink>
         <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>
-        <NavLink to="/mi-financiamiento"><Heart size={20} /> Favoritos</NavLink>
-        <NavLink to="/dealer"><User size={20} /> Perfil</NavLink>
+        <NavLink to="/favoritos"><Heart size={20} /> Favoritos</NavLink>
+        <NavLink to={user ? '/mi-financiamiento' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
     </div>
   )
@@ -107,11 +118,11 @@ function Footer() {
           <div className="row gap-24 wrap" style={{ fontSize: 13.5 }}>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Producto</strong>
-              <span>Comprar</span><span>Vender</span><span>Financiamiento</span>
+              <Link to="/">Comprar</Link><Link to="/financiamiento">Financiamiento</Link><Link to="/como-funciona">Cómo funciona</Link>
             </div>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Aliados</strong>
-              <span>Bancos</span><span>Dealers</span><span>Cómo funciona</span>
+              <Link to="/ingresar">Portal de bancos</Link><Link to="/ingresar">Portal de dealers</Link>
             </div>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Legal</strong>
