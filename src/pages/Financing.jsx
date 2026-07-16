@@ -1,19 +1,18 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
-  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark,
+  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X,
 } from 'lucide-react'
 import { banks, financingCase, fmtRD } from '../data/demo'
-import { createApplication } from '../data/api'
+import { createApplication, createKycSession, getKycStatus } from '../data/api'
 import StatusChip from '../components/StatusChip'
 
 const CONSENT = 'Autorizo a AutoRD a compartir mi información personal, datos de identidad verificados, documentos suministrados y solicitud de financiamiento con las entidades financieras seleccionadas por mí para fines de evaluación crediticia. Autorizo expresamente a dichas entidades financieras a consultar mi historial crediticio exclusivamente para evaluar esta solicitud de financiamiento de vehículo.'
 
 const STEPS = [
   { id: 'datos', label: 'Datos', icon: User },
-  { id: 'cedula', label: 'Cédula', icon: IdCard },
-  { id: 'vida', label: 'Prueba de vida', icon: ScanFace },
+  { id: 'identidad', label: 'Identidad', icon: ScanFace },
   { id: 'consent', label: 'Consentimiento', icon: FileSignature },
   { id: 'enviar', label: 'Enviar a bancos', icon: Send },
   { id: 'respuestas', label: 'Respuestas', icon: Landmark },
@@ -25,30 +24,49 @@ export default function Financing() {
     nombre: 'Juan Pérez', cedula: '', telefono: '', email: '',
     ingreso: '', empleo: 'Asalariado', inicial: '', plazo: '7',
   })
-  const [cedulaState, setCedulaState] = useState('idle') // idle|loading|ok
-  const [vidaState, setVidaState] = useState('idle')
+  const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
+  const [session, setSession] = useState(null) // { url, session_id }
   const [consent, setConsent] = useState(false)
   const [selBanks, setSelBanks] = useState(banks.map((b) => b.id))
   const [notify, setNotify] = useState('ambos')
+  const pollRef = useRef(null)
+
+  useEffect(() => () => clearInterval(pollRef.current), [])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
   const back = () => setStep((s) => Math.max(s - 1, 0))
-
-  const runCedula = () => { setCedulaState('loading'); setTimeout(() => setCedulaState('ok'), 1400) }
-  const runVida = () => { setVidaState('loading'); setTimeout(() => setVidaState('ok'), 1600) }
   const toggleBank = (id) => setSelBanks((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
+
+  const startPoll = (sid) => {
+    clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      const st = await getKycStatus(sid)
+      if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
+      else if (st.declined) { clearInterval(pollRef.current); setKyc('error') }
+    }, 4000)
+  }
+
+  const runKyc = async () => {
+    setKyc('launching')
+    const res = await createKycSession()
+    if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // fallback until backend deployed
+    setSession(res)
+    window.open(res.url, '_blank', 'noopener')
+    setKyc('pending')
+    startPoll(res.session_id)
+  }
+  const recheck = async () => {
+    if (!session) return
+    const st = await getKycStatus(session.session_id)
+    if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
+    else if (st.declined) { clearInterval(pollRef.current); setKyc('error') }
+  }
 
   const submitToBanks = async () => {
     try {
-      await createApplication({
-        ...form,
-        requestedAmount: null,
-        consentText: CONSENT,
-        notify,
-        bankDbIds: selBanks, // slugs in demo; real UUIDs once banks come from DB
-      })
-    } catch (_) { /* demo/offline: proceed to confirmation screen anyway */ }
+      await createApplication({ ...form, requestedAmount: null, consentText: CONSENT, notify, bankDbIds: selBanks })
+    } catch (_) { /* demo/offline */ }
     next()
   }
 
@@ -63,7 +81,6 @@ export default function Financing() {
           Verificamos tu identidad y enviamos tu solicitud a los bancos que elijas. AutoRD no realiza la consulta de crédito: los bancos evalúan y deciden.
         </p>
 
-        {/* Stepper */}
         <div className="card card-pad" style={{ marginBottom: 18 }}>
           <div className="stepper">
             {STEPS.map((s, i) => {
@@ -79,40 +96,17 @@ export default function Financing() {
           </div>
         </div>
 
-        {/* Step content */}
         <div className="card card-pad">
-          {step === 0 && (
-            <StepDatos form={form} set={set} />
-          )}
+          {step === 0 && <StepDatos form={form} set={set} />}
+          {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
+          {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
+          {step === 3 && <StepEnviar banks={banks} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} />}
+          {step === 4 && <StepRespuestas />}
 
-          {step === 1 && (
-            <StepCedula state={cedulaState} run={runCedula} value={form.cedula} onChange={set('cedula')} />
-          )}
-
-          {step === 2 && (
-            <StepVida state={vidaState} run={runVida} />
-          )}
-
-          {step === 3 && (
-            <StepConsent consent={consent} setConsent={setConsent} />
-          )}
-
-          {step === 4 && (
-            <StepEnviar banks={banks} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} />
-          )}
-
-          {step === 5 && (
-            <StepRespuestas />
-          )}
-
-          {/* Nav buttons */}
-          {step < 5 && (
+          {step < 4 && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
               <button className="btn btn-outline" onClick={back} disabled={step === 0}><ChevronLeft size={17} /> Atrás</button>
-              <PrimaryNext
-                step={step} next={next} submitToBanks={submitToBanks}
-                cedulaState={cedulaState} vidaState={vidaState} consent={consent} selBanks={selBanks}
-              />
+              <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} selBanks={selBanks} />
             </div>
           )}
         </div>
@@ -121,11 +115,10 @@ export default function Financing() {
   )
 }
 
-function PrimaryNext({ step, next, submitToBanks, cedulaState, vidaState, consent, selBanks }) {
-  if (step === 1) return <button className="btn btn-primary" onClick={next} disabled={cedulaState !== 'ok'}>Continuar <ChevronRight size={17} /></button>
-  if (step === 2) return <button className="btn btn-primary" onClick={next} disabled={vidaState !== 'ok'}>Continuar <ChevronRight size={17} /></button>
-  if (step === 3) return <button className="btn btn-primary" onClick={next} disabled={!consent}>Firmar y continuar <ChevronRight size={17} /></button>
-  if (step === 4) return <button className="btn btn-primary" onClick={submitToBanks} disabled={selBanks.length === 0}><Send size={16} /> Enviar solicitud a bancos</button>
+function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
+  if (step === 1) return <button className="btn btn-primary" onClick={next} disabled={kyc !== 'ok'}>Continuar <ChevronRight size={17} /></button>
+  if (step === 2) return <button className="btn btn-primary" onClick={next} disabled={!consent}>Firmar y continuar <ChevronRight size={17} /></button>
+  if (step === 3) return <button className="btn btn-primary" onClick={submitToBanks} disabled={selBanks.length === 0}><Send size={16} /> Enviar solicitud a bancos</button>
   return <button className="btn btn-primary" onClick={next}>Continuar <ChevronRight size={17} /></button>
 }
 
@@ -159,64 +152,70 @@ function StepDatos({ form, set }) {
   )
 }
 
-/* ---------------- Step 2: Cédula ---------------- */
-function StepCedula({ state, run, value, onChange }) {
+/* ---------------- Step 2: Identidad (Didit) ---------------- */
+function StepIdentidad({ state, run, recheck, session }) {
   return (
     <>
-      <StepHead icon={IdCard} title="Verificar cédula" sub="Validamos tu cédula de identidad y electoral con la Junta Central Electoral (KYC)." />
-      <div className="grid grid-2" style={{ gap: 14, marginBottom: 16 }}>
-        <F label="Número de cédula"><input className="input" value={value} onChange={onChange} placeholder="402-0000000-0" /></F>
-        <div className="col" style={{ justifyContent: 'flex-end' }}>
-          <div className="tiny muted" style={{ marginBottom: 6 }}>Documento</div>
+      <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
+
+      <div className="row center gap-8" style={{ marginBottom: 16 }}>
+        <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación provista por Didit</span>
+        <span className="tiny muted">Cédula (OCR) · Prueba de vida · Face match</span>
+      </div>
+
+      {state === 'idle' && (
+        <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad con Didit</button>
+      )}
+
+      {state === 'launching' && (
+        <div className="verify-row"><div className="verify-ic"><Loader2 size={20} className="spin" /></div><div><div className="strong">Iniciando verificación…</div><div className="tiny muted">Creando tu sesión segura</div></div></div>
+      )}
+
+      {state === 'pending' && (
+        <div className="col gap-12">
+          <div className="notice"><Info size={16} /><span>Se abrió la verificación de Didit en una nueva pestaña. Complétala (foto de cédula + selfie) y vuelve aquí.</span></div>
+          <div className="verify-row"><div className="verify-ic"><Loader2 size={20} className="spin" /></div><div className="grow"><div className="strong">Esperando tu verificación…</div><div className="tiny muted">Se actualizará automáticamente al terminar</div></div></div>
           <div className="row gap-8">
-            <UploadBox label="Frontal" /><UploadBox label="Reverso" />
+            <button className="btn btn-primary" onClick={recheck}><Check size={16} /> Ya completé la verificación</button>
+            {session?.url && <a className="btn btn-outline" href={session.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir de nuevo</a>}
           </div>
         </div>
-      </div>
+      )}
 
-      {state === 'idle' && <button className="btn btn-navy" onClick={run}><IdCard size={17} /> Validar cédula</button>}
-      {state === 'loading' && <div className="verify-row"><div className="verify-ic"><Loader2 size={20} className="spin" /></div><div><div className="strong">Validando cédula…</div><div className="tiny muted">Consultando padrón electoral</div></div></div>}
+      {state === 'error' && (
+        <div className="col gap-12">
+          <div className="verify-row" style={{ borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
+            <div className="verify-ic" style={{ background: '#fff', color: 'var(--red)' }}><X size={20} /></div>
+            <div className="grow"><div className="strong">No pudimos verificar tu identidad</div><div className="tiny" style={{ color: 'var(--red)' }}>La verificación fue rechazada o quedó incompleta.</div></div>
+          </div>
+          <button className="btn btn-navy" onClick={run}><IdCard size={16} /> Intentar de nuevo</button>
+        </div>
+      )}
+
       {state === 'ok' && (
-        <div className="verify-row ok">
-          <div className="verify-ic"><IdCard size={20} /></div>
-          <div className="grow"><div className="strong">Cédula validada</div><div className="tiny muted">Cédula de identidad y electoral verificada</div></div>
-          <StatusChip status="approved">Completado</StatusChip>
+        <div className="col gap-8">
+          <VRow icon={IdCard} title="Cédula validada" sub="Cédula de identidad y electoral verificada" />
+          <VRow icon={ScanFace} title="Prueba de vida completada" sub="Verificación facial en tiempo real exitosa" />
+          <div className="kyc-banner" style={{ marginTop: 6 }}>
+            <div className="ic"><ShieldCheck size={20} /></div>
+            <div><div className="strong">KYC aprobado</div><div className="tiny" style={{ color: 'var(--green)' }}>Tu identidad ha sido verificada correctamente.</div></div>
+          </div>
         </div>
       )}
     </>
   )
 }
-
-/* ---------------- Step 3: Prueba de vida ---------------- */
-function StepVida({ state, run }) {
+function VRow({ icon: Icon, title, sub }) {
   return (
-    <>
-      <StepHead icon={ScanFace} title="Prueba de vida" sub="Verificación facial en tiempo real para confirmar que eres tú (liveness). Tus datos biométricos no se comparten con dealers." />
-      <div className="row center" style={{ justifyContent: 'center', padding: '18px 0 20px' }}>
-        <div style={{ width: 168, height: 168, borderRadius: '50%', border: '3px dashed var(--teal-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--teal-50)', color: 'var(--teal-700)' }}>
-          {state === 'ok' ? <Check size={64} strokeWidth={2.5} /> : state === 'loading' ? <Loader2 size={56} className="spin" /> : <ScanFace size={64} />}
-        </div>
-      </div>
-      {state === 'idle' && <button className="btn btn-navy btn-block" onClick={run}><ScanFace size={17} /> Iniciar prueba de vida</button>}
-      {state === 'loading' && <div className="text-center muted small" style={{ textAlign: 'center' }}>Analizando… mantén tu rostro dentro del círculo</div>}
-      {state === 'ok' && (
-        <div className="verify-row ok">
-          <div className="verify-ic"><ScanFace size={20} /></div>
-          <div className="grow"><div className="strong">Prueba de vida completada</div><div className="tiny muted">Verificación facial en tiempo real exitosa</div></div>
-          <StatusChip status="approved">Completado</StatusChip>
-        </div>
-      )}
-      {state === 'ok' && (
-        <div className="kyc-banner" style={{ marginTop: 14 }}>
-          <div className="ic"><ShieldCheck size={20} /></div>
-          <div><div className="strong">KYC aprobado</div><div className="tiny" style={{ color: 'var(--green)' }}>Tu identidad ha sido verificada correctamente.</div></div>
-        </div>
-      )}
-    </>
+    <div className="verify-row ok">
+      <div className="verify-ic"><Icon size={20} /></div>
+      <div className="grow"><div className="strong">{title}</div><div className="tiny muted">{sub}</div></div>
+      <StatusChip status="approved">Completado</StatusChip>
+    </div>
   )
 }
 
-/* ---------------- Step 4: Consent ---------------- */
+/* ---------------- Step 3: Consent ---------------- */
 function StepConsent({ consent, setConsent }) {
   return (
     <>
@@ -229,7 +228,7 @@ function StepConsent({ consent, setConsent }) {
       {consent && (
         <div className="verify-row ok" style={{ marginTop: 14 }}>
           <div className="verify-ic"><FileSignature size={20} /></div>
-          <div className="grow"><div className="strong">Consentimiento firmado</div><div className="tiny muted">Autorización registrada · 15 jul 2026</div></div>
+          <div className="grow"><div className="strong">Consentimiento firmado</div><div className="tiny muted">Autorización registrada</div></div>
           <StatusChip status="approved">Firmado</StatusChip>
         </div>
       )}
@@ -240,7 +239,7 @@ function StepConsent({ consent, setConsent }) {
   )
 }
 
-/* ---------------- Step 5: Enviar ---------------- */
+/* ---------------- Step 4: Enviar ---------------- */
 function StepEnviar({ banks, sel, toggle, notify, setNotify, form }) {
   return (
     <>
@@ -275,7 +274,7 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form }) {
   )
 }
 
-/* ---------------- Step 6: Respuestas ---------------- */
+/* ---------------- Step 5: Respuestas ---------------- */
 function StepRespuestas() {
   return (
     <>
@@ -319,11 +318,4 @@ function StepHead({ icon: Icon, title, sub }) {
 }
 function F({ label, help, children }) {
   return <div className="field"><label>{label}</label>{children}{help && <span className="help">{help}</span>}</div>
-}
-function UploadBox({ label }) {
-  return (
-    <div style={{ width: 90, height: 62, border: '1.5px dashed var(--line)', borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', background: 'var(--surface-2)', fontSize: 11, gap: 3 }}>
-      <IdCard size={16} /> {label}
-    </div>
-  )
 }

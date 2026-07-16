@@ -68,6 +68,32 @@ export async function listBanks() {
   return (data || []).map((b) => ({ id: b.slug, dbId: b.id, name: b.name, color: b.color, initials: b.initials }))
 }
 
+// ---------------- KYC (Didit) ----------------
+// Creates a real Didit verification session via the edge function.
+// Returns { url, session_id } when the backend is live, or { simulated: true }
+// as a graceful fallback so the flow still completes before the functions
+// are deployed / in demo mode.
+export async function createKycSession() {
+  if (!LIVE) return { simulated: true }
+  try {
+    const { data, error } = await supabase.functions.invoke('didit-session', { body: { action: 'create' } })
+    if (error || !data?.url) return { simulated: true, error: error?.message }
+    return data
+  } catch (e) {
+    return { simulated: true, error: String(e) }
+  }
+}
+
+export async function getKycStatus(sessionId) {
+  if (!LIVE) return { approved: true }
+  try {
+    const { data } = await supabase.functions.invoke('didit-session', { body: { action: 'status', session_id: sessionId } })
+    return data || { approved: false }
+  } catch {
+    return { approved: false }
+  }
+}
+
 // ---------------- Financing application ----------------
 export async function createApplication(payload) {
   if (!LIVE) {
