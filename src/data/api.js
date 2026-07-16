@@ -1,0 +1,194 @@
+// ============================================================
+// AutoRD data-access layer.
+// If Supabase is configured -> live queries.
+// Otherwise -> local demo data (keeps the app fully runnable).
+// ============================================================
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import {
+  vehicles as demoVehicles, banks as demoBanks, financingCase,
+  dealerInventory, dealerLeads, bankApplications, bankStatusMeta,
+} from './demo'
+
+export { fmtRD } from './demo'
+export const LIVE = isSupabaseConfigured
+
+// Map a DB vehicle row (+ joined dealer) to the shape the UI components expect.
+function mapVehicle(r) {
+  const dealer = r.dealer || {}
+  return {
+    id: r.slug,
+    dbId: r.id,
+    make: r.make, model: r.model, year: r.year, trim: r.trim,
+    transmission: r.transmission, fuel: r.fuel, engine: r.engine,
+    mileage: r.mileage, color: r.color, bodyType: r.body_type,
+    price: Number(r.price),
+    condition: r.condition === 'nuevo' ? 'Nuevo' : 'Usado',
+    certified: r.certified,
+    location: r.location, dealer: dealer.name, dealerVerified: dealer.verified,
+    financing: r.financing, tone: r.tone,
+    monthly: Number(r.monthly), downPct: 20, apr: Number(r.apr), termYears: r.term_years,
+    photos: r.photos_count, description: r.description,
+    features: Array.isArray(r.features) ? r.features : [],
+    status: r.status,
+  }
+}
+
+const VEHICLE_SELECT = '*, dealer:dealers(name, verified, slug, initials)'
+
+// ---------------- Vehicles ----------------
+export async function listVehicles({ tab = 'todos' } = {}) {
+  if (!LIVE) {
+    return demoVehicles.filter((v) => {
+      if (tab === 'nuevos') return v.condition === 'Nuevo'
+      if (tab === 'cert') return v.certified
+      if (tab === 'fin') return v.financing
+      return true
+    })
+  }
+  let q = supabase.from('vehicles').select(VEHICLE_SELECT).eq('status', 'publicado')
+  if (tab === 'nuevos') q = q.eq('condition', 'nuevo')
+  if (tab === 'cert') q = q.eq('certified', true)
+  if (tab === 'fin') q = q.eq('financing', true)
+  const { data, error } = await q.order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map(mapVehicle)
+}
+
+export async function getVehicleBySlug(slug) {
+  if (!LIVE) return demoVehicles.find((v) => v.id === slug) || null
+  const { data, error } = await supabase.from('vehicles').select(VEHICLE_SELECT).eq('slug', slug).single()
+  if (error) return null
+  return mapVehicle(data)
+}
+
+export async function listBanks() {
+  if (!LIVE) return demoBanks
+  const { data, error } = await supabase.from('banks').select('*').eq('active', true).order('name')
+  if (error) throw error
+  return (data || []).map((b) => ({ id: b.slug, dbId: b.id, name: b.name, color: b.color, initials: b.initials }))
+}
+
+// ---------------- Financing application ----------------
+export async function createApplication(payload) {
+  if (!LIVE) {
+    return { code: 'AP-DEMO', ...payload }
+  }
+  const { data: userRes } = await supabase.auth.getUser()
+  const uid = userRes?.user?.id
+  const { data: app, error } = await supabase.from('financing_applications').insert({
+    buyer_id: uid,
+    buyer_name: payload.nombre, buyer_phone: payload.telefono, buyer_email: payload.email,
+    vehicle_id: payload.vehicleDbId || null,
+    dealer_id: payload.dealerDbId || null,
+    requested_amount: payload.requestedAmount,
+    down_payment: payload.inicial,
+    term_years: Number(payload.plazo),
+    notify: payload.notify,
+    status: 'enviada',
+    kyc_status: 'aprobado',
+    consent_signed: true,
+    consent_text: payload.consentText,
+    consent_signed_at: new Date().toISOString(),
+  }).select().single()
+  if (error) throw error
+
+  await supabase.from('application_financials').insert({
+    application_id: app.id, income: payload.ingreso, employment_type: payload.empleo,
+  })
+  if (payload.bankDbIds?.length) {
+    await supabase.from('application_banks').insert(
+      payload.bankDbIds.map((bank_id) => ({ application_id: app.id, bank_id })),
+    )
+  }
+  return app
+}
+
+// Customer financing status (latest application for the logged-in buyer)
+export async function getMyFinancing() {
+  if (!LIVE) return financingCase
+  const { data: userRes } = await supabase.auth.getUser()
+  const uid = userRes?.user?.id
+  if (!uid) return null
+  const { data: app } = await supabase
+    .from('financing_applications')
+    .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(*, bank:banks(name, slug, color, initials))')
+    .eq('buyer_id', uid).order('created_at', { ascending: false }).limit(1).single()
+  if (!app) return null
+  return {
+    code: app.code,
+    vehicle: app.vehicle ? mapVehicle(app.vehicle) : null,
+    requestedAmount: Number(app.requested_amount),
+    down: Number(app.down_payment),
+    term: app.term_years,
+    responses: (app.responses || []).map((r) => ({
+      bankId: r.bank?.slug, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
+      apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
+    })),
+    timeline: financingCase.timeline, // derived client-side for now
+  }
+}
+
+// ---------------- Dealer panel ----------------
+export async function getDealerData(dealerDbId) {
+  if (!LIVE) return { inventory: dealerInventory, leads: dealerLeads }
+  const [{ data: inv }, { data: leads }] = await Promise.all([
+    supabase.from('vehicles').select(VEHICLE_SELECT).eq('dealer_id', dealerDbId),
+    supabase.from('financing_applications').select('*, responses:application_banks(status)').eq('dealer_id', dealerDbId),
+  ])
+  return {
+    inventory: (inv || []).map(mapVehicle),
+    leads: (leads || []).map((a) => ({
+      customer: a.buyer_name, vehicle: '', amount: Number(a.requested_amount),
+      kyc: a.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente',
+      bank: (a.responses || [])[0]?.status || 'pending', salesperson: a.salesperson || 'Sin asignar',
+    })),
+  }
+}
+
+// ---------------- Bank panel ----------------
+export async function getBankApplications(bankDbId, filter = 'todas') {
+  if (!LIVE) {
+    return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
+  }
+  let q = supabase.from('application_banks')
+    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type))')
+    .eq('bank_id', bankDbId)
+  const { data, error } = await q.order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map((r) => ({
+    id: r.app?.code, customer: r.app?.buyer_name, cedula: '—',
+    vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
+    dealer: r.app?.dealer?.name, amount: Number(r.app?.requested_amount),
+    down: Number(r.app?.down_payment), term: r.app?.term_years,
+    income: r.app?.financials?.[0]?.income, employment: r.app?.financials?.[0]?.employment_type,
+    kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
+    status: filterFromResponse(r.status), responseId: r.id,
+  }))
+}
+
+export async function submitBankResponse(responseId, body) {
+  if (!LIVE) return { ok: true }
+  const { error } = await supabase.from('application_banks').update({
+    status: body.status, apr: body.apr, term_years: body.term,
+    monthly: body.monthly, down_required: body.down, notes: body.notes,
+    responded_at: new Date().toISOString(),
+  }).eq('id', responseId)
+  if (error) throw error
+  return { ok: true }
+}
+
+// ---------------- helpers ----------------
+function mapBankStatus(s) {
+  return ({ oferta: 'offer', preaprobada: 'offer', en_evaluacion: 'evaluating',
+    pendiente_docs: 'docs', rechazada: 'rejected', pendiente: 'pending' })[s] || 'pending'
+}
+function bankStatusLabel(s) {
+  return ({ oferta: 'Oferta recibida', preaprobada: 'Pre-aprobado', en_evaluacion: 'En evaluación',
+    pendiente_docs: 'Pendiente documentos', rechazada: 'Rechazada', pendiente: 'Pendiente' })[s] || 'Pendiente'
+}
+function filterFromResponse(s) {
+  return ({ pendiente: 'nueva', en_evaluacion: 'evaluando', pendiente_docs: 'docs',
+    preaprobada: 'preaprobada', oferta: 'preaprobada', rechazada: 'rechazada' })[s] || 'nueva'
+}
+
+export { bankStatusMeta }
