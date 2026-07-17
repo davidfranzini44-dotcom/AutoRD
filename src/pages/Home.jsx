@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight, ChevronRight,
   Clock, MonitorSmartphone, Landmark, Smartphone, Check,
-  MonitorSmartphone as Monitor,
+  MonitorSmartphone as Monitor, Calculator, FileCheck, LockKeyhole,
+  IdCard, Store, Headphones, Building2,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
@@ -54,6 +55,29 @@ const BODY_TYPES = [
   { type: 'Convertible', label: 'Convertibles', image: bodyConvertibles },
   { type: 'Wagon', label: 'Familiares', image: bodyStationWagons },
 ]
+const BRAND_LINKS = [
+  { name: 'Toyota', count: 124 },
+  { name: 'Honda', count: 98 },
+  { name: 'Hyundai', count: 86 },
+  { name: 'Kia', count: 74 },
+  { name: 'Nissan', count: 68 },
+  { name: 'BMW', count: 36 },
+  { name: 'Mercedes-Benz', count: 32 },
+  { name: 'Ford', count: 29 },
+]
+const VERIFIED_DEALERS = [
+  { name: 'AutoPlaza RD', location: 'Santo Domingo', inventory: 128, initials: 'AP' },
+  { name: 'Núñez Motors', location: 'Santiago', inventory: 96, initials: 'NM' },
+  { name: 'Capital Auto Gallery', location: 'La Romana', inventory: 75, initials: 'CA' },
+]
+const BANK_RATES = { popular: 9.75, bhd: 9.5, banreservas: 9.95, scotiabank: 10.25 }
+
+const estimateMonthly = (principal, apr, months) => {
+  const rate = apr / 100 / 12
+  if (!principal || !months) return 0
+  if (!rate) return Math.round(principal / months)
+  return Math.round((principal * rate) / (1 - Math.pow(1 + rate, -months)))
+}
 
 export default function Home() {
   const [all, setAll] = useState([])
@@ -66,6 +90,10 @@ export default function Home() {
   const [precioMax, setPrecioMax] = useState('2450000')
   const [ubicacion, setUbicacion] = useState('Santo Domingo')
   const [sort, setSort] = useState('relevancia')
+  const [calcPrice, setCalcPrice] = useState(1250000)
+  const [calcDownPct, setCalcDownPct] = useState(20)
+  const [calcTerm, setCalcTerm] = useState(60)
+  const [calcBank, setCalcBank] = useState('popular')
 
   useEffect(() => {
     let alive = true
@@ -109,6 +137,13 @@ export default function Home() {
     })
     return r
   }, [all, segment, tipo, marca, modelo, ubicacion, precioMax, anioRange, sort])
+
+  const featuredList = list.slice(0, 4)
+  const recentList = all.slice(5, 10)
+  const calcApr = BANK_RATES[calcBank] || BANK_RATES.popular
+  const calcDown = Math.round(calcPrice * (calcDownPct / 100))
+  const calcPrincipal = Math.max(0, calcPrice - calcDown)
+  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -248,7 +283,7 @@ export default function Home() {
             <p>Nuestro proceso 100% digital te conecta con los mejores bancos de la República Dominicana.</p>
           </div>
           <div className="banks-boxes">
-            {BANK_BOXES.map((b) => <span key={b.slug} className="bank-box" title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 34 : 24} /></span>)}
+            {BANK_BOXES.map((b) => <span key={b.slug} className="bank-box" title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 30 : 21} /></span>)}
             <Link to="/como-funciona" className="link-teal">Ver todos los bancos <ChevronRight size={14} /></Link>
           </div>
         </div>
