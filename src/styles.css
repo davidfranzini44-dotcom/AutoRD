@@ -686,6 +686,16 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .brand-logo-img { object-fit: contain; display: block; }
 .brand-tile strong { font-size: 13.5px; line-height: 1.1; text-align: center; }
 .brand-tile span:last-child { color: var(--muted); font-size: 11.5px; }
+
+/* search results page (/buscar) */
+.buscar-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.buscar-brand { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--line); background: #fff; display: flex; align-items: center; justify-content: center; flex: none; box-shadow: var(--shadow-sm); }
+.buscar-filters { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; align-items: center; }
+.buscar-filters .select { flex: 1 1 148px; height: 42px; min-width: 0; }
+.buscar-filters .bf-clear { flex: 0 0 auto; height: 42px; }
+.bf-search { flex: 2 1 240px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; height: 42px; background: #fff; min-width: 0; }
+.bf-search input { border: none; outline: none; flex: 1; font-size: 14px; background: transparent; color: var(--ink); min-width: 0; }
+.bf-search button { background: none; border: none; color: var(--muted); display: flex; padding: 2px; }
 .dealer-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

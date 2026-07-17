@@ -345,21 +345,15 @@ export default function Home() {
           </div>
           <div className="brand-grid">
             {BRAND_LINKS.map((brand) => (
-              <button
+              <Link
                 key={brand.name}
                 className="brand-tile"
-                type="button"
-                onClick={() => {
-                  setMarca(brand.name)
-                  setModelo('')
-                  setSegment('todos')
-                  runSearch()
-                }}
+                to={`/buscar?marca=${encodeURIComponent(brand.name)}`}
               >
                 <BrandLogo make={brand.name} size={40} />
                 <strong>{brand.name}</strong>
                 <span>{brand.count} vehículos</span>
-              </button>
+              </Link>
             ))}
           </div>
         </section>

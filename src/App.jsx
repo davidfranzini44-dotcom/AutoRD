@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import ConsoleLayout from './components/ConsoleLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
+import Buscar from './pages/Buscar'
 import VehicleDetail from './pages/VehicleDetail'
 import Financing from './pages/Financing'
 import MyFinancing from './pages/MyFinancing'
@@ -20,7 +21,7 @@ export default function App() {
       {/* ---------- Buyer marketplace ---------- */}
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/buscar" element={<Home />} />
+        <Route path="/buscar" element={<Buscar />} />
         <Route path="/vehiculo/:id" element={<VehicleDetail />} />
         <Route path="/financiamiento" element={<Financing />} />
         <Route path="/como-funciona" element={<ComoFunciona />} />
