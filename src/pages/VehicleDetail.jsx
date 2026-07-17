@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
-import { estimateMonthly, BANK_RATES } from '../data/finance'
+import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -19,7 +19,7 @@ export default function VehicleDetail() {
   const [attaching, setAttaching] = useState(false)
   const [calcOpen, setCalcOpen] = useState(false)
   const [calcDownPct, setCalcDownPct] = useState(20)
-  const [calcTerm, setCalcTerm] = useState(60) // months
+  const [calcTerm, setCalcTerm] = useState(null) // months; null = use the car's own term
 
   useEffect(() => {
     let alive = true
@@ -67,9 +67,13 @@ export default function VehicleDetail() {
 
   // Inline "ver cálculo de cuota" — monthly payment for this car.
   const calcApr = v.apr || BANK_RATES.popular
+  const defaultTermMonths = (v.termYears || 7) * 12
+  const termMonths = calcTerm ?? defaultTermMonths
   const calcDown = Math.round(v.price * (calcDownPct / 100))
   const calcPrincipal = Math.max(0, v.price - calcDown)
-  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
+  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, termMonths)
+  // Headline "Desde /mes": same amortization as the calculator's defaults, so they match.
+  const desdeMonthly = carDefaultMonthly(v)
 
   return (
     <main className="page">
@@ -149,8 +153,8 @@ export default function VehicleDetail() {
                 <div className="row between center">
                   <div>
                     <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Desde</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(v.monthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
-                    <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · Tasa desde {v.apr}%</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(desdeMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
+                    <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · 20% inicial · Tasa {v.apr}%</div>
                   </div>
                   <div className="est-ic" style={{ color: 'var(--teal-700)' }}><Calculator size={30} /></div>
                 </div>
@@ -192,7 +196,7 @@ export default function VehicleDetail() {
                   </div>
                   <div className="field" style={{ marginTop: 8 }}>
                     <label>Plazo</label>
-                    <select className="select" value={calcTerm} onChange={(e) => setCalcTerm(Number(e.target.value))}>
+                    <select className="select" value={termMonths} onChange={(e) => setCalcTerm(Number(e.target.value))}>
                       <option value={36}>36 meses</option>
                       <option value={48}>48 meses</option>
                       <option value={60}>60 meses</option>

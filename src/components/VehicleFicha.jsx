@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import CarImage from './CarImage'
 import { fmtRD } from '../data/demo'
+import { carDefaultMonthly } from '../data/finance'
 import { isFavorite, toggleFavorite } from '../data/favorites'
 import { useFicha } from '../context/FichaContext'
 
@@ -60,13 +61,13 @@ function FichaShell({ v, close }) {
           <div className="vloc small"><MapPin size={14} /> {v.location}</div>
           <div className="ficha-price">{fmtRD(v.price)}</div>
 
-          {v.monthly ? (
+          {v.price ? (
             <div className="est-card">
               <div className="row between center">
                 <div>
                   <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Desde</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(v.monthly)}<span style={{ fontSize: 13 }}>/mes</span></div>
-                  <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · Tasa desde {v.apr}%</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(carDefaultMonthly(v))}<span style={{ fontSize: 13 }}>/mes</span></div>
+                  <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · 20% inicial · Tasa {v.apr}%</div>
                 </div>
                 <div style={{ color: 'var(--teal-700)' }}><Calculator size={28} /></div>
               </div>

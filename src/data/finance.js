@@ -14,6 +14,15 @@ export function fmtMoneyInput(raw) {
   return 'RD$ ' + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+// Canonical "Desde RD$X/mes" for a vehicle: 20% down over the car's term, amortized
+// with its APR. Used everywhere a car's headline monthly is shown so they agree.
+export function carDefaultMonthly(v) {
+  const price = Number(v?.price || 0)
+  const principal = Math.max(0, price - Math.round(price * 0.20))
+  const months = (Number(v?.termYears) || 7) * 12
+  return estimateMonthly(principal, Number(v?.apr) || BANK_RATES.popular, months)
+}
+
 // Monthly payment for a `principal` financed at `apr`% over `months`.
 export function estimateMonthly(principal, apr, months) {
   const rate = apr / 100 / 12
