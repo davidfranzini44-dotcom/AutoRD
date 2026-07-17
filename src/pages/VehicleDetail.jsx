@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
+import { estimateMonthly, BANK_RATES } from '../data/finance'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -16,6 +17,9 @@ export default function VehicleDetail() {
   const [fav, setFav] = useState(false)
   const [preApp, setPreApp] = useState(null) // open car-agnostic pre-approval, if any
   const [attaching, setAttaching] = useState(false)
+  const [calcOpen, setCalcOpen] = useState(false)
+  const [calcDownPct, setCalcDownPct] = useState(20)
+  const [calcTerm, setCalcTerm] = useState(60) // months
 
   useEffect(() => {
     let alive = true
@@ -60,6 +64,12 @@ export default function VehicleDetail() {
       nav('/mi-financiamiento')
     } catch (_) { setAttaching(false) }
   }
+
+  // Inline "ver cálculo de cuota" — monthly payment for this car.
+  const calcApr = v.apr || BANK_RATES.popular
+  const calcDown = Math.round(v.price * (calcDownPct / 100))
+  const calcPrincipal = Math.max(0, v.price - calcDown)
+  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
 
   return (
     <main className="page">
@@ -166,8 +176,47 @@ export default function VehicleDetail() {
                   <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
                     Solicitar financiamiento
                   </Link>
-                  <button className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Ver cálculo de cuota</button>
+                  <button className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={() => setCalcOpen((o) => !o)}>
+                    {calcOpen ? 'Ocultar cálculo de cuota' : 'Ver cálculo de cuota'}
+                  </button>
                 </>
+              )}
+
+              {calcOpen && (
+                <div className="card" style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', boxShadow: 'none' }}>
+                  <div className="small strong" style={{ marginBottom: 12 }}>Calcula tu cuota</div>
+                  <div className="field">
+                    <label>Inicial · {calcDownPct}% ({fmtRD(calcDown)})</label>
+                    <input className="range" type="range" min="10" max="50" step="5" value={calcDownPct} onChange={(e) => setCalcDownPct(Number(e.target.value))} />
+                    <div className="range-labels"><span>10%</span><span>30%</span><span>50%</span></div>
+                  </div>
+                  <div className="field" style={{ marginTop: 8 }}>
+                    <label>Plazo</label>
+                    <select className="select" value={calcTerm} onChange={(e) => setCalcTerm(Number(e.target.value))}>
+                      <option value={36}>36 meses</option>
+                      <option value={48}>48 meses</option>
+                      <option value={60}>60 meses</option>
+                      <option value={72}>72 meses</option>
+                      <option value={84}>84 meses</option>
+                    </select>
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--line)', marginTop: 12, paddingTop: 12 }}>
+                    <div className="kv"><span className="k">Precio</span><span className="v">{fmtRD(v.price)}</span></div>
+                    <div className="kv"><span className="k">Inicial</span><span className="v">− {fmtRD(calcDown)}</span></div>
+                    <div className="kv"><span className="k">Monto a financiar</span><span className="v">{fmtRD(calcPrincipal)}</span></div>
+                    <div className="kv"><span className="k">Tasa estimada</span><span className="v">{calcApr}%</span></div>
+                  </div>
+                  <div className="est-card" style={{ marginTop: 12 }}>
+                    <div className="row between center">
+                      <div>
+                        <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Cuota estimada</div>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(calcMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
+                      </div>
+                      <div className="est-ic" style={{ color: 'var(--teal-700)' }}><Calculator size={28} /></div>
+                    </div>
+                  </div>
+                  <div className="tiny muted" style={{ marginTop: 8 }}>Estimado. La tasa y la cuota final las define el banco.</div>
+                </div>
               )}
 
               <div className="notice" style={{ marginTop: 14 }}>
