@@ -8,6 +8,10 @@ import { fmtRD } from '../data/demo'
 
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
 const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
+const TYPE_LABELS = {
+  SUV: 'SUVs', Pickup: 'Camionetas', 'Sedán': 'Sedanes', 'Coupé': 'Coupés',
+  Minivan: 'Minivans', Hatchback: 'Hatchbacks', Convertible: 'Convertibles', Wagon: 'Familiares',
+}
 
 export default function Buscar() {
   const [params, setParams] = useSearchParams()
@@ -70,7 +74,7 @@ export default function Buscar() {
 
   const activeCount = [marca, tipo, ubicacion, precioMax, anioMin, q].filter(Boolean).length
   const clearAll = () => setParams({}, { replace: true })
-  const title = marca || (tipo ? `${tipo}` : 'Todos los vehículos')
+  const title = marca || (tipo ? (TYPE_LABELS[tipo] || tipo) : 'Todos los vehículos')
 
   return (
     <main className="page">

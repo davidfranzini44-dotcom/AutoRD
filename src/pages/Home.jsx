@@ -214,20 +214,14 @@ export default function Home() {
           <h2 id="bodytype-title">Explorar por tipo de vehículo</h2>
           <div className="bodytype-row">
             {BODY_TYPES.map((b) => (
-              <button
+              <Link
                 key={b.type}
-                className={`bt-item ${tipo === b.type ? 'active' : ''}`}
-                onClick={() => {
-                  const next = tipo === b.type ? 'todos' : b.type
-                  setTipo(next)
-                  // Browse-by-type shows all of that type: broaden the other filters.
-                  if (next !== 'todos') { setUbicacion(''); setPrecioMax(''); setAnioRange(''); setSegment('todos') }
-                  runSearch()
-                }}
+                className="bt-item"
+                to={`/buscar?tipo=${encodeURIComponent(b.type)}`}
               >
                 <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
                 <span className="bt-label">{b.label}</span>
-              </button>
+              </Link>
             ))}
           </div>
         </section>
