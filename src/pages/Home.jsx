@@ -123,6 +123,14 @@ export default function Home() {
     ? `/financiamiento?ingreso=${incomeNum}&monto=${calcPrice}&plazo=${calcYears}`
     : '/financiamiento'
 
+  // Remember the calculator inputs so the financing flow (from a car, the nav, etc.)
+  // can reuse them and skip questions the customer already answered.
+  useEffect(() => {
+    try {
+      if (incomeNum > 0) sessionStorage.setItem('autord_calc', JSON.stringify({ ingreso: incomeNum, monto: calcPrice, plazo: calcYears }))
+    } catch { /* ignore storage errors */ }
+  }, [incomeNum, calcPrice, calcYears])
+
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
     setAnioRange(''); setPrecioMax(''); setUbicacion('')

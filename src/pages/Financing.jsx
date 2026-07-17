@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -31,18 +31,52 @@ const PREAP_QUESTIONS = [
   { key: 'telefono', label: '¿A qué WhatsApp te enviamos las respuestas?', help: 'Los bancos responderán por esta vía.', placeholder: '809-000-0000', type: 'tel' },
 ]
 
+// Same conversational flow when financing a specific car. Price is known, so we
+// ask for the down payment (inicial) instead of a desired amount.
+const CAR_QUESTIONS = [
+  { key: 'ingreso', param: 'ingreso', label: '¿Cuál es tu ingreso mensual?', help: 'Tu salario aproximado. Sin comprobante por ahora.', placeholder: 'RD$ 85,000', type: 'money' },
+  { key: 'inicial', param: 'inicial', label: '¿Cuánto puedes dar de inicial?', help: 'Pago inicial disponible (opcional).', placeholder: 'RD$ 250,000', type: 'money', optional: true },
+  { key: 'plazo', param: 'plazo', label: '¿A qué plazo quieres pagar?', help: 'El tiempo para pagar tu financiamiento.', type: 'plazo' },
+  { key: 'telefono', label: '¿A qué WhatsApp te enviamos las respuestas?', help: 'Los bancos responderán por esta vía.', placeholder: '809-000-0000', type: 'tel' },
+]
+
+// Persisted homepage-calculator inputs, so any entry into the flow reuses them.
+function readCalcSeed() { try { return JSON.parse(sessionStorage.getItem('autord_calc') || '{}') || {} } catch { return {} } }
+const numStr = (n) => (n != null && n !== '' ? String(n) : '')
+
 export default function Financing() {
   const [params] = useSearchParams()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
-  // Only ask what the calculator didn't already capture (WhatsApp is always asked).
-  const preapQuestions = PREAP_QUESTIONS.filter((q) => !q.param || !params.get(q.param))
   const { profile } = useAuth() || {}
-  const [step, setStep] = useState(0)
-  const [form, setForm] = useState({
-    nombre: '', cedula: '', telefono: '', email: '',
-    ingreso: '', presupuesto: '', inicial: '', plazo: '7',
+
+  // Reuse whatever the customer entered on the homepage calculator (URL params
+  // first, then a saved calc session) so we don't ask for it again.
+  const calcSeed = readCalcSeed()
+  const seed = {
+    ingreso: params.get('ingreso') || numStr(calcSeed.ingreso),
+    monto: params.get('monto') || numStr(calcSeed.monto),
+    plazo: params.get('plazo') || numStr(calcSeed.plazo),
+    inicial: params.get('inicial') || '',
+  }
+  // One-question-at-a-time flow for BOTH pre-approval and a specific car; only ask
+  // what the calculator didn't already capture (WhatsApp is always asked).
+  const questions = (isPreapproval ? PREAP_QUESTIONS : CAR_QUESTIONS).filter((q) => {
+    if (q.key === 'ingreso') return !seed.ingreso
+    if (q.key === 'presupuesto') return !seed.monto
+    if (q.key === 'inicial') return !seed.inicial
+    if (q.key === 'plazo') return !seed.plazo
+    return true
   })
+
+  const [step, setStep] = useState(0)
+  const [form, setForm] = useState(() => ({
+    nombre: '', cedula: '', telefono: '', email: '',
+    ingreso: seed.ingreso ? fmtMoneyInput(seed.ingreso) : '',
+    presupuesto: seed.monto ? fmtMoneyInput(seed.monto) : '',
+    inicial: seed.inicial ? fmtMoneyInput(seed.inicial) : '',
+    plazo: seed.plazo || '7',
+  }))
   const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
   const [session, setSession] = useState(null) // { url, session_id }
   const [consent, setConsent] = useState(false)
@@ -50,6 +84,7 @@ export default function Financing() {
   const [selBanks, setSelBanks] = useState(demoBanks.map((b) => b.id))
   const [notify, setNotify] = useState('ambos')
   const [vehicle, setVehicle] = useState(null)
+  const [preApp, setPreApp] = useState(null) // existing open pre-approval to reuse
   const pollRef = useRef(null)
 
   useEffect(() => () => clearInterval(pollRef.current), [])
@@ -83,20 +118,20 @@ export default function Financing() {
     }))
   }, [profile])
 
-  // Prefill from the homepage calculator so we don't re-ask what they entered.
+  // If the buyer already did a pre-approval (identity + consent done), reuse it
+  // for this car: don't make them verify again, and attach the car to it on submit.
   useEffect(() => {
-    const ing = params.get('ingreso')
-    const monto = params.get('monto')
-    const pl = params.get('plazo')
-    if (!ing && !monto && !pl) return
-    setForm((f) => ({
-      ...f,
-      ingreso: ing ? fmtRD(Number(ing)) : f.ingreso,
-      presupuesto: monto ? fmtRD(Number(monto)) : f.presupuesto,
-      plazo: pl || f.plazo,
-    }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (isPreapproval) return
+    let alive = true
+    getMyFinancing().then((d) => {
+      if (!alive || !d || !d.isPreapproval || d.vehicle) return
+      setPreApp(d)
+      setKyc('ok')
+      setConsent(true)
+      setForm((f) => ({ ...f, inicial: f.inicial || (d.down ? fmtMoneyInput(String(d.down)) : '') }))
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [isPreapproval])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   // Money fields format as the user types: "85000" -> "RD$ 85,000".
@@ -133,19 +168,27 @@ export default function Financing() {
   const submitToBanks = async () => {
     // Map selected bank ids (slugs) to real DB uuids for routing.
     const bankDbIds = selBanks.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
+    // Car flow: amount = price − inicial. Pre-approval: the (optional) desired budget.
+    const requestedAmount = vehicle
+      ? vehicle.price - (parseMoney(form.inicial) || 0)
+      : parseMoney(form.presupuesto)
     try {
-      await createApplication({
-        ...form,
-        consentText: CONSENT,
-        notify,
-        bankDbIds,
-        vehicleDbId: vehicle?.dbId || null,
-        dealerDbId: vehicle?.dealerDbId || null,
-        // Car flow: amount = price − inicial. Pre-approval: the (optional) desired budget.
-        requestedAmount: vehicle
-          ? vehicle.price - (parseMoney(form.inicial) || 0)
-          : parseMoney(form.presupuesto),
-      })
+      if (preApp && vehicle) {
+        // Reuse the existing pre-approval: attach this car, no new KYC/consent.
+        await attachVehicleToApplication(preApp.id, {
+          vehicleDbId: vehicle.dbId, dealerDbId: vehicle.dealerDbId, requestedAmount,
+        })
+      } else {
+        await createApplication({
+          ...form,
+          consentText: CONSENT,
+          notify,
+          bankDbIds,
+          vehicleDbId: vehicle?.dbId || null,
+          dealerDbId: vehicle?.dealerDbId || null,
+          requestedAmount,
+        })
+      }
     } catch (_) { /* demo/offline */ }
     next()
   }
@@ -187,6 +230,12 @@ export default function Financing() {
           </div>
         )}
 
+        {preApp && vehicle && (
+          <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
+            <ShieldCheck size={16} /><span>Estás usando tu pre-aprobación: ya verificaste tu identidad y firmaste el consentimiento. Solo confirma tus datos y vinculamos este vehículo.</span>
+          </div>
+        )}
+
         <div className="card card-pad" style={{ marginBottom: 18 }}>
           <div className="stepper">
             {STEPS.map((s, i) => {
@@ -205,17 +254,15 @@ export default function Financing() {
         <div className="card card-pad">
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
-            {step === 0 && (isPreapproval
-              ? <PreapDatos form={form} set={set} setMoney={setMoney} questions={preapQuestions} onComplete={next} />
-              : <StepDatos form={form} set={set} setMoney={setMoney} />)}
-            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
-            {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
-            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} />}
+            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} />}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} />}
+            {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
+            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
           </div>
 
-          {/* Pre-approval step 0 has its own in-card controls (one question at a time). */}
-          {step < 4 && !(step === 0 && isPreapproval) && (
+          {/* Step 0 (Datos) has its own in-card controls (one question at a time). */}
+          {step > 0 && step < 4 && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
               <button className="btn btn-outline" onClick={back} disabled={step === 0}><ChevronLeft size={17} /> Atrás</button>
               <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} selBanks={selBanks} />
@@ -237,7 +284,7 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 /* ---------------- Step 1: Datos ---------------- */
 /* Pre-approval Datos — one question at a time with smooth transitions.
    Name + cédula come from the Didit KYC step, so we never ask them here. */
-function PreapDatos({ form, set, setMoney, questions, onComplete }) {
+function PreapDatos({ form, set, setMoney, questions, onComplete, reused }) {
   const [i, setI] = useState(0)
   const idx = Math.min(i, questions.length - 1)
   const q = questions[idx]
@@ -279,44 +326,26 @@ function PreapDatos({ form, set, setMoney, questions, onComplete }) {
       <div className="preap-actions">
         {idx > 0
           ? <button className="btn btn-outline" onClick={() => go(-1)}><ChevronLeft size={17} /> Atrás</button>
-          : <span className="tiny muted"><ShieldCheck size={13} style={{ verticalAlign: -2 }} /> Tu identidad se verifica en el siguiente paso</span>}
+          : <span className="tiny muted"><ShieldCheck size={13} style={{ verticalAlign: -2 }} /> {reused ? 'Identidad ya verificada en tu pre-aprobación' : 'Tu identidad se verifica en el siguiente paso'}</span>}
         <button className="btn btn-primary" onClick={advance} disabled={!ready}>
-          {isLast ? 'Continuar a verificación' : 'Continuar'} <ChevronRight size={17} />
+          {isLast ? (reused ? 'Continuar' : 'Continuar a verificación') : 'Continuar'} <ChevronRight size={17} />
         </button>
       </div>
     </div>
   )
 }
 
-function StepDatos({ form, set, setMoney }) {
-  return (
-    <>
-      <StepHead icon={User} title="Datos básicos" sub="Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía." />
-      <div className="grid grid-2" style={{ gap: 14 }}>
-        <F label="Nombre completo"><input className="input" value={form.nombre} onChange={set('nombre')} placeholder="Nombre y apellido" /></F>
-        <F label="Cédula" help="Formato 000-0000000-0"><input className="input" value={form.cedula} onChange={set('cedula')} placeholder="402-0000000-0" /></F>
-        <F label="Teléfono"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
-        <F label="Email"><input className="input" value={form.email} onChange={set('email')} placeholder="nombre@correo.com" /></F>
-        <F label="Ingreso aproximado (mensual)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={setMoney('ingreso')} placeholder="RD$ 85,000" /></F>
-        <F label="Inicial disponible"><input className="input" value={form.inicial} onChange={setMoney('inicial')} placeholder="RD$ 250,000" /></F>
-        <F label="Plazo preferido">
-          <select className="select" value={form.plazo} onChange={set('plazo')}>
-            <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
-          </select>
-        </F>
-      </div>
-      <div className="notice" style={{ marginTop: 16 }}>
-        <Info size={16} /><span>Solo se solicitarán documentos financieros adicionales si un banco los requiere durante su evaluación.</span>
-      </div>
-    </>
-  )
-}
-
 /* ---------------- Step 2: Identidad (Didit) ---------------- */
-function StepIdentidad({ state, run, recheck, session }) {
+function StepIdentidad({ state, run, recheck, session, reused }) {
   return (
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
+
+      {reused && (
+        <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
+          <ShieldCheck size={16} /><span>Ya verificaste tu identidad en tu pre-aprobación — no necesitas repetirla.</span>
+        </div>
+      )}
 
       <div className="row center gap-8" style={{ marginBottom: 16 }}>
         <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación provista por Didit</span>
@@ -376,10 +405,15 @@ function VRow({ icon: Icon, title, sub }) {
 }
 
 /* ---------------- Step 3: Consent ---------------- */
-function StepConsent({ consent, setConsent }) {
+function StepConsent({ consent, setConsent, reused }) {
   return (
     <>
       <StepHead icon={FileSignature} title="Consentimiento de consulta crediticia" sub="Autorizas a los bancos seleccionados a consultar tu historial de crédito para evaluar esta solicitud." />
+      {reused && (
+        <div className="notice" style={{ marginBottom: 12, borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
+          <ShieldCheck size={16} /><span>Ya firmaste este consentimiento en tu pre-aprobación. Puedes continuar.</span>
+        </div>
+      )}
       <div className="consent-box">{CONSENT}</div>
       <label className="check-row">
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -400,10 +434,15 @@ function StepConsent({ consent, setConsent }) {
 }
 
 /* ---------------- Step 4: Enviar ---------------- */
-function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPreapproval }) {
+function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPreapproval, reused }) {
   return (
     <>
-      <StepHead icon={Send} title={isPreapproval ? 'Enviar pre-aprobación a bancos' : 'Enviar solicitud a bancos'} sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
+      <StepHead icon={Send} title={reused ? 'Vincular vehículo a tu pre-aprobación' : (isPreapproval ? 'Enviar pre-aprobación a bancos' : 'Enviar solicitud a bancos')} sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
+      {reused && (
+        <div className="notice" style={{ marginBottom: 14 }}>
+          <Info size={16} /><span>Tu pre-aprobación ya fue enviada a estos bancos. Vincularemos este vehículo a esa solicitud para que finalicen la oferta.</span>
+        </div>
+      )}
       <div className="small strong" style={{ marginBottom: 10 }}>Bancos seleccionados</div>
       <div className="grid grid-2" style={{ gap: 10 }}>
         {banks.map((b) => (
@@ -477,7 +516,4 @@ function StepHead({ icon: Icon, title, sub }) {
       <p className="muted small" style={{ marginTop: 8 }}>{sub}</p>
     </div>
   )
-}
-function F({ label, help, children }) {
-  return <div className="field"><label>{label}</label>{children}{help && <span className="help">{help}</span>}</div>
 }
