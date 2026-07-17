@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
-  MonitorSmartphone as Monitor, FileCheck,
+  MonitorSmartphone as Monitor, Calculator, FileCheck,
   IdCard, Store, MapPin,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
@@ -14,6 +14,7 @@ import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
+import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', shortLabel: 'Todos', icon: Car },
@@ -78,6 +79,11 @@ export default function Home() {
   const [precioMax, setPrecioMax] = useState('2450000')
   const [ubicacion, setUbicacion] = useState('Santo Domingo')
   const [sort, setSort] = useState('relevancia')
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [calcPrice, setCalcPrice] = useState(1250000)
+  const [calcDownPct, setCalcDownPct] = useState(20)
+  const [calcTerm, setCalcTerm] = useState(60)
+  const [calcIncome, setCalcIncome] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -124,13 +130,39 @@ export default function Home() {
 
   const featuredList = list.slice(0, 5)
   const recentList = all.slice(5, 10)
-  const preapLink = '/financiamiento'
+  const calcApr = BANK_RATES.popular
+  const calcDown = Math.round(calcPrice * (calcDownPct / 100))
+  const calcPrincipal = Math.max(0, calcPrice - calcDown)
+  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
+  const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
+  const afford = affordablePrice({ income: incomeNum, down: calcDown, apr: calcApr, months: calcTerm })
+  const approvedEstimate = afford.price || 0
+  const approvedSearchLimit = approvedEstimate > 0
+    ? Math.ceil((approvedEstimate * 1.1) / 50000) * 50000
+    : 0
+  const preapprovalAmount = approvedEstimate || calcPrice
+  const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
+  const preapLink = incomeNum > 0
+    ? `/financiamiento?ingreso=${incomeNum}&monto=${preapprovalAmount}&plazo=${calcYears}`
+    : '/financiamiento'
+
+  useEffect(() => {
+    try {
+      if (incomeNum > 0) sessionStorage.setItem('autord_calc', JSON.stringify({ ingreso: incomeNum, monto: preapprovalAmount, plazo: calcYears }))
+    } catch { /* ignore storage errors */ }
+  }, [incomeNum, preapprovalAmount, calcYears])
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
     setAnioRange(''); setPrecioMax(''); setUbicacion('')
   }
   const runSearch = () => document.getElementById('vehiculos-destacados')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const toggleCalculator = () => {
+    setShowCalculator((open) => !open)
+    if (!showCalculator) window.setTimeout(() => {
+      document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 40)
+  }
 
   return (
     <main className="page">
@@ -228,11 +260,96 @@ export default function Home() {
             </div>
 
             <div className="finance-eligibility-actions">
-              <Link to={preapLink} className="btn btn-primary">Verificar elegibilidad</Link>
-              <Link to="/como-funciona" className="btn btn-outline">Cómo funciona</Link>
+              <Link to={preapLink} className={`btn btn-primary eligibility-cta ${approvedEstimate > 0 ? 'has-estimate' : ''}`}>
+                {approvedEstimate > 0 ? (
+                  <>
+                    <span>Solicitar pre-aprobación</span>
+                    <strong>{fmtRD(approvedEstimate)}</strong>
+                  </>
+                ) : 'Verificar elegibilidad'}
+              </Link>
+              <button
+                type="button"
+                className={`btn btn-outline calc-toggle ${showCalculator ? 'active' : ''}`}
+                onClick={toggleCalculator}
+                aria-expanded={showCalculator}
+                aria-controls="calculadora-cuotas"
+              >
+                <Calculator size={16} /> {showCalculator ? 'Ocultar' : 'Calculadora'}
+              </button>
             </div>
           </aside>
         </section>
+
+        {showCalculator && (
+          <section className="inline-finance-calculator" id="calculadora-cuotas" aria-label="Calculadora de cuotas">
+            <div className="inline-calc-head">
+              <div>
+                <span className="section-kicker"><Calculator size={14} /> Calculadora</span>
+                <h2>Calcula tu cuota estimada</h2>
+                <p>Ajusta el precio, inicial y plazo para tener una referencia antes de pedir ofertas reales.</p>
+              </div>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowCalculator(false)}>Cerrar</button>
+            </div>
+
+            <div className="inline-calc-grid">
+              <div className="inline-calc-controls">
+                <div className="calc-field">
+                  <label>Precio del vehículo</label>
+                  <input className="input" type="text" value={fmtRD(calcPrice)} readOnly />
+                  <input className="range" type="range" min="200000" max="5000000" step="50000" value={calcPrice} onChange={(e) => setCalcPrice(Number(e.target.value))} />
+                  <div className="range-labels"><span>RD$ 200,000</span><span>RD$ 5,000,000</span></div>
+                </div>
+
+                <div className="calc-field">
+                  <label>Inicial</label>
+                  <input className="input" type="text" value={`${calcDownPct}% (${fmtRD(calcDown)})`} readOnly />
+                  <input className="range" type="range" min="10" max="50" step="5" value={calcDownPct} onChange={(e) => setCalcDownPct(Number(e.target.value))} />
+                  <div className="range-labels"><span>10%</span><span>25%</span><span>50%</span></div>
+                </div>
+
+                <div className="calc-field">
+                  <label>Plazo</label>
+                  <select className="select" value={calcTerm} onChange={(e) => setCalcTerm(Number(e.target.value))}>
+                    <option value={36}>36 meses</option>
+                    <option value={48}>48 meses</option>
+                    <option value={60}>60 meses</option>
+                    <option value={72}>72 meses</option>
+                    <option value={84}>84 meses</option>
+                  </select>
+                </div>
+
+                <div className="calc-field">
+                  <label>Ingreso mensual opcional</label>
+                  <input className="input" type="text" inputMode="numeric" value={calcIncome} onChange={(e) => setCalcIncome(fmtMoneyInput(e.target.value))} placeholder="RD$ 85,000" />
+                </div>
+              </div>
+
+              <aside className="inline-calc-result">
+                <span>Cuota estimada</span>
+                <strong>{fmtRD(calcMonthly)}<small>/mes</small></strong>
+                <p>Tasa referencial desde {calcApr.toFixed(2)}%. El banco confirma condiciones finales.</p>
+                <div className="inline-calc-breakdown">
+                  <div><span>Monto a financiar</span><b>{fmtRD(calcPrincipal)}</b></div>
+                  <div><span>Inicial</span><b>{fmtRD(calcDown)}</b></div>
+                  <div><span>Plazo</span><b>{calcTerm} meses</b></div>
+                  {approvedEstimate > 0 && <div><span>Estimado aprobado</span><b>{fmtRD(approvedEstimate)}</b></div>}
+                  {approvedSearchLimit > 0 && <div><span>Rango sugerido (+10%)</span><b>{fmtRD(approvedSearchLimit)}</b></div>}
+                </div>
+                <div className="inline-calc-actions">
+                  <Link to={preapLink} className="btn btn-primary">
+                    {approvedEstimate > 0 ? `Solicitar pre-aprobación por ${fmtRD(approvedEstimate)}` : 'Solicitar pre-aprobación'}
+                  </Link>
+                  {approvedSearchLimit > 0 && (
+                    <Link to={`/buscar?precioMax=${approvedSearchLimit}`} className="btn btn-outline">
+                      Ver vehículos hasta {fmtRD(approvedSearchLimit)}
+                    </Link>
+                  )}
+                </div>
+              </aside>
+            </div>
+          </section>
+        )}
 
         <section className="home-trust-strip" aria-label="Proceso seguro de financiamiento">
           {HOME_TRUST_STEPS.map((step) => {
@@ -249,23 +366,10 @@ export default function Home() {
           })}
         </section>
 
-        {/* ---------------- Results row ---------------- */}
-        <div className="results-strip">
-          <span>{loading ? 'Cargando inventario…' : <><strong>{list.length.toLocaleString('es-DO')}</strong> vehículos disponibles</>}</span>
-          <label className="results-sort">Ordenar por:
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="relevancia">Más relevantes</option>
-              <option value="menor">Menor precio</option>
-              <option value="mayor">Mayor precio</option>
-              <option value="nuevo">Año más reciente</option>
-            </select>
-          </label>
-        </div>
-
         <section className="featured-panel" id="vehiculos-destacados">
           <div className="section-title">
             <h2>Vehículos destacados</h2>
-            <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+            <Link to="/buscar" className="link-teal">Ver todos los vehículos <ArrowRight size={15} /></Link>
           </div>
 
           {loading ? (
