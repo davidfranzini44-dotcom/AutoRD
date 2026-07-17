@@ -9,12 +9,14 @@ import { fmtRD } from '../data/demo'
 import { useFicha } from '../context/FichaContext'
 
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
+const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
 
 export default function Dealers() {
   const [dealers, setDealers] = useState([])
   const [loading, setLoading] = useState(true)
   const [tipo, setTipo] = useState('')
   const [precioMax, setPrecioMax] = useState('')
+  const [anioMin, setAnioMin] = useState('')
   const [selId, setSelId] = useState(null)
   const { open } = useFicha()
 
@@ -27,15 +29,18 @@ export default function Dealers() {
     return () => { alive = false }
   }, [])
 
-  const hasFilter = !!(tipo || precioMax)
+  const hasFilter = !!(tipo || precioMax || anioMin)
   const filtered = useMemo(() => {
     return dealers.map((d) => ({
       ...d,
-      matches: d.vehicles.filter((v) => (!tipo || v.bodyType === tipo) && (!precioMax || v.price <= Number(precioMax))),
+      matches: d.vehicles.filter((v) =>
+        (!tipo || v.bodyType === tipo) &&
+        (!precioMax || v.price <= Number(precioMax)) &&
+        (!anioMin || v.year >= Number(anioMin))),
     })).filter((d) => (hasFilter ? d.matches.length > 0 : true))
-  }, [dealers, tipo, precioMax, hasFilter])
+  }, [dealers, tipo, precioMax, anioMin, hasFilter])
 
-  const clear = () => { setTipo(''); setPrecioMax('') }
+  const clear = () => { setTipo(''); setPrecioMax(''); setAnioMin('') }
 
   return (
     <main className="page">
@@ -63,9 +68,13 @@ export default function Dealers() {
         </div>
         <div className="row center gap-8" style={{ marginBottom: 16 }}>
           <SlidersHorizontal size={16} className="muted" />
-          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 210, height: 38 }}>
+          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 200, height: 38 }}>
             <option value="">Cualquier precio</option>
             {PRICE_OPTIONS.map((p) => <option key={p} value={p}>Hasta {fmtRD(p)}</option>)}
+          </select>
+          <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)} style={{ maxWidth: 150, height: 38 }}>
+            <option value="">Cualquier año</option>
+            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>Desde {y}</option>)}
           </select>
           {hasFilter && <button className="btn btn-outline btn-sm" onClick={clear}>Limpiar</button>}
         </div>
