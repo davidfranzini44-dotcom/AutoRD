@@ -45,13 +45,13 @@ const BANK_BOXES = [
 ]
 const BODY_TYPES = [
   { type: 'SUV', label: 'SUVs', image: bodySuvs },
-  { type: 'Pickup', label: 'Trucks', image: bodyTrucks },
-  { type: 'Sedán', label: 'Sedans', image: bodySedans },
-  { type: 'Coupé', label: 'Coupes', image: bodyCoupes },
+  { type: 'Pickup', label: 'Camionetas', image: bodyTrucks },
+  { type: 'Sedán', label: 'Sedanes', image: bodySedans },
+  { type: 'Coupé', label: 'Coupés', image: bodyCoupes },
   { type: 'Minivan', label: 'Minivans', image: bodyMinivans },
   { type: 'Hatchback', label: 'Hatchbacks', image: bodyHatchbacks },
   { type: 'Convertible', label: 'Convertibles', image: bodyConvertibles },
-  { type: 'Wagon', label: 'Station wagons', image: bodyStationWagons },
+  { type: 'Wagon', label: 'Familiares', image: bodyStationWagons },
 ]
 
 export default function Home() {
@@ -172,9 +172,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ---------------- Browse by body type ---------------- */}
+        {/* ---------------- Explorar por tipo de vehículo ---------------- */}
         <section className="bodytype-section" aria-labelledby="bodytype-title">
-          <h2 id="bodytype-title">Browse by body type</h2>
+          <h2 id="bodytype-title">Explorar por tipo de vehículo</h2>
           <div className="bodytype-row">
             {BODY_TYPES.map((b) => (
               <button
