@@ -1193,7 +1193,7 @@ select.preap-input { padding-right: 16px; }
 }
 @keyframes fichaSlideX { from { transform: translateX(100%); } to { transform: none; } }
 .ficha-photo { position: relative; flex: none; height: 220px; background: var(--surface-2); }
-.ficha-photo .vphoto { height: 100%; }
+.ficha-photo .vphoto { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
 .ficha-close {
   position: absolute; top: 12px; right: 12px;
   width: 34px; height: 34px; border-radius: 50%;
