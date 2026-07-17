@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
-  MonitorSmartphone as Monitor, Calculator, FileCheck, LockKeyhole,
+  MonitorSmartphone as Monitor, Calculator, FileCheck,
   IdCard, Store, MapPin,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
@@ -13,7 +13,7 @@ import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
-import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
+import { BANK_RATES, affordablePrice, fmtMoneyInput } from '../data/finance'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', icon: Car },
@@ -49,6 +49,16 @@ const VERIFIED_DEALERS = [
   { name: 'Núñez Motors', location: 'Santiago', inventory: 96, initials: 'NM' },
   { name: 'Capital Auto Gallery', location: 'La Romana', inventory: 75, initials: 'CA' },
 ]
+const FINANCE_CONFIDENCE = [
+  { icon: ShieldCheck, text: 'Sin impactar tu crédito' },
+  { icon: FileCheck, text: '100% confidencial' },
+  { icon: Landmark, text: '+10 bancos te responden' },
+]
+const HOME_TRUST_STEPS = [
+  { icon: IdCard, title: 'KYC verificado', text: 'Tu cédula y prueba de vida protegidas desde el inicio.' },
+  { icon: FileCheck, title: 'Autorización crediticia online', text: 'Das permiso al banco para evaluar tu solicitud sin papeleo.' },
+  { icon: Landmark, title: 'Respuesta de bancos en minutos', text: 'Recibe opciones reales para avanzar con el vehículo elegido.' },
+]
 export default function Home() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -60,9 +70,6 @@ export default function Home() {
   const [precioMax, setPrecioMax] = useState('2450000')
   const [ubicacion, setUbicacion] = useState('Santo Domingo')
   const [sort, setSort] = useState('relevancia')
-  const [calcPrice, setCalcPrice] = useState(1250000)
-  const [calcDownPct, setCalcDownPct] = useState(20)
-  const [calcTerm, setCalcTerm] = useState(60)
   const [calcIncome, setCalcIncome] = useState('')
 
   useEffect(() => {
@@ -108,28 +115,27 @@ export default function Home() {
     return r
   }, [all, segment, tipo, marca, modelo, ubicacion, precioMax, anioRange, sort])
 
-  const featuredList = list.slice(0, 4)
+  const featuredList = list.slice(0, 5)
   const recentList = all.slice(5, 10)
   const calcApr = BANK_RATES.popular
-  const calcDown = Math.round(calcPrice * (calcDownPct / 100))
-  const calcPrincipal = Math.max(0, calcPrice - calcDown)
-  const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
   const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
   // Salary-based affordability: monthly income (≈30% DTI) -> max financeable price.
+  const calcTerm = 60
   const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
+  const financeBudget = afford.price > 0 ? afford.price : 1250000
   // Carry what they entered here into the pre-approval so we don't re-ask it.
   const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
   const preapLink = incomeNum > 0
-    ? `/financiamiento?ingreso=${incomeNum}&monto=${calcPrice}&plazo=${calcYears}`
+    ? `/financiamiento?ingreso=${incomeNum}&monto=${financeBudget}&plazo=${calcYears}`
     : '/financiamiento'
 
   // Remember the calculator inputs so the financing flow (from a car, the nav, etc.)
   // can reuse them and skip questions the customer already answered.
   useEffect(() => {
     try {
-      if (incomeNum > 0) sessionStorage.setItem('autord_calc', JSON.stringify({ ingreso: incomeNum, monto: calcPrice, plazo: calcYears }))
+      if (incomeNum > 0) sessionStorage.setItem('autord_calc', JSON.stringify({ ingreso: incomeNum, monto: financeBudget, plazo: calcYears }))
     } catch { /* ignore storage errors */ }
-  }, [incomeNum, calcPrice, calcYears])
+  }, [incomeNum, financeBudget, calcYears])
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -194,107 +200,80 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ---------------- Explorar por tipo de vehículo ---------------- */}
-        <section className="bodytype-section" aria-labelledby="bodytype-title">
-          <h2 id="bodytype-title">Explorar por tipo de vehículo</h2>
-          <div className="bodytype-row">
-            {BODY_TYPES.map((b) => (
-              <Link
-                key={b.type}
-                className="bt-item"
-                to={`/buscar?tipo=${encodeURIComponent(b.type)}`}
-              >
-                <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
-                <span className="bt-label">{b.label}</span>
-              </Link>
-            ))}
+        {/* ---------------- Discovery + financing ---------------- */}
+        <section className="home-discovery-row" aria-label="Explorar vehículos y financiamiento">
+          <div className="bodytype-section bodytype-section--showcase" aria-labelledby="bodytype-title">
+            <div className="section-title compact-title">
+              <h2 id="bodytype-title">Explorar por tipo de vehículo</h2>
+              <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+            </div>
+            <div className="bodytype-row bodytype-row--showcase">
+              {BODY_TYPES.slice(0, 6).map((b) => (
+                <Link
+                  key={b.type}
+                  className="bt-item"
+                  to={`/buscar?tipo=${encodeURIComponent(b.type)}`}
+                >
+                  <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
+                  <span className="bt-label">{b.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
-        </section>
 
-        {/* ---------------- Financing calculator ---------------- */}
-        <section className="finance-calculator">
-          <div className="finance-copy">
+          <aside className="finance-eligibility-card">
             <span className="section-kicker"><Calculator size={14} /> Financiamiento</span>
-            <h2>Calcula tu cuota antes de aplicar</h2>
-            <p>Simula tu financiamiento y recibe ofertas de bancos aliados sin salir de AutoRD.</p>
+            <h2>¿Cuánto puedes financiar?</h2>
+            <p>Verifica tu elegibilidad con KYC y autorización crediticia para que los bancos respondan rápido.</p>
 
-            <div className="calc-grid">
-              <div className="calc-field">
-                <label>Precio del vehículo</label>
-                <input className="input" type="text" value={fmtRD(calcPrice)} readOnly />
-                <input className="range" type="range" min="200000" max="5000000" step="50000" value={calcPrice} onChange={(e) => setCalcPrice(Number(e.target.value))} />
-                <div className="range-labels"><span>RD$ 200,000</span><span>RD$ 5,000,000</span></div>
-              </div>
+            <label className="eligibility-input">
+              <span>Ingreso mensual</span>
+              <input
+                className="input"
+                type="text"
+                inputMode="numeric"
+                value={calcIncome}
+                onChange={(e) => setCalcIncome(fmtMoneyInput(e.target.value))}
+                placeholder="RD$ 85,000"
+              />
+            </label>
 
-              <div className="calc-field">
-                <label>Inicial</label>
-                <input className="input" type="text" value={`${calcDownPct}% (${fmtRD(calcDown)})`} readOnly />
-                <input className="range" type="range" min="10" max="50" step="5" value={calcDownPct} onChange={(e) => setCalcDownPct(Number(e.target.value))} />
-                <div className="range-labels"><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span></div>
-              </div>
-
-              <div className="calc-field">
-                <label>Plazo</label>
-                <select className="select" value={calcTerm} onChange={(e) => setCalcTerm(Number(e.target.value))}>
-                  <option value={36}>36 meses</option>
-                  <option value={48}>48 meses</option>
-                  <option value={60}>60 meses</option>
-                  <option value={72}>72 meses</option>
-                  <option value={84}>84 meses</option>
-                </select>
-              </div>
-
-              <div className="calc-field">
-                <label>Tu ingreso mensual (salario)</label>
-                <input className="input" type="text" inputMode="numeric" value={calcIncome} onChange={(e) => setCalcIncome(fmtMoneyInput(e.target.value))} placeholder="RD$ 85,000" />
-                <div className="range-labels"><span>Para estimar cuánto puedes financiar</span></div>
-              </div>
+            <div className="eligibility-result">
+              <span>Rango estimado</span>
+              <strong>{incomeNum > 0 ? fmtRD(financeBudget) : 'Ingresa tu salario'}</strong>
             </div>
 
-            <div className="calc-note">
-              <FileCheck size={16} />
-              <span>Estos valores son estimados y pueden variar según el perfil y la entidad financiera.</span>
+            <div className="finance-eligibility-pills">
+              {FINANCE_CONFIDENCE.map((item) => {
+                const Icon = item.icon
+                return <span key={item.text}><Icon size={14} /> {item.text}</span>
+              })}
             </div>
-          </div>
 
-          <aside className="payment-card">
-            <div className="payment-label">Cuota estimada</div>
-            <div className="payment-amount">{fmtRD(calcMonthly)}<span>/mes</span></div>
-            <div className="payment-rate">Tasa referencial desde {calcApr.toFixed(2)}%</div>
-            <div className="payment-breakdown">
-              <div><span>Precio del vehículo</span><strong>{fmtRD(calcPrice)}</strong></div>
-              <div><span>Inicial ({calcDownPct}%)</span><strong>- {fmtRD(calcDown)}</strong></div>
-              <div><span>Monto a financiar</span><strong>{fmtRD(calcPrincipal)}</strong></div>
-              <div><span>Plazo</span><strong>{calcTerm} meses</strong></div>
-              <div><span>Cuota estimada</span><strong>{fmtRD(calcMonthly)}/mes</strong></div>
-            </div>
-            <div style={{ borderTop: '1px solid var(--line)', margin: '14px 0', paddingTop: 14 }}>
-              <div className="payment-label" style={{ marginBottom: 2 }}>Con tu salario podrías financiar hasta</div>
-              {afford.price > 0 ? (
-                <>
-                  <div className="payment-amount" style={{ fontSize: 24 }}>{fmtRD(afford.price)}</div>
-                  <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
-                </>
+            <div className="finance-eligibility-actions">
+              <Link to={preapLink} className="btn btn-primary">Verificar elegibilidad</Link>
+              {incomeNum > 0 ? (
+                <Link to={`/buscar?precioMax=${financeBudget}`} className="btn btn-outline">Ver vehículos</Link>
               ) : (
-                <div className="small" style={{ color: 'var(--muted)', marginTop: 4 }}>Ingresa tu salario mensual arriba para calcularlo.</div>
+                <Link to="/como-funciona" className="btn btn-outline">Cómo funciona</Link>
               )}
             </div>
-            <Link to={preapLink} className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
           </aside>
+        </section>
 
-          <div className="finance-proof">
-            <ProofItem icon={IdCard} title="KYC con cédula" text="Validación de identidad y prueba de vida." />
-            <ProofItem icon={FileCheck} title="Autorización crediticia" text="Consentimiento para que el banco consulte crédito." />
-            <ProofItem icon={Landmark} title="Banco responde" text="El banco evalúa tu solicitud y te responde." />
-          </div>
-
-          <div className="finance-safe-note">
-            <span><LockKeyhole size={24} /></span>
-            <div>
-              <strong>Tus datos están protegidos</strong>
-              <p>Utilizamos estándares de seguridad y privacidad para proteger tu información.</p>
-            </div>
-          </div>
+        <section className="home-trust-strip" aria-label="Proceso seguro de financiamiento">
+          {HOME_TRUST_STEPS.map((step) => {
+            const Icon = step.icon
+            return (
+              <article className="home-trust-item" key={step.title}>
+                <span><Icon size={19} /></span>
+                <div>
+                  <strong>{step.title}</strong>
+                  <p>{step.text}</p>
+                </div>
+              </article>
+            )
+          })}
         </section>
 
         {/* ---------------- Results row ---------------- */}
@@ -317,11 +296,11 @@ export default function Home() {
           </div>
 
           {loading ? (
-            <div className="grid grid-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="vcard" style={{ height: 320, background: 'var(--surface-2)' }} />)}</div>
+            <div className="featured-home-grid">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="vcard" style={{ height: 320, background: 'var(--surface-2)' }} />)}</div>
           ) : list.length === 0 ? (
             <div className="card card-pad muted" style={{ textAlign: 'center', boxShadow: 'none' }}>Sin resultados. <button className="link-teal" onClick={resetFilters}>Limpiar filtros</button></div>
           ) : (
-            <div className="grid grid-4">{featuredList.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
+            <div className="featured-home-grid">{featuredList.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
           )}
         </section>
 
@@ -407,18 +386,6 @@ function SearchSelect({ label, value, onChange, children }) {
     <div className="field">
       <label>{label}</label>
       <select className="select" value={value} onChange={onChange}>{children}</select>
-    </div>
-  )
-}
-
-function ProofItem({ icon: Icon, title, text }) {
-  return (
-    <div className="proof-item">
-      <span><Icon size={20} /></span>
-      <div>
-        <strong>{title}</strong>
-        <p>{text}</p>
-      </div>
     </div>
   )
 }

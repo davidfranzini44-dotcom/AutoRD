@@ -49,6 +49,7 @@ export default function Financing() {
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
   const { profile } = useAuth() || {}
+  const [editAll, setEditAll] = useState(false)
 
   // Reuse whatever the customer entered on the homepage calculator (URL params
   // first, then a saved calc session) so we don't ask for it again.
@@ -59,15 +60,17 @@ export default function Financing() {
     plazo: params.get('plazo') || numStr(calcSeed.plazo),
     inicial: params.get('inicial') || '',
   }
-  // One-question-at-a-time flow for BOTH pre-approval and a specific car; only ask
-  // what the calculator didn't already capture (WhatsApp is always asked).
-  const questions = (isPreapproval ? PREAP_QUESTIONS : CAR_QUESTIONS).filter((q) => {
-    if (q.key === 'ingreso') return !seed.ingreso
-    if (q.key === 'presupuesto') return !seed.monto
-    if (q.key === 'inicial') return !seed.inicial
-    if (q.key === 'plazo') return !seed.plazo
-    return true
-  })
+  // One-question-at-a-time flow for BOTH pre-approval and a specific car. Questions
+  // the calculator already answered are skipped (but shown in a recap the customer
+  // can review + edit) — WhatsApp is always asked.
+  const seededByCalc = (q) => (
+    (q.key === 'ingreso' && seed.ingreso) ||
+    (q.key === 'presupuesto' && seed.monto) ||
+    (q.key === 'inicial' && seed.inicial) ||
+    (q.key === 'plazo' && seed.plazo)
+  )
+  const baseQuestions = isPreapproval ? PREAP_QUESTIONS : CAR_QUESTIONS
+  const questions = editAll ? baseQuestions : baseQuestions.filter((q) => !seededByCalc(q))
 
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(() => ({
@@ -193,6 +196,15 @@ export default function Financing() {
     next()
   }
 
+  // What the calculator already captured — shown at the top so the customer still
+  // sees (and can edit) their salary/plazo instead of it silently disappearing.
+  const recap = editAll ? [] : [
+    seed.ingreso && { label: 'Ingreso mensual', value: form.ingreso },
+    isPreapproval && seed.monto && { label: 'Monto deseado', value: form.presupuesto },
+    !isPreapproval && seed.inicial && { label: 'Inicial', value: form.inicial },
+    seed.plazo && { label: 'Plazo', value: `${form.plazo} años` },
+  ].filter(Boolean)
+
   return (
     <main className="page">
       <div className="container" style={{ maxWidth: 860 }}>
@@ -254,7 +266,7 @@ export default function Financing() {
         <div className="card card-pad">
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
-            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} />}
+            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
@@ -284,7 +296,7 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 /* ---------------- Step 1: Datos ---------------- */
 /* Pre-approval Datos — one question at a time with smooth transitions.
    Name + cédula come from the Didit KYC step, so we never ask them here. */
-function PreapDatos({ form, set, setMoney, questions, onComplete, reused }) {
+function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap = [], onEdit }) {
   const [i, setI] = useState(0)
   const idx = Math.min(i, questions.length - 1)
   const q = questions[idx]
@@ -298,6 +310,16 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused }) {
 
   return (
     <div className="preap">
+      {recap.length > 0 && (
+        <div className="preap-recap">
+          <span className="preap-recap-label">De tu calculadora</span>
+          <div className="preap-recap-items">
+            {recap.map((r) => <span key={r.label}>{r.label}: <strong>{r.value}</strong></span>)}
+            {onEdit && <button type="button" className="preap-recap-edit" onClick={onEdit}>Editar</button>}
+          </div>
+        </div>
+      )}
+
       <div className="preap-progress">
         <div className="preap-track"><div className="preap-fill" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} /></div>
         <span className="preap-count">{idx + 1} de {questions.length}</span>
