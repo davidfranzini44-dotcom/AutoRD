@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Heart, Share2, MapPin, BadgeCheck, Gauge, Cog, Fuel, Palette,
-  Calculator, Info, Check, ChevronRight, ShieldCheck,
+  Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2,
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
-import { getVehicleBySlug, listVehicles, fmtRD } from '../data/api'
+import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -14,12 +14,18 @@ export default function VehicleDetail() {
   const [similar, setSimilar] = useState([])
   const [active, setActive] = useState(0)
   const [fav, setFav] = useState(false)
+  const [preApp, setPreApp] = useState(null) // open car-agnostic pre-approval, if any
+  const [attaching, setAttaching] = useState(false)
 
   useEffect(() => {
     let alive = true
     setV(undefined)
     getVehicleBySlug(id).then((data) => { if (alive) setV(data) })
     listVehicles().then((all) => { if (alive) setSimilar(all.filter((x) => x.id !== id).slice(0, 4)) })
+    // Does the logged-in buyer already have an open pre-approval (no car yet)?
+    getMyFinancing()
+      .then((d) => { if (alive && d && d.isPreapproval && !d.vehicle) setPreApp(d) })
+      .catch(() => {})
     return () => { alive = false }
   }, [id])
 
@@ -39,6 +45,21 @@ export default function VehicleDetail() {
     { ic: Fuel, l: 'Combustible', v: v.fuel },
     { ic: Palette, l: 'Color', v: v.color },
   ]
+
+  // Reuse an existing pre-approval instead of restarting KYC.
+  const canUsePre = preApp && (!preApp.approvedAmount || v.price <= preApp.approvedAmount)
+  const overBudget = preApp && preApp.approvedAmount && v.price > preApp.approvedAmount
+  const usePreapproval = async () => {
+    if (!preApp) return
+    setAttaching(true)
+    try {
+      await attachVehicleToApplication(preApp.id, {
+        vehicleDbId: v.dbId, dealerDbId: v.dealerDbId,
+        requestedAmount: v.price - (preApp.down || 0),
+      })
+      nav('/mi-financiamiento')
+    } catch (_) { setAttaching(false) }
+  }
 
   return (
     <main className="page">
@@ -125,10 +146,29 @@ export default function VehicleDetail() {
                 </div>
               </div>
 
-              <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
-                Solicitar financiamiento
-              </Link>
-              <button className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Ver cálculo de cuota</button>
+              {preApp && canUsePre ? (
+                <>
+                  <div className="chip chip-teal" style={{ marginTop: 14, height: 'auto', padding: '8px 12px', display: 'inline-flex' }}>
+                    <Landmark size={14} /> Estás pre-aprobado{preApp.approvedAmount ? ` hasta ${fmtRD(preApp.approvedAmount)}` : ''}
+                  </div>
+                  <button className="btn btn-primary btn-block btn-lg" style={{ marginTop: 10 }} disabled={attaching} onClick={usePreapproval}>
+                    {attaching ? <><Loader2 size={18} className="spin" /> Vinculando…</> : 'Usar mi pre-aprobación'}
+                  </button>
+                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Empezar una nueva solicitud</Link>
+                </>
+              ) : (
+                <>
+                  {overBudget && (
+                    <div className="notice" style={{ marginTop: 14 }}>
+                      <Info size={16} /><span>Este vehículo ({fmtRD(v.price)}) supera tu pre-aprobación de {fmtRD(preApp.approvedAmount)}. Puedes solicitar financiamiento igualmente.</span>
+                    </div>
+                  )}
+                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
+                    Solicitar financiamiento
+                  </Link>
+                  <button className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Ver cálculo de cuota</button>
+                </>
+              )}
 
               <div className="notice" style={{ marginTop: 14 }}>
                 <Info size={16} />

@@ -13,6 +13,7 @@ import BrandLogo from '../components/BrandLogo'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
+import { BANK_RATES, estimateMonthly, affordablePrice } from '../data/finance'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', icon: Car },
@@ -54,15 +55,6 @@ const VERIFIED_DEALERS = [
   { name: 'Núñez Motors', location: 'Santiago', inventory: 96, initials: 'NM' },
   { name: 'Capital Auto Gallery', location: 'La Romana', inventory: 75, initials: 'CA' },
 ]
-const BANK_RATES = { popular: 9.75, bhd: 9.5, banreservas: 9.95, scotiabank: 10.25 }
-
-const estimateMonthly = (principal, apr, months) => {
-  const rate = apr / 100 / 12
-  if (!principal || !months) return 0
-  if (!rate) return Math.round(principal / months)
-  return Math.round((principal * rate) / (1 - Math.pow(1 + rate, -months)))
-}
-
 export default function Home() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -78,6 +70,7 @@ export default function Home() {
   const [calcDownPct, setCalcDownPct] = useState(20)
   const [calcTerm, setCalcTerm] = useState(60)
   const [calcBank, setCalcBank] = useState('popular')
+  const [calcIncome, setCalcIncome] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -128,6 +121,9 @@ export default function Home() {
   const calcDown = Math.round(calcPrice * (calcDownPct / 100))
   const calcPrincipal = Math.max(0, calcPrice - calcDown)
   const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
+  // Instant affordability: from monthly income → max financeable price (≈30% DTI).
+  const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
+  const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -248,6 +244,12 @@ export default function Home() {
                   {BANK_BOXES.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
                 </select>
               </div>
+
+              <div className="calc-field">
+                <label>Ingreso mensual (opcional)</label>
+                <input className="input" type="text" inputMode="numeric" value={calcIncome} onChange={(e) => setCalcIncome(e.target.value)} placeholder="RD$ 85,000" />
+                <div className="range-labels"><span>Para estimar cuánto podrías financiar</span></div>
+              </div>
             </div>
 
             <div className="calculator-banks">
@@ -262,6 +264,13 @@ export default function Home() {
             <div className="payment-label">Cuota estimada</div>
             <div className="payment-amount">{fmtRD(calcMonthly)}<span>/mes</span></div>
             <div className="payment-rate">Tasa desde {calcApr.toFixed(2)}%</div>
+            {afford.price > 0 && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,.18)', margin: '14px 0', paddingTop: 14 }}>
+                <div className="payment-label" style={{ marginBottom: 2 }}>Con tu ingreso podrías financiar hasta</div>
+                <div className="payment-amount" style={{ fontSize: 24 }}>{fmtRD(afford.price)}</div>
+                <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
+              </div>
+            )}
             <Link to="/financiamiento" className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
           </aside>
 

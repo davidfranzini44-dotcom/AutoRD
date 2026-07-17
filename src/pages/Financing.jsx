@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -23,11 +23,12 @@ const STEPS = [
 export default function Financing() {
   const [params] = useSearchParams()
   const vehiculoSlug = params.get('vehiculo')
+  const isPreapproval = !vehiculoSlug
   const { profile } = useAuth() || {}
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     nombre: '', cedula: '', telefono: '', email: '',
-    ingreso: '', empleo: 'Asalariado', inicial: '', plazo: '7',
+    ingreso: '', presupuesto: '', inicial: '', plazo: '7',
   })
   const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
   const [session, setSession] = useState(null) // { url, session_id }
@@ -110,7 +111,10 @@ export default function Financing() {
         bankDbIds,
         vehicleDbId: vehicle?.dbId || null,
         dealerDbId: vehicle?.dealerDbId || null,
-        requestedAmount: vehicle ? vehicle.price - (parseInt(String(form.inicial).replace(/[^\d]/g, ''), 10) || 0) : null,
+        // Car flow: amount = price − inicial. Pre-approval: the (optional) desired budget.
+        requestedAmount: vehicle
+          ? vehicle.price - (parseMoney(form.inicial) || 0)
+          : parseMoney(form.presupuesto),
       })
     } catch (_) { /* demo/offline */ }
     next()
@@ -120,12 +124,24 @@ export default function Financing() {
     <main className="page">
       <div className="container" style={{ maxWidth: 860 }}>
         <div className="row between center" style={{ marginBottom: 6 }}>
-          <h1 style={{ fontSize: 24 }}>Solicitud de financiamiento</h1>
+          <h1 style={{ fontSize: 24 }}>{isPreapproval ? 'Pre-aprobación de financiamiento' : 'Solicitud de financiamiento'}</h1>
           <Link to="/mi-financiamiento" className="link-teal hide-mobile">Mi financiamiento <ChevronRight size={14} /></Link>
         </div>
         <p className="muted small" style={{ marginBottom: 20 }}>
-          Verificamos tu identidad y enviamos tu solicitud a los bancos que elijas. AutoRD no realiza la consulta de crédito: los bancos evalúan y deciden.
+          {isPreapproval
+            ? 'Descubre cuánto pueden financiarte los bancos antes de elegir tu carro. Verificamos tu identidad y enviamos tu solicitud a los bancos que elijas — ellos evalúan y deciden.'
+            : 'Verificamos tu identidad y enviamos tu solicitud a los bancos que elijas. AutoRD no realiza la consulta de crédito: los bancos evalúan y deciden.'}
         </p>
+
+        {isPreapproval && (
+          <div className="card card-pad row center gap-12" style={{ marginBottom: 14 }}>
+            <div className="verify-ic ok" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Landmark size={20} /></div>
+            <div className="grow">
+              <div className="tiny muted">Pre-aprobación · sin vehículo</div>
+              <div className="strong">Averigua tu monto pre-aprobado y luego compra dentro de tu presupuesto</div>
+            </div>
+          </div>
+        )}
 
         {vehicle && (
           <div className="card card-pad row center gap-12" style={{ marginBottom: 14 }}>
@@ -157,10 +173,10 @@ export default function Financing() {
         </div>
 
         <div className="card card-pad">
-          {step === 0 && <StepDatos form={form} set={set} />}
+          {step === 0 && <StepDatos form={form} set={set} isPreapproval={isPreapproval} />}
           {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
           {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
-          {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} />}
+          {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} />}
           {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
 
           {step < 4 && (
@@ -183,21 +199,25 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 }
 
 /* ---------------- Step 1: Datos ---------------- */
-function StepDatos({ form, set }) {
+function StepDatos({ form, set, isPreapproval }) {
   return (
     <>
-      <StepHead icon={User} title="Datos básicos" sub="Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía." />
+      <StepHead
+        icon={User}
+        title="Datos básicos"
+        sub={isPreapproval
+          ? 'Solo lo esencial para que los bancos estimen tu pre-aprobación. Tu ingreso es lo más importante — no pedimos comprobantes todavía.'
+          : 'Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía.'}
+      />
       <div className="grid grid-2" style={{ gap: 14 }}>
         <F label="Nombre completo"><input className="input" value={form.nombre} onChange={set('nombre')} placeholder="Nombre y apellido" /></F>
         <F label="Cédula" help="Formato 000-0000000-0"><input className="input" value={form.cedula} onChange={set('cedula')} placeholder="402-0000000-0" /></F>
         <F label="Teléfono"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
         <F label="Email"><input className="input" value={form.email} onChange={set('email')} placeholder="nombre@correo.com" /></F>
         <F label="Ingreso aproximado (mensual)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={set('ingreso')} placeholder="RD$ 85,000" /></F>
-        <F label="Tipo de empleo">
-          <select className="select" value={form.empleo} onChange={set('empleo')}>
-            <option>Asalariado</option><option>Negocio propio</option><option>Independiente</option><option>Pensionado</option>
-          </select>
-        </F>
+        {isPreapproval && (
+          <F label="Monto deseado (opcional)" help="Si ya tienes un presupuesto en mente"><input className="input" value={form.presupuesto} onChange={set('presupuesto')} placeholder="RD$ 1,500,000" /></F>
+        )}
         <F label="Inicial disponible"><input className="input" value={form.inicial} onChange={set('inicial')} placeholder="RD$ 250,000" /></F>
         <F label="Plazo preferido">
           <select className="select" value={form.plazo} onChange={set('plazo')}>
@@ -206,7 +226,7 @@ function StepDatos({ form, set }) {
         </F>
       </div>
       <div className="notice" style={{ marginTop: 16 }}>
-        <Info size={16} /><span>Solo se solicitarán documentos financieros adicionales si un banco los requiere durante su evaluación.</span>
+        <Info size={16} /><span>Solo pedimos lo básico. Si un banco necesita comprobantes (ingresos, carta de trabajo), los solicitará durante su evaluación.</span>
       </div>
     </>
   )
@@ -300,10 +320,10 @@ function StepConsent({ consent, setConsent }) {
 }
 
 /* ---------------- Step 4: Enviar ---------------- */
-function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle }) {
+function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPreapproval }) {
   return (
     <>
-      <StepHead icon={Send} title="Enviar solicitud a bancos" sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
+      <StepHead icon={Send} title={isPreapproval ? 'Enviar pre-aprobación a bancos' : 'Enviar solicitud a bancos'} sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
       <div className="small strong" style={{ marginBottom: 10 }}>Bancos seleccionados</div>
       <div className="grid grid-2" style={{ gap: 10 }}>
         {banks.map((b) => (
@@ -323,9 +343,10 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle }) {
       </div>
 
       <div className="card" style={{ background: 'var(--surface-2)', marginTop: 18, padding: 14 }}>
-        <div className="small strong" style={{ marginBottom: 8 }}>Resumen de la solicitud</div>
+        <div className="small strong" style={{ marginBottom: 8 }}>{isPreapproval ? 'Resumen de la pre-aprobación' : 'Resumen de la solicitud'}</div>
         {vehicle && <div className="kv"><span className="k">Vehículo</span><span className="v">{vehicle.make} {vehicle.model} {vehicle.year}</span></div>}
         {vehicle && <div className="kv"><span className="k">Precio</span><span className="v">{fmtRD(vehicle.price)}</span></div>}
+        {isPreapproval && form.presupuesto && <div className="kv"><span className="k">Monto deseado</span><span className="v">{form.presupuesto}</span></div>}
         <div className="kv"><span className="k">Solicitante</span><span className="v">{form.nombre || '—'}</span></div>
         <div className="kv"><span className="k">Inicial disponible</span><span className="v">{form.inicial || '—'}</span></div>
         <div className="kv"><span className="k">Plazo preferido</span><span className="v">{form.plazo} años</span></div>

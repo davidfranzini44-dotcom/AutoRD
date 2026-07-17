@@ -98,8 +98,8 @@ export default function BankPanel() {
                       style={{ cursor: 'pointer', background: a.id === selId ? 'var(--teal-50)' : undefined }}>
                       <td className="mono-num tiny muted">{a.id}</td>
                       <td className="strong">{a.customer}</td>
-                      <td className="muted">{a.vehicle}</td>
-                      <td className="num">{fmtRD(a.amount)}</td>
+                      <td className="muted">{a.vehicle || (a.isPreapproval ? <span className="chip chip-teal" style={{ height: 24 }}><Landmark size={12} /> Pre-aprobación</span> : '—')}</td>
+                      <td className="num">{a.amount ? fmtRD(a.amount) : '—'}</td>
                       <td><StatusChip status={a.kyc} /></td>
                       <td><span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span></td>
                     </tr>
@@ -124,6 +124,7 @@ function ApplicationDetail({ a }) {
   const [term, setTerm] = useState('7')
   const [monthly, setMonthly] = useState('')
   const [down, setDown] = useState('')
+  const [approvedAmount, setApprovedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [sent, setSent] = useState(false)
 
@@ -140,7 +141,10 @@ function ApplicationDetail({ a }) {
       <div className="card card-pad">
         <div className="row between center" style={{ marginBottom: 12 }}>
           <div>
-            <div className="strong">{a.customer}</div>
+            <div className="row center gap-8">
+              <div className="strong">{a.customer}</div>
+              {a.isPreapproval && <span className="chip chip-teal" style={{ height: 22 }}><Landmark size={12} /> Pre-aprobación</span>}
+            </div>
             <div className="tiny muted mono-num">{a.id} · Cédula {a.cedula}</div>
           </div>
           <span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span>
@@ -148,22 +152,36 @@ function ApplicationDetail({ a }) {
 
         {/* Applicant summary */}
         <SectionLabel icon={ShieldCheck} text="Solicitante y KYC" />
-        <div className="kv"><span className="k">Ingreso declarado</span><span className="v">{fmtRD(a.income)}/mes</span></div>
-        <div className="kv"><span className="k">Tipo de empleo</span><span className="v">{a.employment}</span></div>
+        <div className="kv"><span className="k">Ingreso declarado</span><span className="v">{a.income ? `${fmtRD(a.income)}/mes` : '—'}</span></div>
+        <div className="kv"><span className="k">Tipo de empleo</span><span className="v">{a.employment || 'No indicado — puedes solicitar comprobantes'}</span></div>
         <div className="kv"><span className="k">Estado KYC</span><span className="v"><StatusChip status={a.kyc} /></span></div>
         <div className="kv"><span className="k">Consentimiento de crédito</span><span className="v"><span className="chip chip-green"><FileCheck2 size={13} /> Firmado</span></span></div>
 
-        {/* Vehicle + dealer */}
-        <SectionLabel icon={Car} text="Vehículo y dealer" style={{ marginTop: 14 }} />
-        <div className="kv"><span className="k">Vehículo</span><span className="v">{a.vehicle}</span></div>
-        <div className="kv"><span className="k">Dealer</span><span className="v">{a.dealer}</span></div>
-        <div className="kv"><span className="k">Monto solicitado</span><span className="v">{fmtRD(a.amount)}</span></div>
-        <div className="kv"><span className="k">Inicial</span><span className="v">{fmtRD(a.down)} ({Math.round(a.down / a.amount * 100)}%)</span></div>
-        <div className="kv"><span className="k">Plazo solicitado</span><span className="v">{a.term} años</span></div>
-
-        <div className="notice" style={{ marginTop: 12 }}>
-          <Info size={16} /><span>La consulta al buró y la decisión de crédito se realizan en los sistemas del banco. AutoRD solo transmite la solicitud y el consentimiento.</span>
-        </div>
+        {/* Vehicle + dealer / pre-approval */}
+        {a.isPreapproval ? (
+          <>
+            <SectionLabel icon={Landmark} text="Pre-aprobación (sin vehículo)" style={{ marginTop: 14 }} />
+            <div className="kv"><span className="k">Tipo de solicitud</span><span className="v">Pre-aprobación — el cliente aún no eligió vehículo</span></div>
+            <div className="kv"><span className="k">Monto deseado</span><span className="v">{a.amount ? fmtRD(a.amount) : 'Sin monto fijo'}</span></div>
+            {a.down ? <div className="kv"><span className="k">Inicial disponible</span><span className="v">{fmtRD(a.down)}</span></div> : null}
+            <div className="kv"><span className="k">Plazo solicitado</span><span className="v">{a.term ? `${a.term} años` : '—'}</span></div>
+            <div className="notice" style={{ marginTop: 12 }}>
+              <Info size={16} /><span>Indica el <strong>monto máximo</strong> que pre-apruebas. El cliente comprará un vehículo dentro de ese presupuesto y luego se vinculará a esta solicitud.</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <SectionLabel icon={Car} text="Vehículo y dealer" style={{ marginTop: 14 }} />
+            <div className="kv"><span className="k">Vehículo</span><span className="v">{a.vehicle}</span></div>
+            <div className="kv"><span className="k">Dealer</span><span className="v">{a.dealer}</span></div>
+            <div className="kv"><span className="k">Monto solicitado</span><span className="v">{fmtRD(a.amount)}</span></div>
+            <div className="kv"><span className="k">Inicial</span><span className="v">{fmtRD(a.down)}{a.amount ? ` (${Math.round(a.down / a.amount * 100)}%)` : ''}</span></div>
+            <div className="kv"><span className="k">Plazo solicitado</span><span className="v">{a.term} años</span></div>
+            <div className="notice" style={{ marginTop: 12 }}>
+              <Info size={16} /><span>La consulta al buró y la decisión de crédito se realizan en los sistemas del banco. AutoRD solo transmite la solicitud y el consentimiento.</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Document request */}
@@ -202,16 +220,22 @@ function ApplicationDetail({ a }) {
             </div>
 
             {needTerms && (
-              <div className="grid grid-2" style={{ gap: 10, marginTop: 12 }}>
-                <F label="Tasa (%)"><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></F>
-                <F label="Plazo (años)">
-                  <select className="select" value={term} onChange={(e) => setTerm(e.target.value)}>
-                    <option>4</option><option>5</option><option>6</option><option>7</option>
-                  </select>
-                </F>
-                <F label="Cuota mensual"><input className="input" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="RD$ 27,950" /></F>
-                <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(e.target.value)} placeholder="RD$ 250,000" /></F>
-              </div>
+              <>
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>{a.isPreapproval ? 'Monto pre-aprobado (RD$) — máximo a financiar' : 'Monto aprobado (RD$)'}</label>
+                  <input className="input" value={approvedAmount} onChange={(e) => setApprovedAmount(e.target.value)} placeholder="RD$ 1,800,000" />
+                </div>
+                <div className="grid grid-2" style={{ gap: 10, marginTop: 10 }}>
+                  <F label="Tasa (%)"><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></F>
+                  <F label="Plazo (años)">
+                    <select className="select" value={term} onChange={(e) => setTerm(e.target.value)}>
+                      <option>4</option><option>5</option><option>6</option><option>7</option>
+                    </select>
+                  </F>
+                  <F label="Cuota mensual"><input className="input" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="RD$ 27,950" /></F>
+                  <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(e.target.value)} placeholder="RD$ 250,000" /></F>
+                </div>
+              </>
             )}
 
             <div className="field" style={{ marginTop: 12 }}>
@@ -221,10 +245,12 @@ function ApplicationDetail({ a }) {
 
             <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} disabled={!decision} onClick={async () => {
               const statusMap = { approved: 'preaprobada', conditional: 'condicional', docs: 'pendiente_docs', rejected: 'rechazada' }
+              // Numeric-safe: strip "RD$"/commas so numeric columns accept the values.
+              const num = (s) => { const n = Number(String(s).replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null }
               try {
                 await submitBankResponse(a.responseId, {
-                  status: statusMap[decision], apr: rate || null, term: Number(term) || null,
-                  monthly: monthly || null, down: down || null, notes,
+                  status: statusMap[decision], apr: num(rate), term: Number(term) || null,
+                  monthly: num(monthly), down: num(down), approvedAmount: num(approvedAmount), notes,
                 })
               } catch (_) { /* demo mode / offline: still confirm visually */ }
               setSent(true)

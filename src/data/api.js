@@ -129,7 +129,9 @@ export async function createApplication(payload) {
   if (error) throw error
 
   await supabase.from('application_financials').insert({
-    application_id: app.id, income: parseMoney(payload.ingreso), employment_type: payload.empleo,
+    // Employment is no longer asked up front — a bank can request supporting
+    // documents itself if it wants them. Income is the field that matters.
+    application_id: app.id, income: parseMoney(payload.ingreso), employment_type: payload.empleo || null,
   })
   // bankDbIds are real bank UUIDs; skip any falsy (demo slugs without a dbId).
   const bankIds = (payload.bankDbIds || []).filter(Boolean)
@@ -152,29 +154,51 @@ export async function getMyFinancing() {
     .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(*, bank:banks(name, slug, color, initials))')
     .eq('buyer_id', uid).order('created_at', { ascending: false }).limit(1).single()
   if (!app) return null
+  const isPre = !app.vehicle_id
   const responses = (app.responses || []).map((r) => ({
     bankId: r.bank?.slug, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
     apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
+    approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
   }))
   const hasOffer = responses.some((r) => r.status === 'offer')
   const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
+  // Best (highest) pre-approved ceiling across banks — powers "shop within budget".
+  const approvedAmounts = responses.map((r) => r.approvedAmount).filter((n) => n != null && n > 0)
+  const approvedAmount = approvedAmounts.length ? Math.max(...approvedAmounts) : null
   const timeline = [
     { key: 'kyc', name: 'KYC aprobado', sub: 'Identidad verificada', state: app.kyc_status === 'aprobado' ? 'done' : 'current' },
     { key: 'consent', name: 'Consentimiento firmado', sub: 'Autorización de consulta crediticia', state: app.consent_signed ? 'done' : 'pending' },
-    { key: 'sent', name: 'Solicitud enviada a bancos', sub: `${responses.length} banco(s) seleccionado(s)`, state: 'done' },
-    { key: 'eval', name: 'Bancos evaluando', sub: 'Los bancos revisan tu solicitud', state: hasOffer || evaluating ? 'done' : 'current' },
-    { key: 'offers', name: 'Ofertas recibidas', sub: hasOffer ? 'Tienes ofertas disponibles' : 'Aún sin ofertas', state: hasOffer ? 'current' : 'pending' },
+    { key: 'sent', name: isPre ? 'Pre-aprobación enviada a bancos' : 'Solicitud enviada a bancos', sub: `${responses.length} banco(s) seleccionado(s)`, state: 'done' },
+    { key: 'eval', name: isPre ? 'Bancos evaluando tu pre-aprobación' : 'Bancos evaluando', sub: 'Los bancos revisan tu solicitud', state: hasOffer || evaluating ? 'done' : 'current' },
+    { key: 'offers', name: isPre ? 'Pre-aprobación recibida' : 'Ofertas recibidas', sub: hasOffer ? (isPre ? 'Tienes una pre-aprobación disponible' : 'Tienes ofertas disponibles') : 'Aún sin respuestas', state: hasOffer ? 'current' : 'pending' },
   ]
   return {
+    id: app.id,
     code: app.code,
     createdAt: app.created_at,
+    isPreapproval: isPre,
     vehicle: app.vehicle ? mapVehicle(app.vehicle) : null,
-    requestedAmount: Number(app.requested_amount),
-    down: Number(app.down_payment),
+    requestedAmount: app.requested_amount != null ? Number(app.requested_amount) : null,
+    down: app.down_payment != null ? Number(app.down_payment) : null,
     term: app.term_years,
+    approvedAmount,
     responses,
     timeline,
   }
+}
+
+// Attach a chosen vehicle to an existing (car-agnostic) pre-approval, so the
+// customer can convert "pre-aprobado hasta RD$X" into a real application for a
+// specific car WITHOUT repeating KYC. Reuses the same application row.
+export async function attachVehicleToApplication(applicationId, { vehicleDbId, dealerDbId, requestedAmount }) {
+  if (!LIVE) return { ok: true }
+  const { error } = await supabase.from('financing_applications').update({
+    vehicle_id: vehicleDbId || null,
+    dealer_id: dealerDbId || null,
+    requested_amount: requestedAmount != null ? Number(requestedAmount) : null,
+  }).eq('id', applicationId)
+  if (error) throw error
+  return { ok: true }
 }
 
 // ---------------- Dealer panel ----------------
@@ -231,12 +255,15 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
   if (error) throw error
   return (data || []).map((r) => {
     const fin = Array.isArray(r.app?.financials) ? r.app.financials[0] : r.app?.financials
+    const isPre = !r.app?.vehicle_id
     return {
       id: r.app?.code, customer: r.app?.buyer_name, cedula: '—',
+      isPreapproval: isPre,
       vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
-      dealer: r.app?.dealer?.name, amount: Number(r.app?.requested_amount),
-      down: Number(r.app?.down_payment), term: r.app?.term_years,
+      dealer: r.app?.dealer?.name, amount: r.app?.requested_amount != null ? Number(r.app.requested_amount) : null,
+      down: r.app?.down_payment != null ? Number(r.app.down_payment) : null, term: r.app?.term_years,
       income: fin?.income, employment: fin?.employment_type,
+      approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
       status: filterFromResponse(r.status), responseId: r.id,
     }
@@ -248,6 +275,7 @@ export async function submitBankResponse(responseId, body) {
   const { error } = await supabase.from('application_banks').update({
     status: body.status, apr: body.apr, term_years: body.term,
     monthly: body.monthly, down_required: body.down, notes: body.notes,
+    approved_amount: body.approvedAmount != null ? Number(body.approvedAmount) : null,
     responded_at: new Date().toISOString(),
   }).eq('id', responseId)
   if (error) throw error

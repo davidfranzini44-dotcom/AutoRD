@@ -35,14 +35,15 @@ export default function MyFinancing() {
   const v = c.vehicle
   const offers = c.responses.filter((r) => r.status === 'offer')
   const docsRequested = c.responses.find((r) => r.status === 'docs')
+  const preApproved = c.approvedAmount && c.approvedAmount > 0
 
   return (
     <main className="page">
       <div className="container" style={{ maxWidth: 1080 }}>
         <div className="row between center wrap gap-12" style={{ marginBottom: 8 }}>
           <div>
-            <h1 style={{ fontSize: 24 }}>Mi financiamiento</h1>
-            <p className="muted small" style={{ marginTop: 4 }}>Solicitud #{c.code}{c.createdAt ? ` · Enviada el ${new Date(c.createdAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
+            <h1 style={{ fontSize: 24 }}>{c.isPreapproval ? 'Mi pre-aprobación' : 'Mi financiamiento'}</h1>
+            <p className="muted small" style={{ marginTop: 4 }}>{c.isPreapproval ? 'Pre-aprobación' : 'Solicitud'} #{c.code}{c.createdAt ? ` · Enviada el ${new Date(c.createdAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
           </div>
           <div className="row gap-8">
             <StatusChip status="aprobado">KYC aprobado</StatusChip>
@@ -52,6 +53,22 @@ export default function MyFinancing() {
 
         <div className="split" style={{ gridTemplateColumns: '1fr 340px' }}>
           <div className="col gap-16">
+            {/* Pre-approval highlight: budget + shop CTA */}
+            {preApproved && (
+              <div className="card card-pad" style={{ borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
+                <div className="row between center wrap gap-12">
+                  <div className="row center gap-12">
+                    <div className="verify-ic ok" style={{ background: '#fff', color: 'var(--teal-700)' }}><Landmark size={22} /></div>
+                    <div>
+                      <div className="strong">¡Estás pre-aprobado! Hasta {fmtRD(c.approvedAmount)}</div>
+                      <div className="tiny muted">Elige un vehículo dentro de tu presupuesto y lo vinculamos a esta pre-aprobación — sin repetir tu verificación.</div>
+                    </div>
+                  </div>
+                  <Link to={`/buscar?precioMax=${c.approvedAmount}`} className="btn btn-primary">Ver carros dentro de tu presupuesto</Link>
+                </div>
+              </div>
+            )}
+
             {/* Offers highlight */}
             {offers.length > 0 && (
               <div className="card card-pad" style={{ borderColor: 'var(--green-bd)', background: 'linear-gradient(180deg,#f2fbf6,#fff)' }}>
@@ -113,22 +130,36 @@ export default function MyFinancing() {
               </div>
             </div>
 
-            <div className="card card-pad">
-              <div className="small strong" style={{ marginBottom: 10 }}>Vehículo</div>
-              <Link to={`/vehiculo/${v.id}`} className="row center gap-12">
-                <div style={{ width: 76, flex: 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}><CarImage tone={v.tone} /></div>
-                <div className="grow">
-                  <div className="strong small">{v.make} {v.model} {v.year}</div>
-                  <div className="tiny muted">{v.dealer}</div>
-                  <div className="strong" style={{ fontSize: 15, marginTop: 2 }}>{fmtRD(v.price)}</div>
+            {v ? (
+              <div className="card card-pad">
+                <div className="small strong" style={{ marginBottom: 10 }}>Vehículo</div>
+                <Link to={`/vehiculo/${v.id}`} className="row center gap-12">
+                  <div style={{ width: 76, flex: 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}><CarImage tone={v.tone} /></div>
+                  <div className="grow">
+                    <div className="strong small">{v.make} {v.model} {v.year}</div>
+                    <div className="tiny muted">{v.dealer}</div>
+                    <div className="strong" style={{ fontSize: 15, marginTop: 2 }}>{fmtRD(v.price)}</div>
+                  </div>
+                </Link>
+                <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 12, paddingTop: 12 }}>
+                  <div className="kv"><span className="k">Monto solicitado</span><span className="v">{c.requestedAmount ? fmtRD(c.requestedAmount) : '—'}</span></div>
+                  <div className="kv"><span className="k">Inicial</span><span className="v">{c.down ? fmtRD(c.down) : '—'}</span></div>
+                  <div className="kv"><span className="k">Plazo</span><span className="v">{c.term} años</span></div>
                 </div>
-              </Link>
-              <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 12, paddingTop: 12 }}>
-                <div className="kv"><span className="k">Monto solicitado</span><span className="v">{fmtRD(c.requestedAmount)}</span></div>
-                <div className="kv"><span className="k">Inicial</span><span className="v">{fmtRD(c.down)}</span></div>
-                <div className="kv"><span className="k">Plazo</span><span className="v">{c.term} años</span></div>
               </div>
-            </div>
+            ) : (
+              <div className="card card-pad">
+                <div className="small strong row center gap-8" style={{ marginBottom: 10 }}><Landmark size={15} color="var(--teal-700)" /> Pre-aprobación</div>
+                <div className="kv"><span className="k">Vehículo</span><span className="v">Aún no elegido</span></div>
+                {preApproved && <div className="kv"><span className="k">Pre-aprobado hasta</span><span className="v strong" style={{ color: 'var(--teal-800)' }}>{fmtRD(c.approvedAmount)}</span></div>}
+                {c.requestedAmount ? <div className="kv"><span className="k">Monto deseado</span><span className="v">{fmtRD(c.requestedAmount)}</span></div> : null}
+                {c.down ? <div className="kv"><span className="k">Inicial</span><span className="v">{fmtRD(c.down)}</span></div> : null}
+                <div className="kv"><span className="k">Plazo</span><span className="v">{c.term ? `${c.term} años` : '—'}</span></div>
+                {preApproved && (
+                  <Link to={`/buscar?precioMax=${c.approvedAmount}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 12 }}>Ver carros hasta {fmtRD(c.approvedAmount)}</Link>
+                )}
+              </div>
+            )}
           </aside>
         </div>
       </div>
@@ -137,7 +168,7 @@ export default function MyFinancing() {
 }
 
 function BankResponse({ r }) {
-  const b = banks.find((x) => x.id === r.bankId)
+  const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
@@ -151,14 +182,21 @@ function BankResponse({ r }) {
       </div>
       {hasTerms && (
         <div style={{ background: 'var(--green-bg)', borderTop: '1px solid var(--green-bd)', padding: '12px 16px' }}>
+          {r.approvedAmount ? (
+            <div className="row center gap-8" style={{ marginBottom: 10 }}>
+              <span className="chip chip-teal"><Landmark size={13} /> Pre-aprobado hasta {fmtRD(r.approvedAmount)}</span>
+            </div>
+          ) : null}
           <div className="grid grid-4" style={{ gap: 10 }}>
-            <Term l="Tasa" v={`${r.apr}%`} />
-            <Term l="Plazo" v={`${r.term} años`} />
-            <Term l="Inicial requerido" v={fmtRD(r.down)} />
-            <Term l="Cuota mensual" v={`${fmtRD(r.monthly)}`} />
+            <Term l="Tasa" v={r.apr ? `${r.apr}%` : '—'} />
+            <Term l="Plazo" v={r.term ? `${r.term} años` : '—'} />
+            <Term l="Inicial requerido" v={r.down ? fmtRD(r.down) : '—'} />
+            <Term l="Cuota mensual" v={r.monthly ? fmtRD(r.monthly) : '—'} />
           </div>
           <div className="row gap-8" style={{ marginTop: 12 }}>
-            <button className="btn btn-primary btn-sm">Aceptar oferta</button>
+            {r.approvedAmount
+              ? <Link to={`/buscar?precioMax=${r.approvedAmount}`} className="btn btn-primary btn-sm">Ver carros dentro de tu presupuesto</Link>
+              : <button className="btn btn-primary btn-sm">Aceptar oferta</button>}
             <button className="btn btn-outline btn-sm">Ver detalle</button>
           </div>
         </div>
