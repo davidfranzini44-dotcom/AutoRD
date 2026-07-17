@@ -3,22 +3,22 @@ import { Link } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
-  MonitorSmartphone as Monitor, Calculator, FileCheck,
+  MonitorSmartphone as Monitor, FileCheck,
   IdCard, Store, MapPin,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import BrandLogo from '../components/BrandLogo'
+import heroVehiclePhoto from '../assets/cars/suv-1.jpg'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
-import { BANK_RATES, affordablePrice, fmtMoneyInput } from '../data/finance'
 
 const SEARCH_TABS = [
-  { id: 'todos', label: 'Todos los vehículos', icon: Car },
-  { id: 'nuevos', label: 'Nuevos', icon: BadgeCheck },
-  { id: 'certificados', label: 'Usados certificados', icon: ShieldCheck },
+  { id: 'todos', label: 'Todos los vehículos', shortLabel: 'Todos', icon: Car },
+  { id: 'nuevos', label: 'Nuevos', shortLabel: 'Nuevos', icon: BadgeCheck },
+  { id: 'certificados', label: 'Usados certificados', shortLabel: 'Certificados', icon: ShieldCheck },
 ]
 const YEAR_RANGES = [
   { value: '2015-2024', label: '2015 - 2024' },
@@ -59,6 +59,14 @@ const HOME_TRUST_STEPS = [
   { icon: FileCheck, title: 'Autorización crediticia online', text: 'Das permiso al banco para evaluar tu solicitud sin papeleo.' },
   { icon: Landmark, title: 'Respuesta de bancos en minutos', text: 'Recibe opciones reales para avanzar con el vehículo elegido.' },
 ]
+const BODY_TYPE_PRICES = {
+  SUV: 'Desde RD$ 650K',
+  Pickup: 'Desde RD$ 720K',
+  Sedán: 'Desde RD$ 450K',
+  Coupé: 'Desde RD$ 850K',
+  Minivan: 'Desde RD$ 600K',
+  Hatchback: 'Desde RD$ 420K',
+}
 export default function Home() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -70,7 +78,6 @@ export default function Home() {
   const [precioMax, setPrecioMax] = useState('2450000')
   const [ubicacion, setUbicacion] = useState('Santo Domingo')
   const [sort, setSort] = useState('relevancia')
-  const [calcIncome, setCalcIncome] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -117,25 +124,7 @@ export default function Home() {
 
   const featuredList = list.slice(0, 5)
   const recentList = all.slice(5, 10)
-  const calcApr = BANK_RATES.popular
-  const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
-  // Salary-based affordability: monthly income (≈30% DTI) -> max financeable price.
-  const calcTerm = 60
-  const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
-  const financeBudget = afford.price > 0 ? afford.price : 1250000
-  // Carry what they entered here into the pre-approval so we don't re-ask it.
-  const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
-  const preapLink = incomeNum > 0
-    ? `/financiamiento?ingreso=${incomeNum}&monto=${financeBudget}&plazo=${calcYears}`
-    : '/financiamiento'
-
-  // Remember the calculator inputs so the financing flow (from a car, the nav, etc.)
-  // can reuse them and skip questions the customer already answered.
-  useEffect(() => {
-    try {
-      if (incomeNum > 0) sessionStorage.setItem('autord_calc', JSON.stringify({ ingreso: incomeNum, monto: financeBudget, plazo: calcYears }))
-    } catch { /* ignore storage errors */ }
-  }, [incomeNum, financeBudget, calcYears])
+  const preapLink = '/financiamiento'
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -148,7 +137,7 @@ export default function Home() {
       <div className="container">
         {/* ---------------- Hero ---------------- */}
         <section className="hero2">
-          <div className="hero2-photo"><CarImage make="Toyota" model="RAV4" bodyType="SUV" seed="hero" label="Vehículo" /></div>
+          <div className="hero2-photo"><CarImage make="Toyota" model="RAV4" bodyType="SUV" seed="hero" photo={heroVehiclePhoto} label="Vehículo" /></div>
           <div className="hero2-text">
             <h1>Compra tu vehículo<br />con financiamiento real</h1>
             <p>Encuentra tu próximo vehículo y obtén ofertas de los mejores bancos de la República Dominicana.</p>
@@ -167,7 +156,9 @@ export default function Home() {
               const Icon = item.icon
               return (
                 <button key={item.id} className={`search-tab ${segment === item.id ? 'active' : ''}`} onClick={() => setSegment(item.id)}>
-                  <Icon size={15} /> {item.label}
+                  <Icon size={15} />
+                  <span className="tab-label-full">{item.label}</span>
+                  <span className="tab-label-short">{item.shortLabel}</span>
                 </button>
               )
             })}
@@ -216,32 +207,18 @@ export default function Home() {
                 >
                   <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
                   <span className="bt-label">{b.label}</span>
+                  <small>{BODY_TYPE_PRICES[b.type]}</small>
                 </Link>
               ))}
             </div>
+            <Link to="/buscar" className="bodytype-more-arrow" aria-label="Ver más tipos de vehículos">
+              <ArrowRight size={18} />
+            </Link>
           </div>
 
           <aside className="finance-eligibility-card">
-            <span className="section-kicker"><Calculator size={14} /> Financiamiento</span>
             <h2>¿Cuánto puedes financiar?</h2>
-            <p>Verifica tu elegibilidad con KYC y autorización crediticia para que los bancos respondan rápido.</p>
-
-            <label className="eligibility-input">
-              <span>Ingreso mensual</span>
-              <input
-                className="input"
-                type="text"
-                inputMode="numeric"
-                value={calcIncome}
-                onChange={(e) => setCalcIncome(fmtMoneyInput(e.target.value))}
-                placeholder="RD$ 85,000"
-              />
-            </label>
-
-            <div className="eligibility-result">
-              <span>Rango estimado</span>
-              <strong>{incomeNum > 0 ? fmtRD(financeBudget) : 'Ingresa tu salario'}</strong>
-            </div>
+            <p>Verifica tu elegibilidad sin afectar tu puntaje de crédito.</p>
 
             <div className="finance-eligibility-pills">
               {FINANCE_CONFIDENCE.map((item) => {
@@ -252,11 +229,7 @@ export default function Home() {
 
             <div className="finance-eligibility-actions">
               <Link to={preapLink} className="btn btn-primary">Verificar elegibilidad</Link>
-              {incomeNum > 0 ? (
-                <Link to={`/buscar?precioMax=${financeBudget}`} className="btn btn-outline">Ver vehículos</Link>
-              ) : (
-                <Link to="/como-funciona" className="btn btn-outline">Cómo funciona</Link>
-              )}
+              <Link to="/como-funciona" className="btn btn-outline">Cómo funciona</Link>
             </div>
           </aside>
         </section>
@@ -342,7 +315,7 @@ export default function Home() {
         <section className="home-section">
           <div className="section-title">
             <h2>Dealers verificados</h2>
-            <Link to="/buscar" className="link-teal">Ver dealers <ArrowRight size={15} /></Link>
+            <Link to="/dealers" className="link-teal">Ver dealers <ArrowRight size={15} /></Link>
           </div>
           <div className="dealer-grid">
             {VERIFIED_DEALERS.map((dealer) => <DealerCard key={dealer.name} dealer={dealer} />)}

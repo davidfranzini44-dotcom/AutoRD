@@ -1,50 +1,36 @@
-# AutoRD Finance Calculator QA
+# AutoRD Customer Homepage QA
 
-Source visual truth path:
-- `C:\Users\Lissa\.codex\generated_images\019f67c2-19c5-7762-a771-30fbeeca0fd6\call_j9KWCdX5wDw2ftPHcwYsVghE.png`
+Source visual direction:
+- Selected concept: first AutoRD homepage option from the Reparando-inspired mockup pass.
+- Target: customer-facing marketplace homepage only, with dealer and bank panels kept separate.
 
-Implementation screenshot path:
-- Desktop full page: `qa\finance-calculator-homepage-full.png`
-- Desktop calculator crop: `qa\finance-calculator-homepage-crop.png`
-- Side-by-side comparison: `qa\finance-calculator-comparison.png`
-- Mobile full page: `qa\finance-calculator-mobile-full.png`
+Implementation scope:
+- Hero with AutoRD search tray and visible folder-tab notch.
+- Advanced vehicle search in Spanish.
+- Body-type discovery shelf for vehicle categories.
+- Compact financing eligibility card with KYC/credit authorization language.
+- Trust strip explaining KYC, credit authorization, and bank response.
+- Featured vehicle panel with five cards on desktop.
 
-Viewport:
-- Desktop verification: in-app Browser default viewport, reported as `1280 x 720`.
-- Mobile verification: temporary in-app Browser viewport `390 x 844`.
+Viewport checks:
+- Desktop: in-app Browser default viewport, reported as `1280 x 720`.
+- Mobile: temporary in-app Browser viewport `390 x 844`, then reset.
 
-State:
-- Home page at `http://127.0.0.1:5174/`.
-- Calculator default values: `RD$ 1,250,000`, `20%`, `60 meses`, optional income placeholder.
-
-Full-view comparison evidence:
-- Source and implementation were combined in `qa\finance-calculator-comparison.png`.
-- The implemented section follows the selected mockup: two-column inputs, light payment summary, three proof items, privacy strip, and no preferred-bank chooser.
-
-Focused region comparison evidence:
-- The calculator crop was inspected directly because typography, spacing, controls, payment breakdown, and proof rail are all visible in the focused crop.
-
-Required fidelity surfaces:
-- Fonts and typography: implementation uses the existing AutoRD type scale and heavier headings; hierarchy matches the source closely enough for the real site context.
-- Spacing and layout rhythm: layout matches the source structure, with slightly tighter real-page proportions caused by the existing AutoRD container width.
-- Colors and visual tokens: teal, navy, pale teal, white card, and line colors use the existing site tokens and match the mockup direction.
-- Image quality and asset fidelity: no new raster assets were required; existing Lucide icons remain consistent with the app.
-- Copy and content: Spanish copy matches the mockup intent and removes the bank selector completely.
-
-Findings:
-- No P0, P1, or P2 issues remain.
-
-Comparison history:
-- Initial visual pass showed the proof icons were too small inside their circles.
-- Fix made: increased `ProofItem` icon size from `17` to `20`.
-- Post-fix evidence: recaptured desktop implementation and comparison image after rebuilding.
+Design QA:
+- Desktop layout: passed. Hero/search/discovery/listing structure matches the selected direction and has no horizontal overflow.
+- Mobile layout: passed. Search tabs fit using mobile labels (`Todos`, `Nuevos`, `Certificados`), search height reduced to `348px`, and no horizontal overflow.
+- Console errors: none.
+- Typography pass: removed negative letter-spacing rules and switched the font stack toward Aptos/Avenir/Segoe for a more natural product feel.
+- Asset pass: replaced the sporty hero road image with the existing bundled SUV photo.
+- Discovery gap pass: restored the mockup-style category grid, using all eight body types in a two-row desktop layout aligned with the financing card.
 
 Checks:
 - `npm.cmd run build` passed.
-- Browser console errors checked: none.
-- Mobile calculator check: no horizontal overflow; payment card and privacy strip visible.
+- `git diff --check` passed.
+- CSS negative letter-spacing scan returned no matches.
+- Discovery card bottom alignment checked: left and right cards now share the same bottom edge.
 
-Follow-up polish:
-- P3: the source mockup has a slightly wider canvas than the current in-app Browser default viewport, so the real homepage version is naturally a bit denser.
+Known note:
+- Vite still reports the existing large JS chunk warning. This is not caused by the homepage styling pass and does not block the mockup implementation.
 
 Final result: passed

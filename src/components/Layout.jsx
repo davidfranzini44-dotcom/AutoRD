@@ -26,6 +26,7 @@ export default function Layout() {
 
   const links = [
     { to: '/', label: 'Comprar', end: true },
+    { to: '/dealers', label: 'Dealers' },
     { to: '/ingresar', label: 'Vender' },
     { to: '/financiamiento', label: 'Financiamiento' },
     { to: '/como-funciona', label: 'Cómo funciona' },

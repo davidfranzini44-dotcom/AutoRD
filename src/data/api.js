@@ -76,6 +76,40 @@ export async function listBanks() {
   return (data || []).map((b) => ({ id: b.slug, dbId: b.id, name: b.name, color: b.color, initials: b.initials }))
 }
 
+// ---------------- Dealers (with their published inventory) ----------------
+const initialsOf = (name) => String(name || '').split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
+
+export async function listDealers() {
+  if (!LIVE) {
+    // Derive dealers from the demo vehicles (grouped by dealer name).
+    const byName = {}
+    demoVehicles.forEach((v) => {
+      const name = v.dealer || 'Dealer'
+      if (!byName[name]) {
+        byName[name] = {
+          id: name, name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          city: v.location, verified: !!v.dealerVerified, initials: initialsOf(name), vehicles: [],
+        }
+      }
+      byName[name].vehicles.push(v)
+    })
+    return Object.values(byName)
+  }
+  const { data, error } = await supabase
+    .from('dealers')
+    .select('id, name, slug, city, verified, initials, vehicles(*)')
+    .order('name')
+  if (error) throw error
+  return (data || []).map((d) => ({
+    id: d.id, name: d.name, slug: d.slug, city: d.city, verified: d.verified,
+    initials: d.initials || initialsOf(d.name),
+    // Map each vehicle and stamp the dealer (the nested select omits the dealer join).
+    vehicles: (d.vehicles || [])
+      .filter((v) => v.status === 'publicado')
+      .map((v) => ({ ...mapVehicle(v), dealer: d.name, dealerVerified: d.verified, dealerDbId: d.id })),
+  }))
+}
+
 // ---------------- KYC (Didit) ----------------
 // Creates a real Didit verification session via the edge function.
 // Returns { url, session_id } when the backend is live, or { simulated: true }

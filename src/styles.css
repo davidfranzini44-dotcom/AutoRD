@@ -274,6 +274,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .search-tab { display:inline-flex; align-items:center; gap:8px; height: 44px; padding: 0 18px; border-radius: 10px 10px 0 0; font-size: 13.5px; font-weight: 700; color:#d7ebe7; background: linear-gradient(180deg, #11574f, #0e4a44); border:none; white-space: nowrap; }
 .search-tab:hover:not(.active) { background: #12605a; color: #fff; }
 .search-tab.active { background: #fff; color: var(--teal-800); box-shadow: 0 -4px 12px rgba(5,30,37,.18); }
+.tab-label-short { display: none; }
 .search-fields { display: grid; grid-template-columns: repeat(6, 1fr) auto; gap: 10px; align-items: end; }
 .search-fields .field label { color: #d5e6e4; font-weight: 700; }
 .search-fields .select { height: 44px; }
@@ -439,10 +440,10 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 
 /* hero */
 .hero2 { position: relative; border-radius: 14px; overflow: hidden; min-height: 338px; background: linear-gradient(118deg, #f3f8f8 0%, #e3eff1 54%, #d7e8eb 100%); border: 1px solid #e2e8f0; box-shadow: 0 1px 1px rgba(16,41,63,.04); display: flex; align-items: center; justify-content: flex-end; }
-.hero2-photo { position: absolute; left: 0; top: 0; bottom: 0; width: 60%; }
+.hero2-photo { position: absolute; left: 0; top: 0; bottom: 0; width: 66%; }
 .hero2-photo .vphoto { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; border-radius: 0; background: none; }
-.hero2-photo .vphoto-img { height: 100%; object-position: center; filter: saturate(.95) contrast(.96); }
-.hero2-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(243,248,248,0) 0%, rgba(243,248,248,.08) 42%, rgba(243,248,248,.9) 73%, #f3f8f8 100%); z-index: 1; }
+.hero2-photo .vphoto-img { height: 100%; object-position: center; filter: saturate(.98) contrast(1); }
+.hero2-photo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(243,248,248,0) 0%, rgba(243,248,248,.04) 50%, rgba(243,248,248,.56) 71%, rgba(243,248,248,.9) 86%, #f3f8f8 100%); z-index: 1; }
 .hero2-text { position: relative; z-index: 2; padding: 36px 42px 84px; max-width: 620px; margin-left: auto; }
 .hero2-text h1 { font-size: 42px; line-height: 1.08; color: var(--navy-900); letter-spacing: 0; font-weight: 800; }
 .hero2-text p { font-size: 15px; color: var(--ink-2); margin-top: 12px; max-width: 430px; line-height: 1.5; }
@@ -543,42 +544,82 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 
 .home-discovery-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 392px;
+  grid-template-columns: minmax(0, 1fr) 490px;
   gap: 16px;
   align-items: stretch;
   margin-top: 18px;
 }
 .bodytype-section--showcase {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   margin-top: 0;
   min-width: 0;
-  padding: 18px 20px 20px;
+  min-height: 170px;
+  padding: 18px 18px 13px;
   border-color: var(--line);
   box-shadow: var(--shadow-sm);
 }
 .compact-title {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 .compact-title h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
 }
 .bodytype-row--showcase {
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 .bodytype-section--showcase .bt-item {
-  min-height: 108px;
-  padding: 10px 6px 9px;
-  border: 1px solid transparent;
+  min-height: 98px;
+  gap: 4px;
+  padding: 8px 8px 9px;
+  border: 1px solid var(--line);
   border-radius: 8px;
+  background: #fff;
 }
 .bodytype-section--showcase .bt-item:hover {
-  border-color: var(--line);
+  border-color: #cbd5e1;
   background: #fbfcfd;
 }
 .bodytype-section--showcase .bt-image {
-  max-width: 118px;
-  height: 58px;
+  max-width: 108px;
+  height: 48px;
+  filter: drop-shadow(0 7px 5px rgba(15, 23, 42, .10));
+}
+.bodytype-section--showcase .bt-label {
+  font-size: 13px;
+  line-height: 1.05;
+}
+.bodytype-section--showcase .bt-item small {
+  display: block;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.bodytype-more-arrow {
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-18%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--teal-800);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+.bodytype-more-arrow:hover {
+  border-color: #cbd5e1;
+  background: var(--teal-50);
 }
 .finance-eligibility-card {
   position: relative;
@@ -586,7 +627,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 22px;
+  min-height: 170px;
+  padding: 19px 20px 18px;
   border: 1px solid #cfe6e3;
   border-radius: 10px;
   background: linear-gradient(180deg, #eef9f7 0%, #ffffff 100%);
@@ -602,15 +644,15 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   background: linear-gradient(90deg, var(--teal-700), #53c7c2);
 }
 .finance-eligibility-card h2 {
-  font-size: 24px;
-  line-height: 1.15;
+  font-size: 22px;
+  line-height: 1.1;
   color: var(--navy-900);
 }
 .finance-eligibility-card p {
-  margin: 8px 0 16px;
+  margin: 4px 0 14px;
   color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.48;
+  font-size: 13px;
+  line-height: 1.35;
 }
 .eligibility-input {
   display: flex;
@@ -646,30 +688,48 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 }
 .finance-eligibility-pills {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 0;
+  padding: 8px 9px;
+  border: 1px solid #d9ebe8;
+  border-radius: 8px;
+  background: rgba(255,255,255,.76);
 }
 .finance-eligibility-pills span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 30px;
-  padding: 0 10px;
-  border: 1px solid #d9ebe8;
-  border-radius: 999px;
-  background: rgba(255,255,255,.74);
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--teal-800);
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
+}
+.finance-eligibility-pills span svg {
+  flex: none;
+  box-sizing: content-box;
+  width: 14px;
+  height: 14px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--teal-50);
 }
 .finance-eligibility-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: auto;
-  padding-top: 18px;
+  margin-top: 13px;
+  padding-top: 0;
+}
+.finance-eligibility-actions .btn {
+  height: 42px;
+  font-weight: 800;
 }
 .home-trust-strip {
   display: grid;
@@ -1216,6 +1276,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .home-section { margin-top: 20px; }
   .home-discovery-row { gap: 14px; margin-top: 16px; }
   .finance-eligibility-card { padding: 18px; }
+  .finance-eligibility-pills { flex-wrap: wrap; }
   .finance-eligibility-actions { grid-template-columns: 1fr; }
   .finance-calculator { margin-top: 16px; padding: 18px; gap: 18px; }
   .finance-copy h2 { font-size: 21px; }
@@ -1285,6 +1346,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   /* body-type row scrolls horizontally on mobile */
   .bodytype-section { padding: 14px 14px 16px; }
   .bodytype-section--showcase { margin-top: 0; }
+  .bodytype-more-arrow { display: none; }
   .bodytype-row { display: flex; overflow-x: auto; gap: 18px; padding-bottom: 6px; scrollbar-width: none; scroll-snap-type: x proximity; }
   .bodytype-row::-webkit-scrollbar { display: none; }
   .bt-item { flex: 0 0 112px; scroll-snap-align: start; }
@@ -1311,8 +1373,15 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 }
 @media (max-width: 560px) {
   .grid-4, .grid-3, .grid-2, .featured-home-grid { grid-template-columns: 1fr; }
-  .search-fields { grid-template-columns: 1fr; }
-  .search-fields .btn { grid-column: auto; }
+  .search-bar { padding: 14px; }
+  .search-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .search-fields .btn { grid-column: 1 / -1; }
+  .search-fields .field label { font-size: 12px; }
+  .search-fields .select { height: 42px; padding-left: 10px; padding-right: 26px; font-size: 13px; }
+  .search-fields .sp-btn { height: 42px; }
+  .search-tab { height: 36px; padding: 0 12px; font-size: 12.5px; }
+  .tab-label-full { display: none; }
+  .tab-label-short { display: inline; }
   .hero2 { min-height: 190px; }
   .hero2-photo { width: 60%; opacity: .82; }
   .hero2-photo::after {
@@ -1414,3 +1483,25 @@ select.preap-input { padding-right: 16px; }
 }
 .vcard-click, .recent-card { cursor: pointer; }
 .vcard-click:focus-visible, .recent-card:focus-visible { outline: 2px solid var(--teal-700); outline-offset: 2px; }
+
+/* ---------------- Dealers map page ---------------- */
+.dealers-split { display: grid; grid-template-columns: 400px 1fr; gap: 16px; align-items: start; }
+.dealers-list { display: flex; flex-direction: column; gap: 10px; max-height: 660px; overflow-y: auto; padding-right: 2px; }
+.dealers-map-wrap { position: sticky; top: 16px; }
+.dealers-map { height: 660px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); }
+.dealers-map--fallback { display: grid; place-items: center; }
+.dealer-row { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.dealer-row:hover { border-color: var(--teal-700); }
+.dealer-row.active { border-color: var(--teal-700); box-shadow: inset 0 0 0 1px var(--teal-700); }
+.dealer-mark { width: 46px; height: 46px; flex: none; border-radius: 12px; background: var(--navy-800); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; }
+.dealer-cars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.dealer-car { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; cursor: pointer; text-align: left; padding: 0; }
+.dealer-car:hover { border-color: var(--teal-700); }
+.dealer-car .vphoto { aspect-ratio: 16 / 10; }
+.dealer-car-b { padding: 6px 8px; display: flex; flex-direction: column; gap: 1px; }
+@media (max-width: 900px) {
+  .dealers-split { grid-template-columns: 1fr; }
+  .dealers-map-wrap { position: static; order: -1; }
+  .dealers-list { max-height: none; overflow: visible; }
+  .dealers-map, .dealers-map-wrap .dealers-map { height: 340px; }
+}

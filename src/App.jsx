@@ -4,6 +4,7 @@ import ConsoleLayout from './components/ConsoleLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Buscar from './pages/Buscar'
+import Dealers from './pages/Dealers'
 import VehicleDetail from './pages/VehicleDetail'
 import Financing from './pages/Financing'
 import MyFinancing from './pages/MyFinancing'
@@ -22,6 +23,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/buscar" element={<Buscar />} />
+        <Route path="/dealers" element={<Dealers />} />
         <Route path="/vehiculo/:id" element={<VehicleDetail />} />
         <Route path="/financiamiento" element={<Financing />} />
         <Route path="/como-funciona" element={<ComoFunciona />} />
