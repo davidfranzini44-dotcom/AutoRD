@@ -9,6 +9,7 @@ import {
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import BankLogo from '../components/BankLogo'
+import BrandLogo from '../components/BrandLogo'
 import bodyConvertibles from '../assets/body-types/convertibles.png'
 import bodyCoupes from '../assets/body-types/coupes.png'
 import bodyHatchbacks from '../assets/body-types/hatchbacks.png'
@@ -355,7 +356,7 @@ export default function Home() {
                   runSearch()
                 }}
               >
-                <span className="brand-mark">{brand.name.slice(0, 2).toUpperCase()}</span>
+                <BrandLogo make={brand.name} size={40} />
                 <strong>{brand.name}</strong>
                 <span>{brand.count} vehículos</span>
               </button>
