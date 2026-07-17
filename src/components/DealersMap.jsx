@@ -31,6 +31,9 @@ export default function DealersMap({ dealers, selId, onSelect }) {
       const map = new maps.Map(ref.current, {
         center: DR_CENTER, zoom: 8,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        // Raster tiles (image-based) render without WebGL, so the map shows on any
+        // device/browser and in headless/GPU-less environments.
+        renderingType: maps.RenderingType?.RASTER,
       })
       mapRef.current = map
       infoRef.current = new maps.InfoWindow()
