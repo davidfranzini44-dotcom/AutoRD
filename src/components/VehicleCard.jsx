@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Heart, MapPin, BadgeCheck, ShieldCheck } from 'lucide-react'
+import { Car, Heart, MapPin, BadgeCheck, ShieldCheck, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import CarImage from './CarImage'
 import { fmtRD } from '../data/demo'
@@ -7,14 +7,18 @@ import { isFavorite, toggleFavorite } from '../data/favorites'
 
 export default function VehicleCard({ v }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
-  const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : ''
+  const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : 'used'
   const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
+  const BadgeIcon = badge === 'nuevo' ? Sparkles : badge === 'certified' ? ShieldCheck : Car
   const specs = [v.year, v.trim, v.transmission, v.engine].filter(Boolean).join(' · ')
 
   return (
     <article className="vcard">
       <div className="vphoto-wrap">
-        <span className={`badge-corner ${badge}`}>{badgeText}</span>
+        <span className={`badge-corner ${badge}`}>
+          <BadgeIcon size={14} strokeWidth={2.5} />
+          {badgeText}
+        </span>
         <button
           className={`fav-btn ${fav ? 'active' : ''}`}
           aria-label="Guardar en favoritos"

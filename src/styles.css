@@ -134,11 +134,42 @@ img { max-width: 100%; display: block; }
 
 .badge-corner {
   position: absolute; top: 10px; left: 10px; z-index: 2;
-  background: rgba(255,255,255,.95); color: var(--ink); font-size: 11px; font-weight: 700;
-  padding: 5px 10px; border-radius: 7px; letter-spacing: .01em; box-shadow: var(--shadow-sm);
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,.54);
+  border-radius: 9px;
+  letter-spacing: .01em;
+  box-shadow: 0 10px 24px rgba(12,32,51,.16), 0 1px 2px rgba(12,32,51,.12);
+  backdrop-filter: blur(8px) saturate(1.08);
+  white-space: nowrap;
 }
-.badge-corner.certified { background: rgba(255,255,255,.95); }
-.badge-corner.nuevo { background: rgba(255,255,255,.95); }
+.badge-corner svg { width: 14px; height: 14px; flex: none; }
+.badge-corner.used {
+  background: rgba(255,255,255,.94);
+  color: var(--navy-800);
+  border-color: rgba(203,213,225,.9);
+}
+.badge-corner.used svg { color: var(--navy-700); }
+.badge-corner.nuevo {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 58%, #1644c7 100%);
+  color: #fff;
+  border-color: rgba(147,197,253,.62);
+  box-shadow: 0 12px 26px rgba(29,78,216,.28), 0 1px 2px rgba(8,47,128,.18);
+}
+.badge-corner.nuevo svg { color: #dbeafe; }
+.badge-corner.certified {
+  background: linear-gradient(135deg, #0f8b80 0%, #0f766e 58%, #0b5f59 100%);
+  color: #fff;
+  border-color: rgba(153,246,228,.52);
+  box-shadow: 0 12px 26px rgba(15,118,110,.28), 0 1px 2px rgba(5,60,56,.18);
+}
+.badge-corner.certified svg { color: #ccfbf1; }
 
 /* ---------- Cards ---------- */
 .card {
