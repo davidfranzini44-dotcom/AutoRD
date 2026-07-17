@@ -8,12 +8,11 @@ import {
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
-import BankLogo from '../components/BankLogo'
 import BrandLogo from '../components/BrandLogo'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
-import { BANK_RATES, estimateMonthly, affordablePrice } from '../data/finance'
+import { BANK_RATES, estimateMonthly } from '../data/finance'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', icon: Car },
@@ -33,12 +32,6 @@ const TRUST = [
   { icon: Clock, t: 'Respuesta rápida', d: 'En minutos' },
   { icon: Monitor, t: '100% online', d: 'Sin filas, sin papeleos' },
   { icon: ShieldCheck, t: 'Seguridad y privacidad', d: 'Tus datos protegidos' },
-]
-const BANK_BOXES = [
-  { slug: 'popular', name: 'Banco Popular' },
-  { slug: 'bhd', name: 'Banco BHD' },
-  { slug: 'banreservas', name: 'Banreservas' },
-  { slug: 'scotiabank', name: 'Scotiabank' },
 ]
 const BRAND_LINKS = [
   { name: 'Toyota', count: 124 },
@@ -116,13 +109,11 @@ export default function Home() {
 
   const featuredList = list.slice(0, 4)
   const recentList = all.slice(5, 10)
-  const calcApr = Math.min(...Object.values(BANK_RATES))
+  const calcApr = BANK_RATES.popular
   const calcDown = Math.round(calcPrice * (calcDownPct / 100))
   const calcPrincipal = Math.max(0, calcPrice - calcDown)
   const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
-  // Instant affordability: from monthly income → max financeable price (≈30% DTI).
   const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
-  const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
   // Carry what they entered here into the pre-approval so we don't re-ask it.
   const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
   const preapLink = incomeNum > 0
@@ -249,33 +240,38 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="calculator-banks">
-              <span>Nuestros bancos aliados</span>
-              <div className="calculator-bank-row">
-                {BANK_BOXES.map((b) => <i key={b.slug} title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 30 : 22} /></i>)}
-              </div>
+            <div className="calc-note">
+              <FileCheck size={16} />
+              <span>Estos valores son estimados y pueden variar según el perfil y la entidad financiera.</span>
             </div>
           </div>
 
           <aside className="payment-card">
             <div className="payment-label">Cuota estimada</div>
             <div className="payment-amount">{fmtRD(calcMonthly)}<span>/mes</span></div>
-            <div className="payment-rate">Tasa desde {calcApr.toFixed(2)}%</div>
-            {afford.price > 0 && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,.18)', margin: '14px 0', paddingTop: 14 }}>
-                <div className="payment-label" style={{ marginBottom: 2 }}>Con tu ingreso podrías financiar hasta</div>
-                <div className="payment-amount" style={{ fontSize: 24 }}>{fmtRD(afford.price)}</div>
-                <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
-              </div>
-            )}
+            <div className="payment-rate">Tasa referencial desde {calcApr.toFixed(2)}%</div>
+            <div className="payment-breakdown">
+              <div><span>Precio del vehículo</span><strong>{fmtRD(calcPrice)}</strong></div>
+              <div><span>Inicial ({calcDownPct}%)</span><strong>- {fmtRD(calcDown)}</strong></div>
+              <div><span>Monto a financiar</span><strong>{fmtRD(calcPrincipal)}</strong></div>
+              <div><span>Plazo</span><strong>{calcTerm} meses</strong></div>
+              <div><span>Cuota estimada</span><strong>{fmtRD(calcMonthly)}/mes</strong></div>
+            </div>
             <Link to={preapLink} className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
           </aside>
 
           <div className="finance-proof">
             <ProofItem icon={IdCard} title="KYC con cédula" text="Validación de identidad y prueba de vida." />
             <ProofItem icon={FileCheck} title="Autorización crediticia" text="Consentimiento para que el banco consulte crédito." />
-            <ProofItem icon={Landmark} title="Respuesta enviada" text="Al dealer, al cliente o a ambos según la solicitud." />
-            <ProofItem icon={LockKeyhole} title="Información protegida" text="Datos tratados con seguridad y transparencia." />
+            <ProofItem icon={Landmark} title="Banco responde" text="El banco evalúa tu solicitud y te responde." />
+          </div>
+
+          <div className="finance-safe-note">
+            <span><LockKeyhole size={24} /></span>
+            <div>
+              <strong>Tus datos están protegidos</strong>
+              <p>Utilizamos estándares de seguridad y privacidad para proteger tu información.</p>
+            </div>
           </div>
         </section>
 
@@ -396,7 +392,7 @@ function SearchSelect({ label, value, onChange, children }) {
 function ProofItem({ icon: Icon, title, text }) {
   return (
     <div className="proof-item">
-      <span><Icon size={17} /></span>
+      <span><Icon size={20} /></span>
       <div>
         <strong>{title}</strong>
         <p>{text}</p>

@@ -555,97 +555,124 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 }
 .finance-calculator {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) 280px 310px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 360px 275px;
+  gap: 26px;
   align-items: stretch;
   margin-top: 22px;
-  padding: 24px 28px;
+  padding: 30px 34px;
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(16,41,63,.07);
 }
-.finance-copy h2 { font-size: 24px; color: var(--navy-900); }
+.finance-copy h2 {
+  font-size: 29px;
+  line-height: 1.15;
+  color: var(--navy-900);
+  letter-spacing: 0;
+}
 .finance-copy > p {
   max-width: 620px;
   color: var(--muted);
-  font-size: 13.5px;
-  margin: 5px 0 20px;
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 7px 0 28px;
 }
 .calc-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 18px;
+  gap: 28px 28px;
 }
-.calc-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.calc-field label { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.calc-field { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.calc-field label { font-size: 14px; font-weight: 800; color: var(--navy-800); }
+.calc-field .input,
+.calc-field .select {
+  height: 56px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--ink);
+}
 .range {
   width: 100%;
   accent-color: var(--teal-700);
   cursor: pointer;
+  margin-top: 6px;
 }
 .range-labels {
   display: flex;
   justify-content: space-between;
   gap: 10px;
   color: var(--muted-2);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
 }
-.calculator-banks { margin-top: 18px; }
-.calculator-banks > span {
-  display: block;
-  font-size: 12.5px;
-  color: var(--ink-2);
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-.calculator-bank-row {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
-  align-items: center;
-  gap: 18px;
-}
-.calculator-bank-row i {
+.calc-note {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  min-width: 0;
-  height: 34px;
-  font-style: normal;
-  overflow: hidden;
+  gap: 10px;
+  margin-top: 34px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
 }
+.calc-note svg { color: var(--muted); flex: none; }
 .payment-card {
-  align-self: center;
+  align-self: start;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(180deg, #eef8f7, #f8fbfb);
-  padding: 22px;
+  background: linear-gradient(180deg, #f8fcfc 0%, #f3f8f7 100%);
+  padding: 28px 26px;
   box-shadow: var(--shadow-sm);
 }
-.payment-label { color: var(--muted); font-size: 12.5px; font-weight: 700; }
+.payment-label { color: var(--muted); font-size: 14px; font-weight: 800; }
 .payment-amount {
-  margin-top: 8px;
+  margin-top: 12px;
   color: var(--teal-800);
-  font-size: 32px;
+  font-size: 40px;
   line-height: 1;
-  font-weight: 850;
-  letter-spacing: -0.04em;
+  font-weight: 900;
+  letter-spacing: 0;
 }
 .payment-amount span { font-size: 15px; letter-spacing: 0; margin-left: 3px; }
-.payment-rate { color: var(--ink-2); font-size: 12.5px; font-weight: 600; margin: 12px 0 18px; }
+.payment-rate {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 650;
+  margin: 15px 0 22px;
+}
+.payment-breakdown {
+  display: grid;
+  gap: 15px;
+  padding-top: 21px;
+  margin-bottom: 28px;
+  border-top: 1px solid var(--line);
+}
+.payment-breakdown div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.payment-breakdown strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
 .finance-proof {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  border-left: 1px solid var(--line);
-  padding-left: 22px;
+  gap: 34px;
+  padding-top: 58px;
   justify-content: center;
 }
-.proof-item { display: flex; gap: 12px; align-items: flex-start; }
+.proof-item { display: flex; gap: 18px; align-items: flex-start; }
 .proof-item > span {
-  width: 30px;
-  height: 30px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   color: var(--teal-700);
   background: var(--teal-50);
@@ -654,8 +681,40 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   justify-content: center;
   flex: none;
 }
-.proof-item strong { display: block; font-size: 13.5px; color: var(--ink); }
-.proof-item p { color: var(--muted); font-size: 12.5px; line-height: 1.35; margin: 2px 0 0; }
+.proof-item strong { display: block; font-size: 15px; color: var(--navy-900); }
+.proof-item p { color: var(--muted); font-size: 13.5px; line-height: 1.45; margin: 5px 0 0; }
+.finance-safe-note {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin: 4px 2px 0;
+  padding: 18px 22px;
+  border: 1px solid var(--teal-100);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fbfefe, #f6fbfa);
+}
+.finance-safe-note > span {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-700);
+  flex: none;
+}
+.finance-safe-note strong {
+  display: block;
+  color: var(--navy-900);
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.finance-safe-note p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
 .recent-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -922,15 +981,14 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .search-fields { grid-template-columns: repeat(3, 1fr); }
   .search-fields .btn { grid-column: span 3; }
   .split { grid-template-columns: 1fr; }
-  .finance-calculator { grid-template-columns: minmax(0, 1fr) 280px; }
+  .finance-calculator { grid-template-columns: minmax(0, 1fr) 340px; }
   .finance-proof {
     grid-column: 1 / -1;
-    border-left: 0;
     border-top: 1px solid var(--line);
-    padding-left: 0;
-    padding-top: 18px;
+    padding-top: 22px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
   }
   .brand-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .recent-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -943,7 +1001,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .nav, .loc-pill span, .icon-btn span { display: none; }
   .finance-calculator { grid-template-columns: 1fr; }
   .payment-card { align-self: stretch; }
-  .finance-proof { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .finance-proof { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 0; border-top: 0; }
   .dealer-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 860px) {
@@ -975,14 +1033,9 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .finance-calculator { margin-top: 16px; padding: 18px; gap: 18px; }
   .finance-copy h2 { font-size: 21px; }
   .calc-grid { grid-template-columns: 1fr; }
-  .calculator-bank-row { gap: 10px; }
-  .calculator-bank-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 18px;
-  }
-  .calculator-bank-row i { min-width: 0; }
   .payment-amount { font-size: 28px; }
   .finance-proof { grid-template-columns: 1fr; }
+  .finance-safe-note { align-items: flex-start; padding: 16px; gap: 14px; }
   .recent-row {
     display: flex;
     overflow-x: auto;
