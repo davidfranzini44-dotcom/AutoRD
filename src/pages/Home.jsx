@@ -124,6 +124,11 @@ export default function Home() {
   // Instant affordability: from monthly income → max financeable price (≈30% DTI).
   const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
   const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
+  // Carry what they entered here into the pre-approval so we don't re-ask it.
+  const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
+  const preapLink = incomeNum > 0
+    ? `/financiamiento?ingreso=${incomeNum}&monto=${calcPrice}&plazo=${calcYears}`
+    : '/financiamiento'
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -271,7 +276,7 @@ export default function Home() {
                 <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
               </div>
             )}
-            <Link to="/financiamiento" className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
+            <Link to={preapLink} className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
           </aside>
 
           <div className="finance-proof">

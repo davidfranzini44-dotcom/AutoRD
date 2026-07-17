@@ -70,6 +70,21 @@ export default function Financing() {
     }))
   }, [profile])
 
+  // Prefill from the homepage calculator so we don't re-ask what they entered.
+  useEffect(() => {
+    const ing = params.get('ingreso')
+    const monto = params.get('monto')
+    const pl = params.get('plazo')
+    if (!ing && !monto && !pl) return
+    setForm((f) => ({
+      ...f,
+      ingreso: ing ? fmtRD(Number(ing)) : f.ingreso,
+      presupuesto: monto ? fmtRD(Number(monto)) : f.presupuesto,
+      plazo: pl || f.plazo,
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
   const back = () => setStep((s) => Math.max(s - 1, 0))
@@ -200,24 +215,41 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 
 /* ---------------- Step 1: Datos ---------------- */
 function StepDatos({ form, set, isPreapproval }) {
+  // Pre-approval: minimal form. Name + cédula come from the Didit KYC step, so we
+  // only ask what a bank can't verify itself — income, desired amount, term, contact.
+  if (isPreapproval) {
+    return (
+      <>
+        <StepHead
+          icon={User}
+          title="Datos básicos"
+          sub="Solo lo esencial. Tu nombre y cédula los tomamos de tu verificación de identidad (Didit) en el siguiente paso — no hace falta escribirlos."
+        />
+        <div className="grid grid-2" style={{ gap: 14 }}>
+          <F label="Ingreso mensual (salario)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={set('ingreso')} placeholder="RD$ 85,000" /></F>
+          <F label="Monto deseado" help="Cuánto quieres financiar (opcional)"><input className="input" value={form.presupuesto} onChange={set('presupuesto')} placeholder="RD$ 1,500,000" /></F>
+          <F label="Plazo preferido">
+            <select className="select" value={form.plazo} onChange={set('plazo')}>
+              <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
+            </select>
+          </F>
+          <F label="WhatsApp" help="Para enviarte las respuestas de los bancos"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
+        </div>
+        <div className="notice" style={{ marginTop: 16 }}>
+          <Info size={16} /><span>Verificamos tu identidad con Didit en el siguiente paso. Si un banco necesita comprobantes, los solicitará durante su evaluación.</span>
+        </div>
+      </>
+    )
+  }
   return (
     <>
-      <StepHead
-        icon={User}
-        title="Datos básicos"
-        sub={isPreapproval
-          ? 'Solo lo esencial para que los bancos estimen tu pre-aprobación. Tu ingreso es lo más importante — no pedimos comprobantes todavía.'
-          : 'Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía.'}
-      />
+      <StepHead icon={User} title="Datos básicos" sub="Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía." />
       <div className="grid grid-2" style={{ gap: 14 }}>
         <F label="Nombre completo"><input className="input" value={form.nombre} onChange={set('nombre')} placeholder="Nombre y apellido" /></F>
         <F label="Cédula" help="Formato 000-0000000-0"><input className="input" value={form.cedula} onChange={set('cedula')} placeholder="402-0000000-0" /></F>
         <F label="Teléfono"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
         <F label="Email"><input className="input" value={form.email} onChange={set('email')} placeholder="nombre@correo.com" /></F>
         <F label="Ingreso aproximado (mensual)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={set('ingreso')} placeholder="RD$ 85,000" /></F>
-        {isPreapproval && (
-          <F label="Monto deseado (opcional)" help="Si ya tienes un presupuesto en mente"><input className="input" value={form.presupuesto} onChange={set('presupuesto')} placeholder="RD$ 1,500,000" /></F>
-        )}
         <F label="Inicial disponible"><input className="input" value={form.inicial} onChange={set('inicial')} placeholder="RD$ 250,000" /></F>
         <F label="Plazo preferido">
           <select className="select" value={form.plazo} onChange={set('plazo')}>
@@ -226,7 +258,7 @@ function StepDatos({ form, set, isPreapproval }) {
         </F>
       </div>
       <div className="notice" style={{ marginTop: 16 }}>
-        <Info size={16} /><span>Solo pedimos lo básico. Si un banco necesita comprobantes (ingresos, carta de trabajo), los solicitará durante su evaluación.</span>
+        <Info size={16} /><span>Solo se solicitarán documentos financieros adicionales si un banco los requiere durante su evaluación.</span>
       </div>
     </>
   )
@@ -347,8 +379,10 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPr
         {vehicle && <div className="kv"><span className="k">Vehículo</span><span className="v">{vehicle.make} {vehicle.model} {vehicle.year}</span></div>}
         {vehicle && <div className="kv"><span className="k">Precio</span><span className="v">{fmtRD(vehicle.price)}</span></div>}
         {isPreapproval && form.presupuesto && <div className="kv"><span className="k">Monto deseado</span><span className="v">{form.presupuesto}</span></div>}
-        <div className="kv"><span className="k">Solicitante</span><span className="v">{form.nombre || '—'}</span></div>
-        <div className="kv"><span className="k">Inicial disponible</span><span className="v">{form.inicial || '—'}</span></div>
+        {isPreapproval
+          ? <div className="kv"><span className="k">WhatsApp</span><span className="v">{form.telefono || '—'}</span></div>
+          : <><div className="kv"><span className="k">Solicitante</span><span className="v">{form.nombre || '—'}</span></div>
+            <div className="kv"><span className="k">Inicial disponible</span><span className="v">{form.inicial || '—'}</span></div></>}
         <div className="kv"><span className="k">Plazo preferido</span><span className="v">{form.plazo} años</span></div>
         <div className="kv"><span className="k">Bancos</span><span className="v">{sel.length} seleccionados</span></div>
         <div className="kv"><span className="k">KYC</span><span className="v"><StatusChip status="approved">KYC aprobado</StatusChip></span></div>
