@@ -25,16 +25,25 @@ export default function DealersMap({ dealers, selId, onSelect }) {
   useEffect(() => {
     if (!isMapsConfigured()) return
     let alive = true
+    let ro = null
     loadGoogleMaps().then((maps) => {
       if (!alive || !ref.current || mapRef.current) return
-      mapRef.current = new maps.Map(ref.current, {
+      const map = new maps.Map(ref.current, {
         center: DR_CENTER, zoom: 8,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
       })
+      mapRef.current = map
       infoRef.current = new maps.InfoWindow()
       setStatus('ready')
+      // A map created before its container is fully laid out paints gray tiles and
+      // does not recover on its own — force a repaint on the first sizes it sees.
+      const nudge = () => { maps.event.trigger(map, 'resize'); map.setCenter(DR_CENTER) }
+      requestAnimationFrame(nudge)
+      setTimeout(nudge, 400)
+      ro = new ResizeObserver(() => maps.event.trigger(map, 'resize'))
+      ro.observe(ref.current)
     }).catch(() => { if (alive) setStatus('error') })
-    return () => { alive = false }
+    return () => { alive = false; if (ro) ro.disconnect() }
   }, [])
 
   const openInfo = (maps, d, marker) => {
