@@ -14,10 +14,17 @@ function pinIcon(initials, color = '#0f766e') {
   return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg)
 }
 
-export default function DealersMap({ dealers, selId, onSelect }) {
+// "You are here" dot for the customer's own location.
+function userDot() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="3"/></svg>`
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg)
+}
+
+export default function DealersMap({ dealers, selId, onSelect, userLoc }) {
   const ref = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef({})
+  const userMarkerRef = useRef(null)
   const infoRef = useRef(null)
   const [status, setStatus] = useState(isMapsConfigured() ? 'loading' : 'nokey')
 
@@ -77,9 +84,19 @@ export default function DealersMap({ dealers, selId, onSelect }) {
       markersRef.current[d.id] = marker
       bounds.extend(pos)
     })
-    if (dealers.length > 1) mapRef.current.fitBounds(bounds, 64)
-    else if (dealers.length === 1) { mapRef.current.setCenter(bounds.getCenter()); mapRef.current.setZoom(12) }
-  }, [dealers, status]) // eslint-disable-line react-hooks/exhaustive-deps
+    // "You are here" marker from the customer's geolocation.
+    if (userMarkerRef.current) { userMarkerRef.current.setMap(null); userMarkerRef.current = null }
+    if (userLoc) {
+      userMarkerRef.current = new maps.Marker({
+        position: userLoc, map: mapRef.current, title: 'Tu ubicación', zIndex: 999,
+        icon: { url: userDot(), scaledSize: new maps.Size(24, 24), anchor: new maps.Point(12, 12) },
+      })
+      bounds.extend(userLoc)
+    }
+    const points = dealers.length + (userLoc ? 1 : 0)
+    if (points > 1) mapRef.current.fitBounds(bounds, 64)
+    else if (points === 1) { mapRef.current.setCenter(bounds.getCenter()); mapRef.current.setZoom(12) }
+  }, [dealers, status, userLoc]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pan + open info when a dealer is selected from the list.
   useEffect(() => {

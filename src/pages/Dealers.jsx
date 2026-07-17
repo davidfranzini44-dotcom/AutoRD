@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal } from 'lucide-react'
+import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import DealersMap from '../components/DealersMap'
 import { listDealers } from '../data/api'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 import { fmtRD } from '../data/demo'
 import { useFicha } from '../context/FichaContext'
+import { dealerCoords, haversineKm } from '../data/geo'
 
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
 const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
@@ -17,6 +18,9 @@ export default function Dealers() {
   const [tipo, setTipo] = useState('')
   const [precioMax, setPrecioMax] = useState('')
   const [anioMin, setAnioMin] = useState('')
+  const [ciudad, setCiudad] = useState('')
+  const [userLoc, setUserLoc] = useState(null) // { lat, lng } from "usar mi ubicación"
+  const [locStatus, setLocStatus] = useState('idle') // idle|loading|ok|denied|unsupported
   const [selId, setSelId] = useState(null)
   const { open } = useFicha()
 
@@ -29,18 +33,36 @@ export default function Dealers() {
     return () => { alive = false }
   }, [])
 
-  const hasFilter = !!(tipo || precioMax || anioMin)
+  const cities = useMemo(() => [...new Set(dealers.map((d) => d.city).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es-DO')), [dealers])
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) { setLocStatus('unsupported'); return }
+    setLocStatus('loading')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocStatus('ok') },
+      () => setLocStatus('denied'),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+    )
+  }
+
+  const vehicleFilter = !!(tipo || precioMax || anioMin)
+  const hasFilter = vehicleFilter || !!ciudad
   const filtered = useMemo(() => {
-    return dealers.map((d) => ({
+    let list = dealers.map((d) => ({
       ...d,
       matches: d.vehicles.filter((v) =>
         (!tipo || v.bodyType === tipo) &&
         (!precioMax || v.price <= Number(precioMax)) &&
         (!anioMin || v.year >= Number(anioMin))),
-    })).filter((d) => (hasFilter ? d.matches.length > 0 : true))
-  }, [dealers, tipo, precioMax, anioMin, hasFilter])
+      distanceKm: userLoc ? haversineKm(userLoc, dealerCoords(d)) : null,
+    }))
+      .filter((d) => (!ciudad || d.city === ciudad))
+      .filter((d) => (vehicleFilter ? d.matches.length > 0 : true))
+    if (userLoc) list = [...list].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+    return list
+  }, [dealers, tipo, precioMax, anioMin, ciudad, vehicleFilter, userLoc])
 
-  const clear = () => { setTipo(''); setPrecioMax(''); setAnioMin('') }
+  const clear = () => { setTipo(''); setPrecioMax(''); setAnioMin(''); setCiudad('') }
 
   return (
     <main className="page">
@@ -51,7 +73,7 @@ export default function Dealers() {
           <div>
             <h1 style={{ fontSize: 24 }}>Dealers verificados</h1>
             <p className="muted small" style={{ marginTop: 2 }}>
-              {loading ? 'Cargando…' : <><strong style={{ color: 'var(--ink)' }}>{filtered.length}</strong> dealer{filtered.length === 1 ? '' : 'es'} {hasFilter ? 'con lo que buscas' : 'en el mapa'}</>}
+              {loading ? 'Cargando…' : <><strong style={{ color: 'var(--ink)' }}>{filtered.length}</strong> dealer{filtered.length === 1 ? '' : 'es'} {hasFilter ? 'con lo que buscas' : 'en el mapa'}{userLoc ? ' · ordenados por cercanía' : ''}</>}
             </p>
           </div>
         </div>
@@ -66,17 +88,25 @@ export default function Dealers() {
             </button>
           ))}
         </div>
-        <div className="row center gap-8" style={{ marginBottom: 16 }}>
+        <div className="row center wrap gap-8" style={{ marginBottom: 16 }}>
           <SlidersHorizontal size={16} className="muted" />
-          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 200, height: 38 }}>
+          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 190, height: 38 }}>
             <option value="">Cualquier precio</option>
             {PRICE_OPTIONS.map((p) => <option key={p} value={p}>Hasta {fmtRD(p)}</option>)}
           </select>
-          <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)} style={{ maxWidth: 150, height: 38 }}>
+          <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)} style={{ maxWidth: 140, height: 38 }}>
             <option value="">Cualquier año</option>
             {YEAR_OPTIONS.map((y) => <option key={y} value={y}>Desde {y}</option>)}
           </select>
+          <select className="select" value={ciudad} onChange={(e) => setCiudad(e.target.value)} style={{ maxWidth: 180, height: 38 }}>
+            <option value="">Toda ubicación</option>
+            {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button className="btn btn-outline btn-sm" onClick={useMyLocation} disabled={locStatus === 'loading'}>
+            {locStatus === 'loading' ? <Loader2 size={15} className="spin" /> : <LocateFixed size={15} />} {locStatus === 'ok' ? 'Ubicación activa' : 'Usar mi ubicación'}
+          </button>
           {hasFilter && <button className="btn btn-outline btn-sm" onClick={clear}>Limpiar</button>}
+          {(locStatus === 'denied' || locStatus === 'unsupported') && <span className="tiny muted">No pudimos obtener tu ubicación.</span>}
         </div>
 
         <div className="dealers-split">
@@ -93,7 +123,7 @@ export default function Dealers() {
           </div>
 
           <div className="dealers-map-wrap">
-            <DealersMap dealers={filtered} selId={selId} onSelect={setSelId} />
+            <DealersMap dealers={filtered} selId={selId} onSelect={setSelId} userLoc={userLoc} />
           </div>
         </div>
       </div>
@@ -117,6 +147,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches }) {
           <div className="tiny muted row center gap-4" style={{ marginTop: 2 }}>
             <MapPin size={12} /> {d.city || 'RD'} · {d.vehicles.length} vehículo{d.vehicles.length === 1 ? '' : 's'}
             {showMatches ? ` · ${d.matches.length} coincidencia${d.matches.length === 1 ? '' : 's'}` : ''}
+            {d.distanceKm != null ? ` · a ${d.distanceKm < 10 ? d.distanceKm.toFixed(1) : Math.round(d.distanceKm)} km` : ''}
           </div>
         </div>
         {prices.length > 0 && (
