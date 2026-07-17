@@ -7,7 +7,14 @@ import {
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
-import BodyTypeIcon from '../components/BodyTypeIcon'
+import bodyConvertibles from '../assets/body-types/convertibles.png'
+import bodyCoupes from '../assets/body-types/coupes.png'
+import bodyHatchbacks from '../assets/body-types/hatchbacks.png'
+import bodyMinivans from '../assets/body-types/minivans.png'
+import bodySedans from '../assets/body-types/sedans.png'
+import bodyStationWagons from '../assets/body-types/station-wagons.png'
+import bodySuvs from '../assets/body-types/suvs.png'
+import bodyTrucks from '../assets/body-types/trucks.png'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 
@@ -37,14 +44,14 @@ const BANK_BOXES = [
   { cls: 'b-scotiabank', label: 'Scotiabank' },
 ]
 const BODY_TYPES = [
-  { type: 'SUV', label: 'SUVs' },
-  { type: 'Pickup', label: 'Camionetas' },
-  { type: 'Sedán', label: 'Sedanes' },
-  { type: 'Coupé', label: 'Coupés' },
-  { type: 'Minivan', label: 'Minivans' },
-  { type: 'Hatchback', label: 'Hatchbacks' },
-  { type: 'Convertible', label: 'Convertibles' },
-  { type: 'Wagon', label: 'Familiares' },
+  { type: 'SUV', label: 'SUVs', image: bodySuvs },
+  { type: 'Pickup', label: 'Trucks', image: bodyTrucks },
+  { type: 'Sedán', label: 'Sedans', image: bodySedans },
+  { type: 'Coupé', label: 'Coupes', image: bodyCoupes },
+  { type: 'Minivan', label: 'Minivans', image: bodyMinivans },
+  { type: 'Hatchback', label: 'Hatchbacks', image: bodyHatchbacks },
+  { type: 'Convertible', label: 'Convertibles', image: bodyConvertibles },
+  { type: 'Wagon', label: 'Station wagons', image: bodyStationWagons },
 ]
 
 export default function Home() {
@@ -166,10 +173,8 @@ export default function Home() {
         </div>
 
         {/* ---------------- Browse by body type ---------------- */}
-        <section className="bodytype-section">
-          <div className="section-title" style={{ marginBottom: 12 }}>
-            <h2>Explorar por tipo de vehículo</h2>
-          </div>
+        <section className="bodytype-section" aria-labelledby="bodytype-title">
+          <h2 id="bodytype-title">Browse by body type</h2>
           <div className="bodytype-row">
             {BODY_TYPES.map((b) => (
               <button
@@ -183,7 +188,7 @@ export default function Home() {
                   runSearch()
                 }}
               >
-                <BodyTypeIcon type={b.type} />
+                <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
                 <span className="bt-label">{b.label}</span>
               </button>
             ))}
