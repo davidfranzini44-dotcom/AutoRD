@@ -20,10 +20,22 @@ const STEPS = [
   { id: 'respuestas', label: 'Respuestas', icon: Landmark },
 ]
 
+// Pre-approval "Datos" step, asked ONE question at a time. `param` = the
+// homepage-calculator query param that pre-fills it; when present we skip that
+// question (already answered on the calculator). Name/cédula come from KYC.
+const PREAP_QUESTIONS = [
+  { key: 'ingreso', param: 'ingreso', label: '¿Cuál es tu ingreso mensual?', help: 'Tu salario aproximado. Sin comprobante por ahora.', placeholder: 'RD$ 85,000', type: 'money' },
+  { key: 'presupuesto', param: 'monto', label: '¿Cuánto quieres financiar?', help: 'Monto deseado. Déjalo en blanco si aún no lo sabes.', placeholder: 'RD$ 1,500,000', type: 'money', optional: true },
+  { key: 'plazo', param: 'plazo', label: '¿A qué plazo quieres pagar?', help: 'El tiempo para pagar tu financiamiento.', type: 'plazo' },
+  { key: 'telefono', label: '¿A qué WhatsApp te enviamos las respuestas?', help: 'Los bancos responderán por esta vía.', placeholder: '809-000-0000', type: 'tel' },
+]
+
 export default function Financing() {
   const [params] = useSearchParams()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
+  // Only ask what the calculator didn't already capture (WhatsApp is always asked).
+  const preapQuestions = PREAP_QUESTIONS.filter((q) => !q.param || !params.get(q.param))
   const { profile } = useAuth() || {}
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
@@ -188,13 +200,16 @@ export default function Financing() {
         </div>
 
         <div className="card card-pad">
-          {step === 0 && <StepDatos form={form} set={set} isPreapproval={isPreapproval} />}
+          {step === 0 && (isPreapproval
+            ? <PreapDatos form={form} set={set} questions={preapQuestions} onComplete={next} />
+            : <StepDatos form={form} set={set} />)}
           {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
           {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
           {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} />}
           {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
 
-          {step < 4 && (
+          {/* Pre-approval step 0 has its own in-card controls (one question at a time). */}
+          {step < 4 && !(step === 0 && isPreapproval) && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
               <button className="btn btn-outline" onClick={back} disabled={step === 0}><ChevronLeft size={17} /> Atrás</button>
               <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} selBanks={selBanks} />
@@ -214,33 +229,59 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 }
 
 /* ---------------- Step 1: Datos ---------------- */
-function StepDatos({ form, set, isPreapproval }) {
-  // Pre-approval: minimal form. Name + cédula come from the Didit KYC step, so we
-  // only ask what a bank can't verify itself — income, desired amount, term, contact.
-  if (isPreapproval) {
-    return (
-      <>
-        <StepHead
-          icon={User}
-          title="Datos básicos"
-          sub="Solo lo esencial. Tu nombre y cédula los tomamos de tu verificación de identidad (Didit) en el siguiente paso — no hace falta escribirlos."
-        />
-        <div className="grid grid-2" style={{ gap: 14 }}>
-          <F label="Ingreso mensual (salario)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={set('ingreso')} placeholder="RD$ 85,000" /></F>
-          <F label="Monto deseado" help="Cuánto quieres financiar (opcional)"><input className="input" value={form.presupuesto} onChange={set('presupuesto')} placeholder="RD$ 1,500,000" /></F>
-          <F label="Plazo preferido">
-            <select className="select" value={form.plazo} onChange={set('plazo')}>
-              <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
-            </select>
-          </F>
-          <F label="WhatsApp" help="Para enviarte las respuestas de los bancos"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
-        </div>
-        <div className="notice" style={{ marginTop: 16 }}>
-          <Info size={16} /><span>Verificamos tu identidad con Didit en el siguiente paso. Si un banco necesita comprobantes, los solicitará durante su evaluación.</span>
-        </div>
-      </>
-    )
-  }
+/* Pre-approval Datos — one question at a time with smooth transitions.
+   Name + cédula come from the Didit KYC step, so we never ask them here. */
+function PreapDatos({ form, set, questions, onComplete }) {
+  const [i, setI] = useState(0)
+  const idx = Math.min(i, questions.length - 1)
+  const q = questions[idx]
+  const isLast = idx === questions.length - 1
+  const val = form[q.key]
+  const ready = q.optional || (val != null && String(val).trim() !== '')
+  const go = (d) => setI((x) => Math.min(questions.length - 1, Math.max(0, x + d)))
+  const advance = () => { if (!ready) return; if (isLast) onComplete(); else go(1) }
+  const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance() } }
+
+  return (
+    <div className="preap">
+      <div className="preap-progress">
+        <div className="preap-track"><div className="preap-fill" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} /></div>
+        <span className="preap-count">{idx + 1} de {questions.length}</span>
+      </div>
+
+      <div className="preap-slide" key={q.key}>
+        <div className="preap-q">{q.label}</div>
+        <div className="preap-help">{q.help}</div>
+        {q.type === 'plazo' ? (
+          <select className="select preap-input" value={form.plazo} onChange={set('plazo')} autoFocus>
+            <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
+          </select>
+        ) : (
+          <input
+            className="input preap-input"
+            value={val || ''}
+            onChange={set(q.key)}
+            onKeyDown={onKey}
+            placeholder={q.placeholder}
+            inputMode={q.type === 'money' || q.type === 'tel' ? 'numeric' : 'text'}
+            autoFocus
+          />
+        )}
+      </div>
+
+      <div className="preap-actions">
+        {idx > 0
+          ? <button className="btn btn-outline" onClick={() => go(-1)}><ChevronLeft size={17} /> Atrás</button>
+          : <span className="tiny muted"><ShieldCheck size={13} style={{ verticalAlign: -2 }} /> Tu identidad se verifica en el siguiente paso</span>}
+        <button className="btn btn-primary" onClick={advance} disabled={!ready}>
+          {isLast ? 'Continuar a verificación' : 'Continuar'} <ChevronRight size={17} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function StepDatos({ form, set }) {
   return (
     <>
       <StepHead icon={User} title="Datos básicos" sub="Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía." />

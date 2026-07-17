@@ -69,7 +69,6 @@ export default function Home() {
   const [calcPrice, setCalcPrice] = useState(1250000)
   const [calcDownPct, setCalcDownPct] = useState(20)
   const [calcTerm, setCalcTerm] = useState(60)
-  const [calcBank, setCalcBank] = useState('popular')
   const [calcIncome, setCalcIncome] = useState('')
 
   useEffect(() => {
@@ -117,7 +116,7 @@ export default function Home() {
 
   const featuredList = list.slice(0, 4)
   const recentList = all.slice(5, 10)
-  const calcApr = BANK_RATES[calcBank] || BANK_RATES.popular
+  const calcApr = Math.min(...Object.values(BANK_RATES))
   const calcDown = Math.round(calcPrice * (calcDownPct / 100))
   const calcPrincipal = Math.max(0, calcPrice - calcDown)
   const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
@@ -240,13 +239,6 @@ export default function Home() {
                   <option value={60}>60 meses</option>
                   <option value={72}>72 meses</option>
                   <option value={84}>84 meses</option>
-                </select>
-              </div>
-
-              <div className="calc-field">
-                <label>Banco preferido</label>
-                <select className="select" value={calcBank} onChange={(e) => setCalcBank(e.target.value)}>
-                  {BANK_BOXES.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
                 </select>
               </div>
 
