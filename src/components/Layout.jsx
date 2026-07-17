@@ -5,6 +5,8 @@ import {
   Home, Search, Landmark, User, LogOut, LayoutDashboard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { FichaProvider } from '../context/FichaContext'
+import VehicleFicha from './VehicleFicha'
 import autordLogo from '../assets/autord-logo-reference.png'
 
 function Logo() {
@@ -34,6 +36,7 @@ export default function Layout() {
     : profile?.role === 'bank' ? '/banco' : null
 
   return (
+    <FichaProvider>
     <div className="app">
       <header className="header">
         <div className="container header-inner">
@@ -101,7 +104,10 @@ export default function Layout() {
         <NavLink to="/favoritos"><Heart size={20} /> Favoritos</NavLink>
         <NavLink to={user ? '/mi-financiamiento' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
+
+      <VehicleFicha />
     </div>
+    </FichaProvider>
   )
 }
 

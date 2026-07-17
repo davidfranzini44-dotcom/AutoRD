@@ -11,6 +11,7 @@ import CarImage from '../components/CarImage'
 import BrandLogo from '../components/BrandLogo'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
+import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
 import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
 
@@ -415,8 +416,16 @@ function ProofItem({ icon: Icon, title, text }) {
 }
 
 function RecentCard({ v }) {
+  const { open } = useFicha()
   return (
-    <Link to={`/vehiculo/${v.id}`} className="recent-card">
+    <div
+      className="recent-card"
+      role="button"
+      tabIndex={0}
+      aria-label={`Ver ${v.make} ${v.model} ${v.year}`}
+      onClick={() => open(v)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(v) } }}
+    >
       <div className="recent-photo">
         <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
       </div>
@@ -426,7 +435,7 @@ function RecentCard({ v }) {
         <b>{fmtRD(v.price)}</b>
         <em><MapPin size={12} /> {v.location}</em>
       </div>
-    </Link>
+    </div>
   )
 }
 

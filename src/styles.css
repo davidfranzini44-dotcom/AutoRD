@@ -1176,3 +1176,45 @@ select.preap-input { padding-right: 16px; }
   .preap-q { font-size: 19px; }
   .preap-input { font-size: 18px !important; height: 52px; }
 }
+
+/* ---------------- Vehicle ficha side drawer ---------------- */
+.ficha-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(12, 32, 51, .5);
+  display: flex; justify-content: flex-end;
+  animation: fichaFade .2s ease;
+}
+@keyframes fichaFade { from { opacity: 0; } to { opacity: 1; } }
+.ficha-panel {
+  width: min(440px, 100%); height: 100%;
+  background: #fff; display: flex; flex-direction: column;
+  box-shadow: -12px 0 44px rgba(0, 0, 0, .2);
+  animation: fichaSlideX .34s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes fichaSlideX { from { transform: translateX(100%); } to { transform: none; } }
+.ficha-photo { position: relative; flex: none; height: 220px; background: var(--surface-2); }
+.ficha-photo .vphoto { height: 100%; }
+.ficha-close {
+  position: absolute; top: 12px; right: 12px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255, 255, 255, .94); border: 1px solid var(--line);
+  display: grid; place-items: center; cursor: pointer; color: var(--ink);
+}
+.ficha-close:hover { background: #fff; }
+.ficha-body { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ficha-price { font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.ficha-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ficha-actions {
+  flex: none; padding: 14px 18px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 8px; background: #fff;
+}
+@media (max-width: 560px) {
+  .ficha-overlay { justify-content: center; align-items: flex-end; }
+  .ficha-panel {
+    width: 100%; height: 92vh; border-radius: 18px 18px 0 0;
+    animation: fichaSlideY .34s cubic-bezier(.16, 1, .3, 1);
+  }
+  @keyframes fichaSlideY { from { transform: translateY(100%); } to { transform: none; } }
+}
+.vcard-click, .recent-card { cursor: pointer; }
+.vcard-click:focus-visible, .recent-card:focus-visible { outline: 2px solid var(--teal-700); outline-offset: 2px; }
