@@ -259,7 +259,7 @@ export default function Home() {
               <div><span>Plazo</span><strong>{calcTerm} meses</strong></div>
               <div><span>Cuota estimada</span><strong>{fmtRD(calcMonthly)}/mes</strong></div>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,.18)', margin: '14px 0', paddingTop: 14 }}>
+            <div style={{ borderTop: '1px solid var(--line)', margin: '14px 0', paddingTop: 14 }}>
               <div className="payment-label" style={{ marginBottom: 2 }}>Con tu salario podrías financiar hasta</div>
               {afford.price > 0 ? (
                 <>
@@ -267,7 +267,7 @@ export default function Home() {
                   <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
                 </>
               ) : (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.85)', marginTop: 4 }}>Ingresa tu salario mensual arriba para calcularlo.</div>
+                <div className="small" style={{ color: 'var(--muted)', marginTop: 4 }}>Ingresa tu salario mensual arriba para calcularlo.</div>
               )}
             </div>
             <Link to={preapLink} className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
