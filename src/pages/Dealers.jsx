@@ -9,15 +9,17 @@ import { fmtRD } from '../data/demo'
 import { useFicha } from '../context/FichaContext'
 import { dealerCoords, haversineKm, directionsUrl } from '../data/geo'
 
-const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
-const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
+const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
+const YEARS = Array.from({ length: 2025 - 2010 + 1 }, (_, i) => 2025 - i) // 2025 → 2010
 
 export default function Dealers() {
   const [dealers, setDealers] = useState([])
   const [loading, setLoading] = useState(true)
   const [tipo, setTipo] = useState('')
+  const [precioMin, setPrecioMin] = useState('')
   const [precioMax, setPrecioMax] = useState('')
   const [anioMin, setAnioMin] = useState('')
+  const [anioMax, setAnioMax] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [userLoc, setUserLoc] = useState(null) // { lat, lng } from "usar mi ubicación"
   const [locStatus, setLocStatus] = useState('idle') // idle|loading|ok|denied|unsupported
@@ -45,24 +47,26 @@ export default function Dealers() {
     )
   }
 
-  const vehicleFilter = !!(tipo || precioMax || anioMin)
+  const vehicleFilter = !!(tipo || precioMin || precioMax || anioMin || anioMax)
   const hasFilter = vehicleFilter || !!ciudad
   const filtered = useMemo(() => {
     let list = dealers.map((d) => ({
       ...d,
       matches: d.vehicles.filter((v) =>
         (!tipo || v.bodyType === tipo) &&
+        (!precioMin || v.price >= Number(precioMin)) &&
         (!precioMax || v.price <= Number(precioMax)) &&
-        (!anioMin || v.year >= Number(anioMin))),
+        (!anioMin || v.year >= Number(anioMin)) &&
+        (!anioMax || v.year <= Number(anioMax))),
       distanceKm: userLoc ? haversineKm(userLoc, dealerCoords(d)) : null,
     }))
       .filter((d) => (!ciudad || d.city === ciudad))
       .filter((d) => (vehicleFilter ? d.matches.length > 0 : true))
     if (userLoc) list = [...list].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
     return list
-  }, [dealers, tipo, precioMax, anioMin, ciudad, vehicleFilter, userLoc])
+  }, [dealers, tipo, precioMin, precioMax, anioMin, anioMax, ciudad, vehicleFilter, userLoc])
 
-  const clear = () => { setTipo(''); setPrecioMax(''); setAnioMin(''); setCiudad('') }
+  const clear = () => { setTipo(''); setPrecioMin(''); setPrecioMax(''); setAnioMin(''); setAnioMax(''); setCiudad('') }
 
   return (
     <main className="page">
@@ -90,13 +94,21 @@ export default function Dealers() {
         </div>
         <div className="row center wrap gap-8" style={{ marginBottom: 16 }}>
           <SlidersHorizontal size={16} className="muted" />
-          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 190, height: 38 }}>
-            <option value="">Cualquier precio</option>
-            {PRICE_OPTIONS.map((p) => <option key={p} value={p}>Hasta {fmtRD(p)}</option>)}
+          <select className="select" value={precioMin} onChange={(e) => setPrecioMin(e.target.value)} style={{ maxWidth: 160, height: 38 }}>
+            <option value="">Precio desde</option>
+            {PRICE_OPTIONS.filter((p) => !precioMax || p <= Number(precioMax)).map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
           </select>
-          <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)} style={{ maxWidth: 140, height: 38 }}>
-            <option value="">Cualquier año</option>
-            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>Desde {y}</option>)}
+          <select className="select" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} style={{ maxWidth: 160, height: 38 }}>
+            <option value="">Precio hasta</option>
+            {PRICE_OPTIONS.filter((p) => !precioMin || p >= Number(precioMin)).map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
+          </select>
+          <select className="select" value={anioMin} onChange={(e) => setAnioMin(e.target.value)} style={{ maxWidth: 130, height: 38 }}>
+            <option value="">Año desde</option>
+            {YEARS.filter((y) => !anioMax || y <= Number(anioMax)).map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select className="select" value={anioMax} onChange={(e) => setAnioMax(e.target.value)} style={{ maxWidth: 130, height: 38 }}>
+            <option value="">Año hasta</option>
+            {YEARS.filter((y) => !anioMin || y >= Number(anioMin)).map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
           <select className="select" value={ciudad} onChange={(e) => setCiudad(e.target.value)} style={{ maxWidth: 180, height: 38 }}>
             <option value="">Toda ubicación</option>

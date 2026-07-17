@@ -7,8 +7,8 @@ import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 
-const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
-const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
+const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
+const YEARS = Array.from({ length: 2025 - 2010 + 1 }, (_, i) => 2025 - i) // 2025 → 2010
 
 export default function Buscar() {
   const [params, setParams] = useSearchParams()
@@ -18,8 +18,10 @@ export default function Buscar() {
   const marca = params.get('marca') || ''
   const tipo = params.get('tipo') || ''
   const ubicacion = params.get('ubicacion') || ''
+  const precioMin = params.get('precioMin') || ''
   const precioMax = params.get('precioMax') || ''
   const anioMin = params.get('anioMin') || ''
+  const anioMax = params.get('anioMax') || ''
   const q = params.get('q') || ''
   const sort = params.get('sort') || 'relevancia'
 
@@ -52,8 +54,10 @@ export default function Buscar() {
       if (marca && v.make !== marca) return false
       if (tipo && v.bodyType !== tipo) return false
       if (ubicacion && v.location !== ubicacion) return false
+      if (precioMin && v.price < Number(precioMin)) return false
       if (precioMax && v.price > Number(precioMax)) return false
       if (anioMin && v.year < Number(anioMin)) return false
+      if (anioMax && v.year > Number(anioMax)) return false
       if (q.trim()) {
         const s = `${v.make} ${v.model} ${v.year} ${v.trim || ''}`.toLowerCase()
         if (!s.includes(q.trim().toLowerCase())) return false
@@ -67,9 +71,9 @@ export default function Buscar() {
       return 0
     })
     return r
-  }, [all, marca, tipo, ubicacion, precioMax, anioMin, q, sort])
+  }, [all, marca, tipo, ubicacion, precioMin, precioMax, anioMin, anioMax, q, sort])
 
-  const activeCount = [marca, tipo, ubicacion, precioMax, anioMin, q].filter(Boolean).length
+  const activeCount = [marca, tipo, ubicacion, precioMin, precioMax, anioMin, anioMax, q].filter(Boolean).length
   const clearAll = () => setParams({}, { replace: true })
   const title = marca || (tipo ? (TYPE_LABELS[tipo] || tipo) : 'Todos los vehículos')
 
@@ -139,11 +143,19 @@ export default function Buscar() {
           </select>
           <select className="select" value={anioMin} onChange={(e) => setParam('anioMin', e.target.value)}>
             <option value="">Año desde</option>
-            {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
+            {YEARS.filter((y) => !anioMax || y <= Number(anioMax)).map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select className="select" value={anioMax} onChange={(e) => setParam('anioMax', e.target.value)}>
+            <option value="">Año hasta</option>
+            {YEARS.filter((y) => !anioMin || y >= Number(anioMin)).map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+          <select className="select" value={precioMin} onChange={(e) => setParam('precioMin', e.target.value)}>
+            <option value="">Precio desde</option>
+            {PRICE_OPTIONS.filter((p) => !precioMax || p <= Number(precioMax)).map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
           </select>
           <select className="select" value={precioMax} onChange={(e) => setParam('precioMax', e.target.value)}>
-            <option value="">Precio máx.</option>
-            {PRICE_OPTIONS.map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
+            <option value="">Precio hasta</option>
+            {PRICE_OPTIONS.filter((p) => !precioMin || p >= Number(precioMin)).map((p) => <option key={p} value={p}>{fmtRD(p)}</option>)}
           </select>
           <select className="select" value={ubicacion} onChange={(e) => setParam('ubicacion', e.target.value)}>
             <option value="">Toda ubicación</option>
