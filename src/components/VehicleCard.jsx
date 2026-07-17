@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Car, Heart, MapPin, BadgeCheck, ShieldCheck, Sparkles } from 'lucide-react'
+import { Car, Heart, MapPin, BadgeCheck, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import CarImage from './CarImage'
 import { fmtRD } from '../data/demo'
@@ -9,7 +9,7 @@ export default function VehicleCard({ v }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
   const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : 'used'
   const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
-  const BadgeIcon = badge === 'nuevo' ? Sparkles : badge === 'certified' ? ShieldCheck : Car
+  const BadgeIcon = badge === 'nuevo' ? BadgeCheck : badge === 'certified' ? ShieldCheck : Car
   const specs = [v.year, v.trim, v.transmission, v.engine].filter(Boolean).join(' · ')
 
   return (
