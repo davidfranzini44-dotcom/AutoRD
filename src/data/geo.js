@@ -19,6 +19,15 @@ function hashOf(s) {
   return Math.abs([...String(s || 'x')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7))
 }
 
+// Google Maps directions deep link to a destination (optionally from an origin).
+// Opens the Maps app on mobile / Google Maps on desktop.
+export function directionsUrl(dest, origin) {
+  if (!dest) return 'https://www.google.com/maps'
+  const p = new URLSearchParams({ api: '1', destination: `${dest.lat},${dest.lng}` })
+  if (origin) p.set('origin', `${origin.lat},${origin.lng}`)
+  return `https://www.google.com/maps/dir/?${p.toString()}`
+}
+
 // Great-circle distance in km between two {lat,lng} points.
 export function haversineKm(a, b) {
   if (!a || !b) return null

@@ -1108,7 +1108,20 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
 .recent-card:hover { transform: translateY(-2px); border-color: #d7dee7; box-shadow: var(--shadow-md); }
+.recent-photo { position: relative; }
 .recent-photo .vphoto { aspect-ratio: 16 / 9; border-radius: 0; }
+.recent-badge {
+  top: 8px;
+  left: 8px;
+  min-height: 24px;
+  padding: 4px 7px;
+  font-size: 10.5px;
+  border-radius: 6px;
+}
+.recent-badge svg {
+  width: 12px;
+  height: 12px;
+}
 .recent-body { padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
 .recent-body strong { font-size: 14px; line-height: 1.15; color: var(--ink); }
 .recent-body span,

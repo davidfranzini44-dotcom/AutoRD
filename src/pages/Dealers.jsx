@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2 } from 'lucide-react'
+import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import DealersMap from '../components/DealersMap'
 import { listDealers } from '../data/api'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 import { fmtRD } from '../data/demo'
 import { useFicha } from '../context/FichaContext'
-import { dealerCoords, haversineKm } from '../data/geo'
+import { dealerCoords, haversineKm, directionsUrl } from '../data/geo'
 
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
 const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
@@ -118,7 +118,7 @@ export default function Dealers() {
                 Ningún dealer tiene ese tipo de vehículo en ese rango. <button className="link-teal" onClick={clear}>Ver todos</button>
               </div>
             ) : filtered.map((d) => (
-              <DealerRow key={d.id} d={d} active={d.id === selId} onSelect={() => setSelId(d.id)} onOpenCar={open} showMatches={hasFilter} />
+              <DealerRow key={d.id} d={d} active={d.id === selId} onSelect={() => setSelId(d.id)} onOpenCar={open} showMatches={hasFilter} userLoc={userLoc} />
             ))}
           </div>
 
@@ -131,7 +131,7 @@ export default function Dealers() {
   )
 }
 
-function DealerRow({ d, active, onSelect, onOpenCar, showMatches }) {
+function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
   const cars = showMatches ? d.matches : d.vehicles
   const prices = d.vehicles.map((v) => v.price).filter(Boolean)
   const min = prices.length ? Math.min(...prices) : 0
@@ -174,6 +174,13 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches }) {
           ))}
         </div>
       )}
+
+      <div className="row gap-8" style={{ marginTop: 12 }}>
+        <Link to={`/dealers/${d.slug}`} className="btn btn-outline btn-sm" onClick={(e) => e.stopPropagation()}>Ver dealer <ChevronRight size={14} /></Link>
+        <a className="btn btn-outline btn-sm" href={directionsUrl(dealerCoords(d), userLoc)} target="_blank" rel="noreferrer" onClick={(e) => { e.stopPropagation(); onSelect() }}>
+          <Navigation size={14} /> Cómo llegar
+        </a>
+      </div>
     </article>
   )
 }

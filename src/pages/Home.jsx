@@ -469,6 +469,10 @@ function SearchSelect({ label, value, onChange, children }) {
 
 function RecentCard({ v }) {
   const { open } = useFicha()
+  const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : 'used'
+  const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
+  const BadgeIcon = badge === 'nuevo' ? BadgeCheck : badge === 'certified' ? ShieldCheck : Car
+
   return (
     <div
       className="recent-card"
@@ -479,6 +483,10 @@ function RecentCard({ v }) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(v) } }}
     >
       <div className="recent-photo">
+        <span className={`badge-corner recent-badge ${badge}`}>
+          <BadgeIcon size={13} strokeWidth={2.5} />
+          {badgeText}
+        </span>
         <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
       </div>
       <div className="recent-body">

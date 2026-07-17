@@ -110,6 +110,25 @@ export async function listDealers() {
   }))
 }
 
+export async function getDealerBySlug(slug) {
+  if (!LIVE) {
+    const all = await listDealers()
+    return all.find((d) => d.slug === slug) || null
+  }
+  const { data, error } = await supabase
+    .from('dealers')
+    .select('id, name, slug, city, verified, initials, phone, vehicles(*)')
+    .eq('slug', slug).single()
+  if (error) return null
+  return {
+    id: data.id, name: data.name, slug: data.slug, city: data.city, verified: data.verified,
+    phone: data.phone, initials: data.initials || initialsOf(data.name),
+    vehicles: (data.vehicles || [])
+      .filter((v) => v.status === 'publicado')
+      .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id })),
+  }
+}
+
 // ---------------- KYC (Didit) ----------------
 // Creates a real Didit verification session via the edge function.
 // Returns { url, session_id } when the backend is live, or { simulated: true }
