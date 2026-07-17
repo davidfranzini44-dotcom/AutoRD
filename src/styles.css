@@ -695,6 +695,13 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 
 /* search results page (/buscar) */
 .buscar-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.brand-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.brand-chip { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 22px; background: #fff; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; transition: .15s ease; }
+.brand-chip:hover { border-color: #cbd5e1; }
+.brand-chip.active { border-color: var(--teal-600); background: var(--teal-50); color: var(--teal-800); }
+.brand-chip .brand-logo-img { width: 22px; height: 22px; object-fit: contain; flex: none; }
+.brand-chip .brand-mark { width: 24px; height: 24px; font-size: 10px; }
+.brand-chip-all { padding: 0 2px; }
 .buscar-brand { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--line); background: #fff; display: flex; align-items: center; justify-content: center; flex: none; box-shadow: var(--shadow-sm); }
 .buscar-filters { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; align-items: center; }
 .buscar-filters .select { flex: 1 1 148px; height: 42px; min-width: 0; }
@@ -1012,6 +1019,10 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .bt-item { flex: 0 0 112px; scroll-snap-align: start; }
   .bt-image { height: 46px; max-width: 112px; }
   .bt-label { font-size: 14px; }
+  /* brand chips scroll horizontally on mobile */
+  .brand-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  .brand-chips::-webkit-scrollbar { display: none; }
+  .brand-chip { flex: 0 0 auto; }
   .sp-search, .sp-btn { grid-column: auto; }
   .bottom-trust { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .chips-row { gap: 8px; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }

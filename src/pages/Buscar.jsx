@@ -99,6 +99,19 @@ export default function Buscar() {
           </label>
         </div>
 
+        {/* Brand picker */}
+        <div className="brand-chips">
+          <button className={`brand-chip ${!marca ? 'active' : ''}`} onClick={() => setParam('marca', '')}>
+            <span className="brand-chip-all">Todas</span>
+          </button>
+          {options.makes.map((m) => (
+            <button key={m} className={`brand-chip ${marca === m ? 'active' : ''}`} onClick={() => setParam('marca', marca === m ? '' : m)}>
+              <BrandLogo make={m} size={22} />
+              <span>{m}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Body-type tabs */}
         <div className="bodytype-row bodytype-row--compact" style={{ marginBottom: 14 }}>
           {BODY_TYPES.map((b) => (
@@ -120,10 +133,6 @@ export default function Buscar() {
             <input value={q} onChange={(e) => setParam('q', e.target.value)} placeholder="Buscar marca, modelo o año…" />
             {q && <button onClick={() => setParam('q', '')} aria-label="Limpiar"><X size={15} /></button>}
           </div>
-          <select className="select" value={marca} onChange={(e) => setParam('marca', e.target.value)}>
-            <option value="">Todas las marcas</option>
-            {options.makes.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
           <select className="select" value={tipo} onChange={(e) => setParam('tipo', e.target.value)}>
             <option value="">Todos los tipos</option>
             {options.types.map((t) => <option key={t} value={t}>{t}</option>)}
