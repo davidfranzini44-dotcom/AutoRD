@@ -7,7 +7,7 @@ import { listDealers } from '../data/api'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 import { fmtRD } from '../data/demo'
 import { useFicha } from '../context/FichaContext'
-import { dealerCoords, haversineKm, directionsUrl } from '../data/geo'
+import { dealerCoords, haversineKm, directionsUrl, nearestCity } from '../data/geo'
 
 const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
 const YEARS = Array.from({ length: 2025 - 2010 + 1 }, (_, i) => 2025 - i) // 2025 → 2010
@@ -47,6 +47,10 @@ export default function Dealers() {
     )
   }
 
+  // Auto-detect the customer's location on load so dealers sort by proximity to their city.
+  useEffect(() => { useMyLocation() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const myCity = userLoc ? nearestCity(userLoc) : null
+
   const vehicleFilter = !!(tipo || precioMin || precioMax || anioMin || anioMax)
   const hasFilter = vehicleFilter || !!ciudad
   const filtered = useMemo(() => {
@@ -77,7 +81,7 @@ export default function Dealers() {
           <div>
             <h1 style={{ fontSize: 24 }}>Dealers verificados</h1>
             <p className="muted small" style={{ marginTop: 2 }}>
-              {loading ? 'Cargando…' : <><strong style={{ color: 'var(--ink)' }}>{filtered.length}</strong> dealer{filtered.length === 1 ? '' : 'es'} {hasFilter ? 'con lo que buscas' : 'en el mapa'}{userLoc ? ' · ordenados por cercanía' : ''}</>}
+              {loading ? 'Cargando…' : <><strong style={{ color: 'var(--ink)' }}>{filtered.length}</strong> dealer{filtered.length === 1 ? '' : 'es'} {hasFilter ? 'con lo que buscas' : 'en el mapa'}{myCity ? ` · tu zona: ${myCity}` : ''}{userLoc ? ' · ordenados por cercanía' : ''}</>}
             </p>
           </div>
         </div>

@@ -10,6 +10,7 @@ import { fmtMoneyInput } from '../data/finance'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
+import CarImage from '../components/CarImage'
 
 const CONSENT = 'Autorizo a AutoRD a compartir mi información personal, datos de identidad verificados, documentos suministrados y solicitud de financiamiento con las entidades financieras seleccionadas por mí para fines de evaluación crediticia. Autorizo expresamente a dichas entidades financieras a consultar mi historial crediticio exclusivamente para evaluar esta solicitud de financiamiento de vehículo.'
 
@@ -230,7 +231,9 @@ export default function Financing() {
 
         {vehicle && (
           <div className="card card-pad row center gap-12" style={{ marginBottom: 14 }}>
-            <div className="verify-ic ok" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Car size={20} /></div>
+            <div style={{ width: 96, flex: 'none', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)' }}>
+              <CarImage make={vehicle.make} model={vehicle.model} bodyType={vehicle.bodyType} seed={vehicle.id} tone={vehicle.tone} label={`${vehicle.make} ${vehicle.model}`} />
+            </div>
             <div className="grow">
               <div className="tiny muted">Financiando</div>
               <div className="strong">{vehicle.make} {vehicle.model} {vehicle.year}</div>

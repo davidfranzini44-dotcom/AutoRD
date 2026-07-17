@@ -117,12 +117,14 @@ export async function getDealerBySlug(slug) {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, verified, initials, phone, vehicles(*)')
+    .select('id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, vehicles(*)')
     .eq('slug', slug).single()
   if (error) return null
   return {
     id: data.id, name: data.name, slug: data.slug, city: data.city, verified: data.verified,
-    phone: data.phone, initials: data.initials || initialsOf(data.name),
+    phone: data.phone, whatsapp: data.whatsapp, hours: data.hours,
+    locations: Array.isArray(data.locations) ? data.locations : [],
+    initials: data.initials || initialsOf(data.name),
     vehicles: (data.vehicles || [])
       .filter((v) => v.status === 'publicado')
       .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id })),

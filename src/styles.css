@@ -279,6 +279,22 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .search-fields { display: grid; grid-template-columns: repeat(6, 1fr) auto; gap: 10px; align-items: end; }
 .search-fields .field label { color: #d5e6e4; font-weight: 700; }
 .search-fields .select { height: 44px; }
+.search-bar-note {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.search-advanced-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d9f4f2;
+  font-size: 13px;
+  font-weight: 850;
+}
+.search-advanced-cta:hover {
+  color: #fff;
+}
 
 /* ---------- Trust strip ---------- */
 .trust-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; background:#fff; border:1px solid var(--line); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); }
@@ -1732,6 +1748,7 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .search-bar { margin-top: 16px; }
   .search-fields { grid-template-columns: repeat(2, 1fr); }
   .search-fields .btn { grid-column: span 2; }
+  .search-bar-note { justify-content: flex-start; }
   .grid-3 { grid-template-columns: repeat(2,1fr); }
   .trust-strip { grid-template-columns: repeat(2,1fr); gap: 14px; }
   .trust-strip .t + .t { border-left: none; padding-left: 0; }

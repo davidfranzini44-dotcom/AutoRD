@@ -39,6 +39,19 @@ export function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s))
 }
 
+// Nearest known DR city to a {lat,lng} — used to label the customer's zone from
+// geolocation without needing the Geocoding API.
+export function nearestCity(loc) {
+  if (!loc) return null
+  let best = null
+  let bestD = Infinity
+  for (const [name, c] of Object.entries(DR_CITY_COORDS)) {
+    const dist = haversineKm(loc, c)
+    if (dist != null && dist < bestD) { bestD = dist; best = name }
+  }
+  return best
+}
+
 // City coords + a small deterministic offset so dealers in the same city don't
 // stack on the exact same point.
 export function dealerCoords(dealer) {
