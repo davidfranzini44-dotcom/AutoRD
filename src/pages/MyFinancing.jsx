@@ -8,6 +8,7 @@ import { banks, fmtRD } from '../data/demo'
 import { getMyFinancing } from '../data/api'
 import StatusChip from '../components/StatusChip'
 import CarImage from '../components/CarImage'
+import BankLogo from '../components/BankLogo'
 
 const TL_ICON = { kyc: ShieldCheck, consent: FileSignature, sent: Send, eval: Loader2, offers: Landmark }
 
@@ -141,7 +142,7 @@ function BankResponse({ r }) {
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
       <div className="row center gap-12" style={{ padding: '14px 16px' }}>
-        <span className="bank-mark" style={{ background: b.color }}>{b.initials}</span>
+        <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={22} />
         <div className="grow">
           <div className="strong small">{b.name}</div>
           <div className="tiny muted">{r.note}</div>

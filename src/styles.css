@@ -439,11 +439,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .fin-banner-lt h3 { font-size: 19px; color: var(--ink); }
 .fin-banner-lt p { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; max-width: 420px; }
 .fin-banner-lt .banks-boxes { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; }
-.bank-box { display: flex; align-items: center; justify-content: center; height: 52px; padding: 0 20px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 800; font-size: 15px; letter-spacing: .01em; white-space: nowrap; }
-.bank-box.b-popular { color: #1a56a8; font-style: italic; }
-.bank-box.b-bhd { color: #1e9e46; }
-.bank-box.b-banreservas { color: #1552a0; font-size: 13px; letter-spacing: .04em; }
-.bank-box.b-scotiabank { color: #e0281f; }
+.bank-box { display: flex; align-items: center; justify-content: center; height: 52px; padding: 0 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; white-space: nowrap; }
+.bank-logo-img { display: block; width: auto; max-width: 130px; object-fit: contain; flex: none; }
 
 /* browse by body type (AutoTrader-style) */
 .bodytype-section {
@@ -656,7 +653,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .banks-row { margin-left: 0; flex-wrap: wrap; gap: 12px; }
   .fin-banner-lt { flex-direction: column; align-items: flex-start; }
   .fin-banner-lt .banks-boxes { margin-left: 0; }
-  .bank-box { height: 44px; padding: 0 14px; font-size: 13px; }
+  .bank-box { height: 44px; padding: 0 12px; }
+  .bank-logo-img { max-width: 96px; }
   .featured-panel { padding: 14px; }
   .hero2-trust { gap: 12px; }
   .metric-row { grid-template-columns: repeat(2,1fr); gap: 10px; }

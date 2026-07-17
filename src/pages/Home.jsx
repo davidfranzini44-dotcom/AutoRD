@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
+import BankLogo from '../components/BankLogo'
 import bodyConvertibles from '../assets/body-types/convertibles.png'
 import bodyCoupes from '../assets/body-types/coupes.png'
 import bodyHatchbacks from '../assets/body-types/hatchbacks.png'
@@ -38,10 +39,10 @@ const TRUST = [
   { icon: ShieldCheck, t: 'Seguridad y privacidad', d: 'Tus datos protegidos' },
 ]
 const BANK_BOXES = [
-  { cls: 'b-popular', label: 'POPULAR' },
-  { cls: 'b-bhd', label: 'BHD' },
-  { cls: 'b-banreservas', label: 'BANRESERVAS' },
-  { cls: 'b-scotiabank', label: 'Scotiabank' },
+  { slug: 'popular', name: 'Banco Popular' },
+  { slug: 'bhd', name: 'Banco BHD' },
+  { slug: 'banreservas', name: 'Banreservas' },
+  { slug: 'scotiabank', name: 'Scotiabank' },
 ]
 const BODY_TYPES = [
   { type: 'SUV', label: 'SUVs', image: bodySuvs },
@@ -247,7 +248,7 @@ export default function Home() {
             <p>Nuestro proceso 100% digital te conecta con los mejores bancos de la República Dominicana.</p>
           </div>
           <div className="banks-boxes">
-            {BANK_BOXES.map((b) => <span key={b.cls} className={`bank-box ${b.cls}`}>{b.label}</span>)}
+            {BANK_BOXES.map((b) => <span key={b.slug} className="bank-box" title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 34 : 24} /></span>)}
             <Link to="/como-funciona" className="link-teal">Ver todos los bancos <ChevronRight size={14} /></Link>
           </div>
         </div>

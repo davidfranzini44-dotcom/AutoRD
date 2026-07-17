@@ -8,6 +8,7 @@ import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
 import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
+import BankLogo from '../components/BankLogo'
 
 const CONSENT = 'Autorizo a AutoRD a compartir mi información personal, datos de identidad verificados, documentos suministrados y solicitud de financiamiento con las entidades financieras seleccionadas por mí para fines de evaluación crediticia. Autorizo expresamente a dichas entidades financieras a consultar mi historial crediticio exclusivamente para evaluar esta solicitud de financiamiento de vehículo.'
 
@@ -308,7 +309,7 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle }) {
         {banks.map((b) => (
           <div key={b.id} className={`selectable ${sel.includes(b.id) ? 'sel' : ''}`} onClick={() => toggle(b.id)}>
             <span className="box">{sel.includes(b.id) && <Check size={14} strokeWidth={3} />}</span>
-            <span className="bank-mark" style={{ width: 30, height: 30, fontSize: 11, background: b.color }}>{b.initials}</span>
+            <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={20} />
             <span className="strong small">{b.name}</span>
           </div>
         ))}
@@ -349,7 +350,7 @@ function StepRespuestas({ banks }) {
       <div className="col gap-8" style={{ maxWidth: 520, margin: '0 auto' }}>
         {banks.map((b) => (
           <div className="bank-card" key={b.id}>
-            <span className="bank-mark" style={{ background: b.color }}>{b.initials}</span>
+            <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={22} />
             <div className="grow"><div className="strong small">{b.name}</div><div className="tiny muted">Solicitud enviada · esperando respuesta</div></div>
             <StatusChip status="pending" />
           </div>
