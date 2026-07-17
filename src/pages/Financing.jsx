@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
 import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney } from '../data/api'
+import { fmtMoneyInput } from '../data/finance'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -98,6 +99,8 @@ export default function Financing() {
   }, [])
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  // Money fields format as the user types: "85000" -> "RD$ 85,000".
+  const setMoney = (k) => (e) => setForm((f) => ({ ...f, [k]: fmtMoneyInput(e.target.value) }))
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
   const back = () => setStep((s) => Math.max(s - 1, 0))
   const toggleBank = (id) => setSelBanks((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
@@ -200,13 +203,16 @@ export default function Financing() {
         </div>
 
         <div className="card card-pad">
-          {step === 0 && (isPreapproval
-            ? <PreapDatos form={form} set={set} questions={preapQuestions} onComplete={next} />
-            : <StepDatos form={form} set={set} />)}
-          {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
-          {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
-          {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} />}
-          {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
+          {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
+          <div className="preap-slide" key={step}>
+            {step === 0 && (isPreapproval
+              ? <PreapDatos form={form} set={set} setMoney={setMoney} questions={preapQuestions} onComplete={next} />
+              : <StepDatos form={form} set={set} setMoney={setMoney} />)}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} />}
+            {step === 2 && <StepConsent consent={consent} setConsent={setConsent} />}
+            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} />}
+            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
+          </div>
 
           {/* Pre-approval step 0 has its own in-card controls (one question at a time). */}
           {step < 4 && !(step === 0 && isPreapproval) && (
@@ -231,7 +237,7 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
 /* ---------------- Step 1: Datos ---------------- */
 /* Pre-approval Datos — one question at a time with smooth transitions.
    Name + cédula come from the Didit KYC step, so we never ask them here. */
-function PreapDatos({ form, set, questions, onComplete }) {
+function PreapDatos({ form, set, setMoney, questions, onComplete }) {
   const [i, setI] = useState(0)
   const idx = Math.min(i, questions.length - 1)
   const q = questions[idx]
@@ -241,6 +247,7 @@ function PreapDatos({ form, set, questions, onComplete }) {
   const go = (d) => setI((x) => Math.min(questions.length - 1, Math.max(0, x + d)))
   const advance = () => { if (!ready) return; if (isLast) onComplete(); else go(1) }
   const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance() } }
+  const onChange = (q.type === 'money' ? setMoney : set)(q.key)
 
   return (
     <div className="preap">
@@ -260,7 +267,7 @@ function PreapDatos({ form, set, questions, onComplete }) {
           <input
             className="input preap-input"
             value={val || ''}
-            onChange={set(q.key)}
+            onChange={onChange}
             onKeyDown={onKey}
             placeholder={q.placeholder}
             inputMode={q.type === 'money' || q.type === 'tel' ? 'numeric' : 'text'}
@@ -281,7 +288,7 @@ function PreapDatos({ form, set, questions, onComplete }) {
   )
 }
 
-function StepDatos({ form, set }) {
+function StepDatos({ form, set, setMoney }) {
   return (
     <>
       <StepHead icon={User} title="Datos básicos" sub="Empecemos con tu información de contacto y capacidad de pago. No pedimos comprobantes todavía." />
@@ -290,8 +297,8 @@ function StepDatos({ form, set }) {
         <F label="Cédula" help="Formato 000-0000000-0"><input className="input" value={form.cedula} onChange={set('cedula')} placeholder="402-0000000-0" /></F>
         <F label="Teléfono"><input className="input" value={form.telefono} onChange={set('telefono')} placeholder="809-000-0000" /></F>
         <F label="Email"><input className="input" value={form.email} onChange={set('email')} placeholder="nombre@correo.com" /></F>
-        <F label="Ingreso aproximado (mensual)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={set('ingreso')} placeholder="RD$ 85,000" /></F>
-        <F label="Inicial disponible"><input className="input" value={form.inicial} onChange={set('inicial')} placeholder="RD$ 250,000" /></F>
+        <F label="Ingreso aproximado (mensual)" help="Estimado, sin comprobante por ahora"><input className="input" value={form.ingreso} onChange={setMoney('ingreso')} placeholder="RD$ 85,000" /></F>
+        <F label="Inicial disponible"><input className="input" value={form.inicial} onChange={setMoney('inicial')} placeholder="RD$ 250,000" /></F>
         <F label="Plazo preferido">
           <select className="select" value={form.plazo} onChange={set('plazo')}>
             <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>

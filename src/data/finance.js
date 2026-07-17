@@ -6,6 +6,14 @@
 // Indicative annual rates (%) per allied bank, keyed by slug.
 export const BANK_RATES = { popular: 9.75, bhd: 9.5, banreservas: 9.95, scotiabank: 10.25 }
 
+// Format a money field as the user types: keep digits, group thousands, prefix RD$.
+// "85000" -> "RD$ 85,000"; "" -> "".
+export function fmtMoneyInput(raw) {
+  const digits = String(raw ?? '').replace(/[^\d]/g, '')
+  if (!digits) return ''
+  return 'RD$ ' + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
 // Monthly payment for a `principal` financed at `apr`% over `months`.
 export function estimateMonthly(principal, apr, months) {
   const rate = apr / 100 / 12

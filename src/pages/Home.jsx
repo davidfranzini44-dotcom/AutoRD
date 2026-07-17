@@ -12,7 +12,7 @@ import BrandLogo from '../components/BrandLogo'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
-import { BANK_RATES, estimateMonthly } from '../data/finance'
+import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', icon: Car },
@@ -114,6 +114,8 @@ export default function Home() {
   const calcPrincipal = Math.max(0, calcPrice - calcDown)
   const calcMonthly = estimateMonthly(calcPrincipal, calcApr, calcTerm)
   const incomeNum = Number(String(calcIncome).replace(/[^\d]/g, '')) || 0
+  // Salary-based affordability: monthly income (≈30% DTI) -> max financeable price.
+  const afford = affordablePrice({ income: incomeNum, down: 0, apr: calcApr, months: calcTerm })
   // Carry what they entered here into the pre-approval so we don't re-ask it.
   const calcYears = Math.min(7, Math.max(4, Math.round(calcTerm / 12)))
   const preapLink = incomeNum > 0
@@ -234,9 +236,9 @@ export default function Home() {
               </div>
 
               <div className="calc-field">
-                <label>Ingreso mensual (opcional)</label>
-                <input className="input" type="text" inputMode="numeric" value={calcIncome} onChange={(e) => setCalcIncome(e.target.value)} placeholder="RD$ 85,000" />
-                <div className="range-labels"><span>Para estimar cuánto podrías financiar</span></div>
+                <label>Tu ingreso mensual (salario)</label>
+                <input className="input" type="text" inputMode="numeric" value={calcIncome} onChange={(e) => setCalcIncome(fmtMoneyInput(e.target.value))} placeholder="RD$ 85,000" />
+                <div className="range-labels"><span>Para estimar cuánto puedes financiar</span></div>
               </div>
             </div>
 
@@ -256,6 +258,17 @@ export default function Home() {
               <div><span>Monto a financiar</span><strong>{fmtRD(calcPrincipal)}</strong></div>
               <div><span>Plazo</span><strong>{calcTerm} meses</strong></div>
               <div><span>Cuota estimada</span><strong>{fmtRD(calcMonthly)}/mes</strong></div>
+            </div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,.18)', margin: '14px 0', paddingTop: 14 }}>
+              <div className="payment-label" style={{ marginBottom: 2 }}>Con tu salario podrías financiar hasta</div>
+              {afford.price > 0 ? (
+                <>
+                  <div className="payment-amount" style={{ fontSize: 24 }}>{fmtRD(afford.price)}</div>
+                  <Link to={`/buscar?precioMax=${afford.price}`} className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }}>Ver carros hasta {fmtRD(afford.price)}</Link>
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.85)', marginTop: 4 }}>Ingresa tu salario mensual arriba para calcularlo.</div>
+              )}
             </div>
             <Link to={preapLink} className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
           </aside>
