@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Search, Car, BadgeCheck, ShieldCheck, ArrowRight, ChevronRight,
-  Clock, MonitorSmartphone, Landmark, Smartphone, Check,
+  Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
+  Clock, MonitorSmartphone, Landmark,
   MonitorSmartphone as Monitor, Calculator, FileCheck, LockKeyhole,
-  IdCard, Store, Headphones, Building2,
+  IdCard, Store, MapPin,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
@@ -231,6 +231,70 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ---------------- Financing calculator ---------------- */}
+        <section className="finance-calculator">
+          <div className="finance-copy">
+            <span className="section-kicker"><Calculator size={14} /> Financiamiento</span>
+            <h2>Calcula tu cuota antes de aplicar</h2>
+            <p>Simula tu financiamiento y recibe ofertas de bancos aliados sin salir de AutoRD.</p>
+
+            <div className="calc-grid">
+              <div className="calc-field">
+                <label>Precio del vehículo</label>
+                <input className="input" type="text" value={fmtRD(calcPrice)} readOnly />
+                <input className="range" type="range" min="200000" max="5000000" step="50000" value={calcPrice} onChange={(e) => setCalcPrice(Number(e.target.value))} />
+                <div className="range-labels"><span>RD$ 200,000</span><span>RD$ 5,000,000</span></div>
+              </div>
+
+              <div className="calc-field">
+                <label>Inicial</label>
+                <input className="input" type="text" value={`${calcDownPct}% (${fmtRD(calcDown)})`} readOnly />
+                <input className="range" type="range" min="10" max="50" step="5" value={calcDownPct} onChange={(e) => setCalcDownPct(Number(e.target.value))} />
+                <div className="range-labels"><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span></div>
+              </div>
+
+              <div className="calc-field">
+                <label>Plazo</label>
+                <select className="select" value={calcTerm} onChange={(e) => setCalcTerm(Number(e.target.value))}>
+                  <option value={36}>36 meses</option>
+                  <option value={48}>48 meses</option>
+                  <option value={60}>60 meses</option>
+                  <option value={72}>72 meses</option>
+                  <option value={84}>84 meses</option>
+                </select>
+              </div>
+
+              <div className="calc-field">
+                <label>Banco preferido</label>
+                <select className="select" value={calcBank} onChange={(e) => setCalcBank(e.target.value)}>
+                  {BANK_BOXES.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="calculator-banks">
+              <span>Nuestros bancos aliados</span>
+              <div className="calculator-bank-row">
+                {BANK_BOXES.map((b) => <i key={b.slug} title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 30 : 22} /></i>)}
+              </div>
+            </div>
+          </div>
+
+          <aside className="payment-card">
+            <div className="payment-label">Cuota estimada</div>
+            <div className="payment-amount">{fmtRD(calcMonthly)}<span>/mes</span></div>
+            <div className="payment-rate">Tasa desde {calcApr.toFixed(2)}%</div>
+            <Link to="/financiamiento" className="btn btn-primary btn-block">Solicitar pre-aprobación</Link>
+          </aside>
+
+          <div className="finance-proof">
+            <ProofItem icon={IdCard} title="KYC con cédula" text="Validación de identidad y prueba de vida." />
+            <ProofItem icon={FileCheck} title="Autorización crediticia" text="Consentimiento para que el banco consulte crédito." />
+            <ProofItem icon={Landmark} title="Respuesta enviada" text="Al dealer, al cliente o a ambos según la solicitud." />
+            <ProofItem icon={LockKeyhole} title="Información protegida" text="Datos tratados con seguridad y transparencia." />
+          </div>
+        </section>
+
         {/* ---------------- Results row ---------------- */}
         <div className="results-strip">
           <span>{loading ? 'Cargando inventario…' : <><strong>{list.length.toLocaleString('es-DO')}</strong> vehículos disponibles</>}</span>
@@ -255,12 +319,78 @@ export default function Home() {
           ) : list.length === 0 ? (
             <div className="card card-pad muted" style={{ textAlign: 'center', boxShadow: 'none' }}>Sin resultados. <button className="link-teal" onClick={resetFilters}>Limpiar filtros</button></div>
           ) : (
-            <div className="grid grid-4">{list.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
+            <div className="grid grid-4">{featuredList.map((v) => <VehicleCard key={v.id} v={v} />)}</div>
           )}
         </section>
 
+        {/* ---------------- Recent listings ---------------- */}
+        {!loading && recentList.length > 0 && (
+          <section className="home-section">
+            <div className="section-title">
+              <h2>Recién publicados</h2>
+              <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+            </div>
+            <div className="recent-row">
+              {recentList.map((v) => <RecentCard key={v.id} v={v} />)}
+            </div>
+          </section>
+        )}
+
+        {/* ---------------- Explore by brand ---------------- */}
+        <section className="home-section">
+          <div className="section-title">
+            <h2>Explorar por marca</h2>
+            <Link to="/buscar" className="link-teal">Ver todas las marcas <ArrowRight size={15} /></Link>
+          </div>
+          <div className="brand-grid">
+            {BRAND_LINKS.map((brand) => (
+              <button
+                key={brand.name}
+                className="brand-tile"
+                type="button"
+                onClick={() => {
+                  setMarca(brand.name)
+                  setModelo('')
+                  setSegment('todos')
+                  runSearch()
+                }}
+              >
+                <span className="brand-mark">{brand.name.slice(0, 2).toUpperCase()}</span>
+                <strong>{brand.name}</strong>
+                <span>{brand.count} vehículos</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------------- Verified dealers ---------------- */}
+        <section className="home-section">
+          <div className="section-title">
+            <h2>Dealers verificados</h2>
+            <Link to="/buscar" className="link-teal">Ver dealers <ArrowRight size={15} /></Link>
+          </div>
+          <div className="dealer-grid">
+            {VERIFIED_DEALERS.map((dealer) => <DealerCard key={dealer.name} dealer={dealer} />)}
+          </div>
+        </section>
+
+        {/* ---------------- Sell CTA ---------------- */}
+        <section className="sell-cta">
+          <div>
+            <h2>¿Quieres vender tu vehículo?</h2>
+            <p>Publica tu vehículo o registra tu dealer en AutoRD para recibir compradores listos para financiar.</p>
+          </div>
+          <div className="sell-actions">
+            <Link to="/ingresar" className="btn btn-primary"><Car size={16} /> Publicar vehículo</Link>
+            <Link to="/ingresar" className="btn btn-outline"><Store size={16} /> Soy dealer</Link>
+          </div>
+          <div className="sell-photo" aria-hidden="true">
+            <CarImage make="Ford" model="Ranger" bodyType="Pickup" seed="seller" label="Vehículo en venta" />
+          </div>
+        </section>
+
         {/* ---------------- Trust strip ---------------- */}
-        <div className="trust-strip" style={{ marginTop: 22 }}>
+        <div className="trust-strip final-trust">
           {TRUST.map((t) => {
             const Icon = t.icon
             return (
@@ -270,22 +400,6 @@ export default function Home() {
               </div>
             )
           })}
-        </div>
-
-        {/* ---------------- Financing banner ---------------- */}
-        <div className="fin-banner-lt" style={{ marginTop: 22 }}>
-          <div className="fin-illus" aria-hidden="true">
-            <div className="fi-phone"><Smartphone size={22} /></div>
-            <div className="fi-shield"><Check size={20} strokeWidth={3.5} /></div>
-          </div>
-          <div>
-            <h3>Financiamiento seguro, rápido y transparente</h3>
-            <p>Nuestro proceso 100% digital te conecta con los mejores bancos de la República Dominicana.</p>
-          </div>
-          <div className="banks-boxes">
-            {BANK_BOXES.map((b) => <span key={b.slug} className="bank-box" title={b.name}><BankLogo slug={b.slug} name={b.name} size={b.slug === 'bhd' ? 30 : 21} /></span>)}
-            <Link to="/como-funciona" className="link-teal">Ver todos los bancos <ChevronRight size={14} /></Link>
-          </div>
         </div>
       </div>
     </main>
@@ -298,5 +412,53 @@ function SearchSelect({ label, value, onChange, children }) {
       <label>{label}</label>
       <select className="select" value={value} onChange={onChange}>{children}</select>
     </div>
+  )
+}
+
+function ProofItem({ icon: Icon, title, text }) {
+  return (
+    <div className="proof-item">
+      <span><Icon size={17} /></span>
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
+      </div>
+    </div>
+  )
+}
+
+function RecentCard({ v }) {
+  return (
+    <Link to={`/vehiculo/${v.id}`} className="recent-card">
+      <div className="recent-photo">
+        <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
+      </div>
+      <div className="recent-body">
+        <strong>{v.make} {v.model}</strong>
+        <span>{v.year} · {v.trim} · {Number(v.mileage).toLocaleString('es-DO')} km</span>
+        <b>{fmtRD(v.price)}</b>
+        <em><MapPin size={12} /> {v.location}</em>
+      </div>
+    </Link>
+  )
+}
+
+function DealerCard({ dealer }) {
+  return (
+    <article className="dealer-card">
+      <div className="dealer-mark">{dealer.initials}</div>
+      <div className="dealer-main">
+        <div className="dealer-name">
+          <strong>{dealer.name}</strong>
+          <BadgeCheck size={16} />
+        </div>
+        <span><MapPin size={13} /> {dealer.location}</span>
+        <p>{dealer.inventory} vehículos</p>
+        <div className="dealer-badges">
+          <span className="chip chip-teal"><ShieldCheck size={13} /> Dealer verificado</span>
+          <span className="chip chip-teal"><Landmark size={13} /> Financiamiento disponible</span>
+        </div>
+      </div>
+    </article>
   )
 }
