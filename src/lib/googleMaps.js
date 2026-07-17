@@ -14,18 +14,13 @@ export function loadGoogleMaps() {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   promise = new Promise((resolve, reject) => {
     if (!key) { reject(new Error('missing-key')); return }
-    const existing = document.getElementById('gmaps-sdk')
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.google?.maps))
-      existing.addEventListener('error', () => reject(new Error('load-failed')))
-      return
-    }
+    // With loading=async, google.maps is NOT ready at script onload — resolve on
+    // Google's official callback, which fires only once the API is fully loaded.
+    window.__autordGmapsReady = () => resolve(window.google.maps)
     const s = document.createElement('script')
     s.id = 'gmaps-sdk'
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async`
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=__autordGmapsReady`
     s.async = true
-    s.defer = true
-    s.onload = () => resolve(window.google?.maps)
     s.onerror = () => reject(new Error('load-failed'))
     document.head.appendChild(s)
   })
