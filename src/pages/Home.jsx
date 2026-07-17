@@ -10,14 +10,7 @@ import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import BankLogo from '../components/BankLogo'
 import BrandLogo from '../components/BrandLogo'
-import bodyConvertibles from '../assets/body-types/convertibles.png'
-import bodyCoupes from '../assets/body-types/coupes.png'
-import bodyHatchbacks from '../assets/body-types/hatchbacks.png'
-import bodyMinivans from '../assets/body-types/minivans.png'
-import bodySedans from '../assets/body-types/sedans.png'
-import bodyStationWagons from '../assets/body-types/station-wagons.png'
-import bodySuvs from '../assets/body-types/suvs.png'
-import bodyTrucks from '../assets/body-types/trucks.png'
+import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 
@@ -45,16 +38,6 @@ const BANK_BOXES = [
   { slug: 'bhd', name: 'Banco BHD' },
   { slug: 'banreservas', name: 'Banreservas' },
   { slug: 'scotiabank', name: 'Scotiabank' },
-]
-const BODY_TYPES = [
-  { type: 'SUV', label: 'SUVs', image: bodySuvs },
-  { type: 'Pickup', label: 'Camionetas', image: bodyTrucks },
-  { type: 'Sedán', label: 'Sedanes', image: bodySedans },
-  { type: 'Coupé', label: 'Coupés', image: bodyCoupes },
-  { type: 'Minivan', label: 'Minivans', image: bodyMinivans },
-  { type: 'Hatchback', label: 'Hatchbacks', image: bodyHatchbacks },
-  { type: 'Convertible', label: 'Convertibles', image: bodyConvertibles },
-  { type: 'Wagon', label: 'Familiares', image: bodyStationWagons },
 ]
 const BRAND_LINKS = [
   { name: 'Toyota', count: 124 },

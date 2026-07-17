@@ -503,6 +503,12 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   transform: translateY(-2px);
   filter: drop-shadow(0 10px 8px rgba(15, 85, 91, .16));
 }
+/* compact variant used on the /buscar results page */
+.bodytype-row--compact { gap: 8px; }
+.bodytype-row--compact .bt-item { gap: 6px; padding: 9px 4px 7px; border-radius: 10px; }
+.bodytype-row--compact .bt-item.active { background: var(--teal-50); }
+.bodytype-row--compact .bt-image { height: 42px; max-width: 92px; }
+.bodytype-row--compact .bt-label { font-size: 12.5px; }
 
 /* homepage calculator and discovery sections */
 .home-section { margin-top: 24px; }

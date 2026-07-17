@@ -5,13 +5,10 @@ import VehicleCard from '../components/VehicleCard'
 import BrandLogo from '../components/BrandLogo'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
+import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 
 const PRICE_OPTIONS = [900000, 1300000, 1800000, 2450000, 3500000]
 const YEAR_OPTIONS = [2024, 2022, 2020, 2018, 2015]
-const TYPE_LABELS = {
-  SUV: 'SUVs', Pickup: 'Camionetas', 'Sedán': 'Sedanes', 'Coupé': 'Coupés',
-  Minivan: 'Minivans', Hatchback: 'Hatchbacks', Convertible: 'Convertibles', Wagon: 'Familiares',
-}
 
 export default function Buscar() {
   const [params, setParams] = useSearchParams()
@@ -100,6 +97,20 @@ export default function Buscar() {
               <option value="nuevo">Año más reciente</option>
             </select>
           </label>
+        </div>
+
+        {/* Body-type tabs */}
+        <div className="bodytype-row bodytype-row--compact" style={{ marginBottom: 14 }}>
+          {BODY_TYPES.map((b) => (
+            <button
+              key={b.type}
+              className={`bt-item ${tipo === b.type ? 'active' : ''}`}
+              onClick={() => setParam('tipo', tipo === b.type ? '' : b.type)}
+            >
+              <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
+              <span className="bt-label">{b.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Filter bar */}
