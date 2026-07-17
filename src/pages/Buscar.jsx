@@ -8,7 +8,7 @@ import VehicleCard from '../components/VehicleCard'
 import BrandLogo from '../components/BrandLogo'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
-import { BANK_RATES, estimateMonthly } from '../data/finance'
+import { carDefaultMonthly } from '../data/finance'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 
 const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
@@ -48,11 +48,9 @@ const normalize = (value) =>
 const num = (value) => Number(value) || 0
 const kmLabel = (value) => `${Number(value).toLocaleString('es-DO')} km`
 
+// Same amortized "Desde /mes" used on the car page + ficha, so cuota sort/filter agree.
 function monthlyFor(v) {
-  if (v.monthly) return Number(v.monthly)
-  const principal = Math.round(Number(v.price || 0) * 0.8)
-  const months = Number(v.termYears || 7) * 12
-  return estimateMonthly(principal, Number(v.apr || BANK_RATES.popular), months)
+  return carDefaultMonthly(v)
 }
 
 function vehicleText(v) {

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
   MonitorSmartphone as Monitor, Calculator, FileCheck,
-  IdCard, Store, MapPin,
+  IdCard, Store, MapPin, SlidersHorizontal,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
@@ -69,6 +69,7 @@ const BODY_TYPE_PRICES = {
   Hatchback: 'Desde RD$ 420K',
 }
 export default function Home() {
+  const navigate = useNavigate()
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [segment, setSegment] = useState('todos')
@@ -156,7 +157,22 @@ export default function Home() {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
     setAnioRange(''); setPrecioMax(''); setUbicacion('')
   }
-  const runSearch = () => document.getElementById('vehiculos-destacados')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const runSearch = () => {
+    const params = new URLSearchParams()
+    if (segment === 'nuevos') params.set('condicion', 'nuevo')
+    if (segment === 'certificados') params.set('condicion', 'certified')
+    if (tipo && tipo !== 'todos') params.set('tipo', tipo)
+    if (marca) params.set('marca', marca)
+    if (modelo) params.set('modelo', modelo)
+    if (precioMax) params.set('precioMax', precioMax)
+    if (ubicacion) params.set('ubicacion', ubicacion)
+    if (anioRange) {
+      const [min, max] = anioRange.split('-')
+      if (min) params.set('anioMin', min)
+      if (max) params.set('anioMax', max)
+    }
+    navigate(`/buscar${params.toString() ? `?${params.toString()}` : ''}`)
+  }
   const toggleCalculator = () => {
     setShowCalculator((open) => !open)
     if (!showCalculator) window.setTimeout(() => {
@@ -220,6 +236,9 @@ export default function Home() {
               {options.locations.map((l) => <option key={l} value={l}>{l}</option>)}
             </SearchSelect>
             <button className="btn sp-btn" type="button" onClick={runSearch}><Search size={17} /> Buscar</button>
+          </div>
+          <div className="search-bar-note">
+            <Link to="/buscar" className="search-advanced-cta"><SlidersHorizontal size={15} /> Búsqueda avanzada</Link>
           </div>
         </div>
 
