@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
@@ -67,6 +67,8 @@ const BODY_TYPE_PRICES = {
   Coupé: 'Desde RD$ 850K',
   Minivan: 'Desde RD$ 600K',
   Hatchback: 'Desde RD$ 420K',
+  Convertible: 'Desde RD$ 1.2M',
+  Wagon: 'Desde RD$ 520K',
 }
 export default function Home() {
   const navigate = useNavigate()
@@ -105,6 +107,11 @@ export default function Home() {
     ? [...dealers].sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0)).slice(0, 3)
         .map((d) => ({ name: d.name, slug: d.slug, initials: d.initials, location: d.city || 'RD', inventory: d.vehicles.length, verified: d.verified }))
     : VERIFIED_DEALERS
+
+  // "Explorar por tipo" shows 6 at a time; the arrow pages to the other types.
+  const [btPage, setBtPage] = useState(0)
+  const btWindow = btPage === 0 ? BODY_TYPES.slice(0, 6) : BODY_TYPES.slice(-6)
+  const cycleBodytypes = () => setBtPage((p) => (p === 0 ? 1 : 0))
 
   const options = useMemo(() => {
     const unique = (items) => [...new Set(items.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es-DO'))
@@ -260,8 +267,8 @@ export default function Home() {
               <h2 id="bodytype-title">Explorar por tipo de vehículo</h2>
               <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
             </div>
-            <div className="bodytype-row bodytype-row--showcase">
-              {BODY_TYPES.slice(0, 6).map((b) => (
+            <div className="bodytype-row bodytype-row--showcase" key={btPage}>
+              {btWindow.map((b) => (
                 <Link
                   key={b.type}
                   className="bt-item"
@@ -273,9 +280,9 @@ export default function Home() {
                 </Link>
               ))}
             </div>
-            <Link to="/buscar" className="bodytype-more-arrow" aria-label="Ver más tipos de vehículos">
+            <button type="button" className="bodytype-more-arrow" aria-label="Ver más tipos de vehículos" onClick={cycleBodytypes}>
               <ArrowRight size={18} />
-            </Link>
+            </button>
           </div>
 
           <aside className="finance-eligibility-card">
