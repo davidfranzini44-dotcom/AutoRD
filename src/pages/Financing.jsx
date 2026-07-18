@@ -373,12 +373,12 @@ function StepIdentidad({ state, run, recheck, session, reused }) {
       )}
 
       <div className="row center gap-8" style={{ marginBottom: 16 }}>
-        <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación provista por Didit</span>
+        <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación de identidad segura</span>
         <span className="tiny muted">Cédula (OCR) · Prueba de vida · Face match</span>
       </div>
 
       {state === 'idle' && (
-        <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad con Didit</button>
+        <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad</button>
       )}
 
       {state === 'launching' && (
@@ -387,7 +387,7 @@ function StepIdentidad({ state, run, recheck, session, reused }) {
 
       {state === 'pending' && (
         <div className="col gap-12">
-          <div className="notice"><Info size={16} /><span>Se abrió la verificación de Didit en una nueva pestaña. Complétala (foto de cédula + selfie) y vuelve aquí.</span></div>
+          <div className="notice"><Info size={16} /><span>Se abrió la verificación de identidad en una nueva pestaña. Complétala (foto de cédula + selfie) y vuelve aquí.</span></div>
           <div className="verify-row"><div className="verify-ic"><Loader2 size={20} className="spin" /></div><div className="grow"><div className="strong">Esperando tu verificación…</div><div className="tiny muted">Se actualizará automáticamente al terminar</div></div></div>
           <div className="row gap-8">
             <button className="btn btn-primary" onClick={recheck}><Check size={16} /> Ya completé la verificación</button>
