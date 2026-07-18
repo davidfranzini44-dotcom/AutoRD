@@ -97,11 +97,12 @@ export async function listDealers() {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, verified, initials, vehicles(*)')
+    .select('id, name, slug, city, verified, initials, phone, whatsapp, vehicles(*)')
     .order('name')
   if (error) throw error
   return (data || []).map((d) => ({
     id: d.id, name: d.name, slug: d.slug, city: d.city, verified: d.verified,
+    phone: d.phone, whatsapp: d.whatsapp,
     initials: d.initials || initialsOf(d.name),
     // Map each vehicle and stamp the dealer (the nested select omits the dealer join).
     vehicles: (d.vehicles || [])
@@ -129,6 +130,28 @@ export async function getDealerBySlug(slug) {
       .filter((v) => v.status === 'publicado')
       .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id })),
   }
+}
+
+// Dealer console: read + update the signed-in dealer's own editable profile.
+export async function getMyDealer(dealerDbId) {
+  if (!LIVE || !dealerDbId) return null
+  const { data, error } = await supabase
+    .from('dealers')
+    .select('id, name, slug, city, phone, whatsapp, hours, locations')
+    .eq('id', dealerDbId).single()
+  if (error) return null
+  return { ...data, locations: Array.isArray(data.locations) ? data.locations : [] }
+}
+
+export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations }) {
+  if (!LIVE || !dealerDbId) return { ok: false, demo: true }
+  const { error } = await supabase.from('dealers').update({
+    whatsapp: whatsapp || null,
+    hours: hours || null,
+    locations: Array.isArray(locations) ? locations : [],
+  }).eq('id', dealerDbId)
+  if (error) throw error
+  return { ok: true }
 }
 
 // ---------------- KYC (Didit) ----------------

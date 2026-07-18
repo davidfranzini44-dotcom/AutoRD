@@ -11,7 +11,7 @@ import CarImage from '../components/CarImage'
 import BrandLogo from '../components/BrandLogo'
 import heroVehiclePhoto from '../assets/cars/suv-1.jpg'
 import { BODY_TYPES } from '../data/bodyTypes'
-import { listVehicles } from '../data/api'
+import { listVehicles, listDealers } from '../data/api'
 import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
 import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
@@ -94,6 +94,17 @@ export default function Home() {
       .finally(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [])
+
+  const [dealers, setDealers] = useState([])
+  useEffect(() => {
+    let alive = true
+    listDealers().then((d) => { if (alive) setDealers(d) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+  const homeDealers = dealers.length
+    ? [...dealers].sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0)).slice(0, 3)
+        .map((d) => ({ name: d.name, slug: d.slug, initials: d.initials, location: d.city || 'RD', inventory: d.vehicles.length, verified: d.verified }))
+    : VERIFIED_DEALERS
 
   const options = useMemo(() => {
     const unique = (items) => [...new Set(items.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es-DO'))
@@ -441,7 +452,7 @@ export default function Home() {
             <Link to="/dealers" className="link-teal">Ver dealers <ArrowRight size={15} /></Link>
           </div>
           <div className="dealer-grid">
-            {VERIFIED_DEALERS.map((dealer) => <DealerCard key={dealer.name} dealer={dealer} />)}
+            {homeDealers.map((dealer) => <DealerCard key={dealer.slug || dealer.name} dealer={dealer} />)}
           </div>
         </section>
 
@@ -519,21 +530,24 @@ function RecentCard({ v }) {
 }
 
 function DealerCard({ dealer }) {
-  return (
-    <article className="dealer-card">
+  const inner = (
+    <>
       <div className="dealer-mark">{dealer.initials}</div>
       <div className="dealer-main">
         <div className="dealer-name">
           <strong>{dealer.name}</strong>
-          <BadgeCheck size={16} />
+          {dealer.verified !== false && <BadgeCheck size={16} />}
         </div>
         <span><MapPin size={13} /> {dealer.location}</span>
-        <p>{dealer.inventory} vehículos</p>
+        <p>{dealer.inventory} vehículo{dealer.inventory === 1 ? '' : 's'}</p>
         <div className="dealer-badges">
-          <span className="chip chip-teal"><ShieldCheck size={13} /> Dealer verificado</span>
+          {dealer.verified !== false && <span className="chip chip-teal"><ShieldCheck size={13} /> Dealer verificado</span>}
           <span className="chip chip-teal"><Landmark size={13} /> Financiamiento disponible</span>
         </div>
       </div>
-    </article>
+    </>
   )
+  return dealer.slug
+    ? <Link to={`/dealers/${dealer.slug}`} className="dealer-card" style={{ cursor: 'pointer' }}>{inner}</Link>
+    : <article className="dealer-card">{inner}</article>
 }

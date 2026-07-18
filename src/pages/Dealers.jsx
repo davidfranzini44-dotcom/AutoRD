@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight } from 'lucide-react'
+import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight, MessageCircle } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import DealersMap from '../components/DealersMap'
 import { listDealers } from '../data/api'
@@ -148,6 +148,7 @@ export default function Dealers() {
 }
 
 function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
+  const wa = String(d.whatsapp || d.phone || '').replace(/[^\d]/g, '')
   const cars = showMatches ? d.matches : d.vehicles
   const prices = d.vehicles.map((v) => v.price).filter(Boolean)
   const min = prices.length ? Math.min(...prices) : 0
@@ -191,8 +192,13 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
         </div>
       )}
 
-      <div className="row gap-8" style={{ marginTop: 12 }}>
+      <div className="row wrap gap-8" style={{ marginTop: 12 }}>
         <Link to={`/dealers/${d.slug}`} className="btn btn-outline btn-sm" onClick={(e) => e.stopPropagation()}>Ver dealer <ChevronRight size={14} /></Link>
+        {wa && (
+          <a className="btn btn-sm" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+            <MessageCircle size={14} /> WhatsApp
+          </a>
+        )}
         <a className="btn btn-outline btn-sm" href={directionsUrl(dealerCoords(d), userLoc)} target="_blank" rel="noreferrer" onClick={(e) => { e.stopPropagation(); onSelect() }}>
           <Navigation size={14} /> Cómo llegar
         </a>

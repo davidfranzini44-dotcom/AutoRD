@@ -11,6 +11,7 @@ const DEALER_NAV = [
   { to: '/dealer/inventario', label: 'Inventario', icon: Boxes },
   { to: '/dealer/leads', label: 'Leads de financiamiento', icon: Users },
   { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle },
+  { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store },
 ]
 const BANK_NAV = [
   { to: '/banco', label: 'Bandeja de solicitudes', icon: Inbox, end: true },
