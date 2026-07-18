@@ -1,8 +1,16 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { LogIn, UserPlus, ShieldCheck, Info } from 'lucide-react'
+import { LogIn, UserPlus, ShieldCheck, Info, User, Store, Landmark } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+
+// Public demo accounts (credentials already committed in scripts/seed-demo.mjs).
+const DEMO_PASSWORD = 'AutoRD2026!'
+const DEMO_ACCOUNTS = [
+  { email: 'buyer@autord.demo', label: 'Comprador', icon: User, dest: '/' },
+  { email: 'dealer@autord.demo', label: 'Dealer', icon: Store, dest: '/dealer' },
+  { email: 'bank@autord.demo', label: 'Banco', icon: Landmark, dest: '/banco' },
+]
 
 export default function Login() {
   const { signIn, signUp, configured } = useAuth()
@@ -12,6 +20,16 @@ export default function Login() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+
+  const demoLogin = async (email, dest) => {
+    setErr(''); setBusy(true)
+    try {
+      await signIn(email, DEMO_PASSWORD)
+      nav(dest)
+    } catch (e2) {
+      setErr(e2.message || 'No se pudo iniciar la demo.')
+    } finally { setBusy(false) }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -97,6 +115,22 @@ export default function Login() {
               {mode === 'login' ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Ingresar'}
             </button>
           </div>
+
+          {configured && (
+            <div style={{ borderTop: '1px solid var(--line)', marginTop: 16, paddingTop: 14 }}>
+              <div className="tiny muted" style={{ textAlign: 'center', marginBottom: 10 }}>Acceso de demostración</div>
+              <div className="grid grid-3" style={{ gap: 8 }}>
+                {DEMO_ACCOUNTS.map((d) => {
+                  const Icon = d.icon
+                  return (
+                    <button key={d.email} className="btn btn-outline btn-sm" disabled={busy} onClick={() => demoLogin(d.email, d.dest)} style={{ flexDirection: 'column', height: 'auto', padding: '10px 6px', gap: 4 }}>
+                      <Icon size={16} /> {d.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <p className="tiny muted" style={{ textAlign: 'center', marginTop: 14 }}>
