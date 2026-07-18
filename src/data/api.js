@@ -156,17 +156,20 @@ export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locatio
 
 // ---------------- KYC (Didit) ----------------
 // Creates a real Didit verification session via the edge function.
-// Returns { url, session_id } when the backend is live, or { simulated: true }
-// as a graceful fallback so the flow still completes before the functions
-// are deployed / in demo mode.
+// - Demo mode (no Supabase at all): { simulated: true } -> the UI auto-approves
+//   so the app stays explorable offline.
+// - Live backend: { url, session_id } on success, or { error } on failure. We do
+//   NOT fake an approval when the backend is reachable but errors — a real test
+//   must fail loudly instead of silently passing.
 export async function createKycSession() {
   if (!LIVE) return { simulated: true }
   try {
     const { data, error } = await supabase.functions.invoke('didit-session', { body: { action: 'create' } })
-    if (error || !data?.url) return { simulated: true, error: error?.message }
+    if (error) return { error: error.message || 'No se pudo iniciar la verificación de identidad.' }
+    if (!data?.url) return { error: data?.error || 'La verificación de identidad no está disponible ahora mismo.' }
     return data
   } catch (e) {
-    return { simulated: true, error: String(e) }
+    return { error: String(e?.message || e) }
   }
 }
 

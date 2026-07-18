@@ -82,6 +82,7 @@ export default function Financing() {
     plazo: seed.plazo || '7',
   }))
   const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
+  const [kycError, setKycError] = useState('')
   const [session, setSession] = useState(null) // { url, session_id }
   const [consent, setConsent] = useState(false)
   const [bankList, setBankList] = useState(demoBanks)
@@ -154,9 +155,10 @@ export default function Financing() {
   }
 
   const runKyc = async () => {
-    setKyc('launching')
+    setKyc('launching'); setKycError('')
     const res = await createKycSession()
-    if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // fallback until backend deployed
+    if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // demo mode only (no Supabase)
+    if (res.error || !res.url) { setKycError(res.error || 'No disponible'); setKyc('error'); return }
     setSession(res)
     window.open(res.url, '_blank', 'noopener')
     setKyc('pending')
@@ -270,7 +272,7 @@ export default function Financing() {
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
             {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
-            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} />}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} error={kycError} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
@@ -361,7 +363,7 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
 }
 
 /* ---------------- Step 2: Identidad (Didit) ---------------- */
-function StepIdentidad({ state, run, recheck, session, reused }) {
+function StepIdentidad({ state, run, recheck, session, reused, error }) {
   return (
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
@@ -400,7 +402,7 @@ function StepIdentidad({ state, run, recheck, session, reused }) {
         <div className="col gap-12">
           <div className="verify-row" style={{ borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
             <div className="verify-ic" style={{ background: '#fff', color: 'var(--red)' }}><X size={20} /></div>
-            <div className="grow"><div className="strong">No pudimos verificar tu identidad</div><div className="tiny" style={{ color: 'var(--red)' }}>La verificación fue rechazada o quedó incompleta.</div></div>
+            <div className="grow"><div className="strong">No pudimos verificar tu identidad</div><div className="tiny" style={{ color: 'var(--red)' }}>{error || 'La verificación fue rechazada o quedó incompleta.'}</div></div>
           </div>
           <button className="btn btn-navy" onClick={run}><IdCard size={16} /> Intentar de nuevo</button>
         </div>
