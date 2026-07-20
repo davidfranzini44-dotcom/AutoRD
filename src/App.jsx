@@ -18,6 +18,7 @@ import PostVehicle from './pages/PostVehicle'
 import BankPanel from './pages/BankPanel'
 import BankReports from './pages/BankReports'
 import AdminPanel from './pages/AdminPanel'
+import WhatsAppInbox from './components/WhatsAppInbox'
 
 export default function App() {
   return (
@@ -43,12 +44,14 @@ export default function App() {
         <Route path="/dealer/leads" element={<DealerPanel view="leads" />} />
         <Route path="/dealer/perfil" element={<DealerProfileEdit />} />
         <Route path="/dealer/publicar" element={<PostVehicle />} />
+        <Route path="/dealer/whatsapp" element={<WhatsAppInbox />} />
       </Route>
 
       {/* ---------- Bank console ---------- */}
       <Route element={<ProtectedRoute role="bank"><ConsoleLayout /></ProtectedRoute>}>
         <Route path="/banco" element={<BankPanel />} />
         <Route path="/banco/reportes" element={<BankReports />} />
+        <Route path="/banco/whatsapp" element={<WhatsAppInbox />} />
       </Route>
 
       {/* ---------- Super admin ---------- */}

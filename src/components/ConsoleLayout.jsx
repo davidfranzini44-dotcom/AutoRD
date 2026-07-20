@@ -2,7 +2,7 @@ import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Boxes, Users, PlusCircle, Inbox, FileCheck2, BarChart3,
-  ArrowLeft, LogOut, Menu, X, Landmark, Store,
+  ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,10 +11,12 @@ const DEALER_NAV = [
   { to: '/dealer/inventario', label: 'Inventario', icon: Boxes },
   { to: '/dealer/leads', label: 'Leads de financiamiento', icon: Users },
   { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle },
+  { to: '/dealer/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store },
 ]
 const BANK_NAV = [
   { to: '/banco', label: 'Bandeja de solicitudes', icon: Inbox, end: true },
+  { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/banco/reportes', label: 'Reportes', icon: BarChart3 },
 ]
 

@@ -439,6 +439,34 @@ export async function waDisconnect() {
   return { ok: true }
 }
 
+// ---------------- WhatsApp inbox (dealer/bank, two-way chat) ----------------
+export async function ibStatus() {
+  if (!LIVE) return { status: 'disconnected', enabled: false }
+  const { data, error } = await supabase.rpc('wa_ib_status')
+  if (error) throw error
+  return (data && data[0]) || { status: 'disconnected', enabled: false }
+}
+export async function ibLink() { const { error } = await supabase.rpc('wa_ib_link'); if (error) throw error; return { ok: true } }
+export async function ibPair(phone) { const { error } = await supabase.rpc('wa_ib_pair', { p_phone: phone }); if (error) throw error; return { ok: true } }
+export async function ibDisconnect() { const { error } = await supabase.rpc('wa_ib_disconnect'); if (error) throw error; return { ok: true } }
+export async function ibConversations() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('wa_ib_conversations')
+  if (error) throw error
+  return data || []
+}
+export async function ibMessages(convId) {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('wa_ib_messages', { p_conversation: convId })
+  if (error) throw error
+  return data || []
+}
+export async function ibSend(convId, body) {
+  const { error } = await supabase.rpc('wa_ib_send', { p_conversation: convId, p_body: body })
+  if (error) throw error
+  return { ok: true }
+}
+
 // ---------------- helpers ----------------
 function mapBankStatus(s) {
   return ({ oferta: 'offer', preaprobada: 'offer', en_evaluacion: 'evaluating',
