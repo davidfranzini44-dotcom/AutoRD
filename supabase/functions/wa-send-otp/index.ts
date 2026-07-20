@@ -50,11 +50,25 @@ Deno.serve(async (req) => {
     const { data: { user } } = await userClient.auth.getUser()
     if (!user) return json({ error: 'not_authenticated' }, 401)
 
-    const { phone } = await req.json().catch(() => ({}))
-    const to = normPhone(phone || '')
-    if (to.length < 11) return json({ error: 'invalid_phone' }, 400)
-
+    const reqBody = await req.json().catch(() => ({}))
     const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
+
+    // Readiness check — no code generated, nothing sent. { check: true }
+    if (reqBody.check) {
+      if (REP_KEY) {
+        const rep = createClient(REP_URL, REP_KEY, { auth: { persistSession: false } })
+        const { data: conns, error } = await rep.from('wa_connections')
+          .select('org_id,status,phone_number,enabled').eq('provider', 'baileys').eq('enabled', true)
+        if (error) return json({ ok: false, mode: 'reparando', error: error.message })
+        const live = (conns || []).find((c) => String(c.status || '').toLowerCase().includes('connect')) || (conns || [])[0]
+        return json({ ok: !!live, mode: 'reparando', ready: !!live, org: live?.org_id || null, sender: live?.phone_number || null, connections: (conns || []).length })
+      }
+      const { data: c } = await admin.from('wa_connection').select('enabled,status,phone_number').eq('id', 'platform').single()
+      return json({ ok: c?.status === 'connected', mode: 'autord', ready: c?.status === 'connected', sender: c?.phone_number || null })
+    }
+
+    const to = normPhone(reqBody.phone || '')
+    if (to.length < 11) return json({ error: 'invalid_phone' }, 400)
 
     // Rate limit: >=30s gap and <=5 codes/hour per (user, phone).
     const since = new Date(Date.now() - 3600_000).toISOString()
