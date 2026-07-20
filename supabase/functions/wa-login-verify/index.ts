@@ -61,20 +61,24 @@ Deno.serve(async (req) => {
 
     // Find-or-create the account for this phone (deterministic synthetic email),
     // then generate a magiclink token the browser exchanges for a session.
+    // Find-or-create the account for this phone (deterministic synthetic email),
+    // set a one-time random password, and return it. The browser immediately
+    // signs in with it (password grant is 100% reliable for a confirmed email).
     const email = `wa${to}@autord.local`
-    let gl = await admin.auth.admin.generateLink({ type: 'magiclink', email })
-    if (gl.error) {
-      const cu = await admin.auth.admin.createUser({ email, email_confirm: true, user_metadata: { role: 'buyer', phone: to } })
+    const password = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '')
+    const { data: uid } = await admin.rpc('auth_uid_by_email', { p_email: email })
+    let userId = uid as string | null
+    if (userId) {
+      const up = await admin.auth.admin.updateUserById(userId, { password })
+      if (up.error) return json({ ok: false, error: up.error.message }, 500)
+    } else {
+      const cu = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { role: 'buyer', phone: to } })
       if (cu.error) return json({ ok: false, error: cu.error.message }, 500)
-      gl = await admin.auth.admin.generateLink({ type: 'magiclink', email })
-      if (gl.error) return json({ ok: false, error: gl.error.message }, 500)
+      userId = cu.data.user?.id ?? null
     }
-    const token_hash = (gl.data as any)?.properties?.hashed_token
-    const uid = (gl.data as any)?.user?.id
-    if (uid) await admin.from('profiles').update({ phone: to, phone_verified_at: new Date().toISOString() }).eq('id', uid)
-    if (!token_hash) return json({ ok: false, error: 'no_token' }, 500)
+    if (userId) await admin.from('profiles').update({ phone: to, phone_verified_at: new Date().toISOString() }).eq('id', userId)
 
-    return json({ ok: true, verified: true, token_hash, email, phone: to })
+    return json({ ok: true, verified: true, email, password, phone: to })
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

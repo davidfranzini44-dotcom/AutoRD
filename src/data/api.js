@@ -388,10 +388,10 @@ export async function verifyPhoneLogin(phone, code) {
   if (!LIVE) return { ok: true, simulated: true }
   const { data, error } = await supabase.functions.invoke('wa-login-verify', { body: { phone, code } })
   if (error) return { ok: false, error: error.message }
-  if (!data?.ok || !data?.token_hash) return { ok: false, error: data?.error || 'wrong_code' }
-  // Exchange the one-time token for a session in this browser's client.
-  const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: data.token_hash, type: 'magiclink' })
-  if (vErr) return { ok: false, error: vErr.message }
+  if (!data?.ok || !data?.password) return { ok: false, error: data?.error || 'wrong_code' }
+  // One-time password grant → real session in this browser's client.
+  const { error: sErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
+  if (sErr) return { ok: false, error: sErr.message }
   return { ok: true }
 }
 
