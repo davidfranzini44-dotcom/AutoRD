@@ -1,11 +1,16 @@
 // AutoRD — send a WhatsApp OTP.
 // POST { phone } (authenticated caller; anonymous sessions allowed).
-// Generates a 6-digit code, stores only its HMAC, and enqueues the message
-// into wa_outbox — the always-on Baileys worker delivers it from the operator's
-// linked WhatsApp number. No SMS provider, no per-message cost.
+// Generates a 6-digit code, stores only its HMAC in AutoRD, and delivers the
+// text over WhatsApp with NO SMS cost.
+//
+// Two delivery modes (chosen by env):
+//  - GATEWAY (recommended): if REPARANDO_SERVICE_ROLE_KEY is set, it enqueues
+//    into the *Reparando* project's wa_outbox so Reparando's already-running
+//    Baileys worker + already-linked number sends it. No AutoRD worker needed.
+//  - LOCAL: otherwise it enqueues into AutoRD's own wa_outbox (drained by
+//    autord-wa-worker), and requires AutoRD's wa_connection to be connected.
 //
 // Deploy: supabase functions deploy wa-send-otp --no-verify-jwt
-// Uses the auto-injected SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const cors = {
@@ -17,7 +22,6 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, 'content-type': 'application/json' } })
 const enc = new TextEncoder()
 
-// Digits only; Dominican/NANP numbers are 10 digits nationally -> prefix "1".
 function normPhone(raw: string) {
   let d = (raw || '').replace(/[^0-9]/g, '')
   if (d.length === 10) d = '1' + d
@@ -36,6 +40,11 @@ Deno.serve(async (req) => {
     const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
     const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
+    // Optional Reparando gateway (reuse its running worker + linked WhatsApp).
+    const REP_KEY = Deno.env.get('REPARANDO_SERVICE_ROLE_KEY')
+    const REP_URL = Deno.env.get('REPARANDO_SUPABASE_URL') || 'https://cfotlppderfzdmspsjjn.supabase.co'
+    const REP_ORG = Deno.env.get('REPARANDO_ORG_ID') || ''
+
     const authHeader = req.headers.get('Authorization') ?? ''
     const userClient = createClient(URL, ANON, { global: { headers: { Authorization: authHeader } } })
     const { data: { user } } = await userClient.auth.getUser()
@@ -46,10 +55,6 @@ Deno.serve(async (req) => {
     if (to.length < 11) return json({ error: 'invalid_phone' }, 400)
 
     const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
-
-    // The platform WhatsApp must be linked & connected.
-    const { data: conn } = await admin.from('wa_connection').select('enabled,status').eq('id', 'platform').single()
-    if (!conn || !conn.enabled || conn.status !== 'connected') return json({ error: 'wa_not_connected' }, 503)
 
     // Rate limit: >=30s gap and <=5 codes/hour per (user, phone).
     const since = new Date(Date.now() - 3600_000).toISOString()
@@ -66,14 +71,31 @@ Deno.serve(async (req) => {
     const code = String(n)
     const code_hash = await hmac(SERVICE, `${to}:${code}`)
     const expires_at = new Date(Date.now() + 600_000).toISOString()
+    const body = `AutoRD: tu codigo de verificacion es ${code}. Vence en 10 minutos. No lo compartas con nadie.`
 
     await admin.from('phone_otps').insert({ user_id: user.id, phone: to, code_hash, purpose: 'claim', expires_at })
-    await admin.from('wa_outbox').insert({
-      to_phone: to,
-      body: `AutoRD: tu codigo de verificacion es ${code}. Vence en 10 minutos. No lo compartas con nadie.`,
-    })
 
-    return json({ ok: true, expires_in: 600, phone: to })
+    if (REP_KEY) {
+      // ---- Gateway: hand off to Reparando's worker ----
+      const rep = createClient(REP_URL, REP_KEY, { auth: { persistSession: false } })
+      let org = REP_ORG
+      if (!org) {
+        // Auto-pick the linked Baileys connection (works when there's a single store).
+        const { data: conns } = await rep.from('wa_connections').select('org_id,status').eq('provider', 'baileys').eq('enabled', true)
+        const live = (conns || []).find((c) => String(c.status || '').toLowerCase().includes('connect')) || (conns || [])[0]
+        if (!live) return json({ error: 'wa_not_connected' }, 503)
+        org = live.org_id
+      }
+      const { error: qErr } = await rep.from('wa_outbox').insert({ org_id: org, to_phone: to, body, status: 'queued' })
+      if (qErr) return json({ error: 'enqueue_failed', detail: qErr.message }, 502)
+      return json({ ok: true, expires_in: 600, phone: to, via: 'reparando' })
+    }
+
+    // ---- Local: AutoRD's own worker ----
+    const { data: conn } = await admin.from('wa_connection').select('enabled,status').eq('id', 'platform').single()
+    if (!conn || !conn.enabled || conn.status !== 'connected') return json({ error: 'wa_not_connected' }, 503)
+    await admin.from('wa_outbox').insert({ to_phone: to, body })
+    return json({ ok: true, expires_in: 600, phone: to, via: 'autord' })
   } catch (e) {
     return json({ error: String(e) }, 500)
   }
