@@ -1,14 +1,8 @@
-// AutoRD — send a WhatsApp OTP.
-// POST { phone } (authenticated caller; anonymous sessions allowed).
-// Generates a 6-digit code, stores only its HMAC in AutoRD, and delivers the
-// text over WhatsApp with NO SMS cost.
-//
-// Two delivery modes (chosen by env):
-//  - GATEWAY (recommended): if REPARANDO_SERVICE_ROLE_KEY is set, it enqueues
-//    into the *Reparando* project's wa_outbox so Reparando's already-running
-//    Baileys worker + already-linked number sends it. No AutoRD worker needed.
-//  - LOCAL: otherwise it enqueues into AutoRD's own wa_outbox (drained by
-//    autord-wa-worker), and requires AutoRD's wa_connection to be connected.
+// AutoRD — send a WhatsApp OTP + log the send.
+// POST { phone, kind?: 'otp'|'test', check?: true } (authenticated caller).
+// Generates a 6-digit code, stores only its HMAC, delivers via the gateway
+// (Reparando worker) or AutoRD's own worker, and records the send in
+// wa_notifications (the code itself is never logged).
 //
 // Deploy: supabase functions deploy wa-send-otp --no-verify-jwt
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -40,7 +34,6 @@ Deno.serve(async (req) => {
     const ANON = Deno.env.get('SUPABASE_ANON_KEY')!
     const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // Optional Reparando gateway (reuse its running worker + linked WhatsApp).
     const REP_KEY = Deno.env.get('REPARANDO_SERVICE_ROLE_KEY')
     const REP_URL = Deno.env.get('REPARANDO_SUPABASE_URL') || 'https://cfotlppderfzdmspsjjn.supabase.co'
     const REP_ORG = Deno.env.get('REPARANDO_ORG_ID') || ''
@@ -53,7 +46,7 @@ Deno.serve(async (req) => {
     const reqBody = await req.json().catch(() => ({}))
     const admin = createClient(URL, SERVICE, { auth: { persistSession: false } })
 
-    // Readiness check — no code generated, nothing sent. { check: true }
+    // Readiness check — no code generated, nothing sent.
     if (reqBody.check) {
       if (REP_KEY) {
         const rep = createClient(REP_URL, REP_KEY, { auth: { persistSession: false } })
@@ -67,6 +60,7 @@ Deno.serve(async (req) => {
       return json({ ok: c?.status === 'connected', mode: 'autord', ready: c?.status === 'connected', sender: c?.phone_number || null })
     }
 
+    const kind = reqBody.kind === 'test' ? 'test' : 'otp'
     const to = normPhone(reqBody.phone || '')
     if (to.length < 11) return json({ error: 'invalid_phone' }, 400)
 
@@ -85,31 +79,40 @@ Deno.serve(async (req) => {
     const code = String(n)
     const code_hash = await hmac(SERVICE, `${to}:${code}`)
     const expires_at = new Date(Date.now() + 600_000).toISOString()
-    const body = `AutoRD: tu codigo de verificacion es ${code}. Vence en 10 minutos. No lo compartas con nadie.`
+    const message = `AutoRD: tu codigo de verificacion es ${code}. Vence en 10 minutos. No lo compartas con nadie.`
 
     await admin.from('phone_otps').insert({ user_id: user.id, phone: to, code_hash, purpose: 'claim', expires_at })
 
+    // Deliver.
+    let via: string | null = null, ok = false, errCode: string | null = null
     if (REP_KEY) {
-      // ---- Gateway: hand off to Reparando's worker ----
       const rep = createClient(REP_URL, REP_KEY, { auth: { persistSession: false } })
       let org = REP_ORG
       if (!org) {
-        // Auto-pick the linked Baileys connection (works when there's a single store).
         const { data: conns } = await rep.from('wa_connections').select('org_id,status').eq('provider', 'baileys').eq('enabled', true)
         const live = (conns || []).find((c) => String(c.status || '').toLowerCase().includes('connect')) || (conns || [])[0]
-        if (!live) return json({ error: 'wa_not_connected' }, 503)
-        org = live.org_id
+        if (!live) errCode = 'wa_not_connected'; else org = live.org_id
       }
-      const { error: qErr } = await rep.from('wa_outbox').insert({ org_id: org, to_phone: to, body, status: 'queued' })
-      if (qErr) return json({ error: 'enqueue_failed', detail: qErr.message }, 502)
-      return json({ ok: true, expires_in: 600, phone: to, via: 'reparando' })
+      if (!errCode) {
+        const { error: qErr } = await rep.from('wa_outbox').insert({ org_id: org, to_phone: to, body: message, status: 'queued' })
+        if (qErr) errCode = 'enqueue_failed'; else { ok = true; via = 'reparando' }
+      }
+    } else {
+      const { data: conn } = await admin.from('wa_connection').select('enabled,status').eq('id', 'platform').single()
+      if (!conn || !conn.enabled || conn.status !== 'connected') errCode = 'wa_not_connected'
+      else { await admin.from('wa_outbox').insert({ to_phone: to, body: message }); ok = true; via = 'autord' }
     }
 
-    // ---- Local: AutoRD's own worker ----
-    const { data: conn } = await admin.from('wa_connection').select('enabled,status').eq('id', 'platform').single()
-    if (!conn || !conn.enabled || conn.status !== 'connected') return json({ error: 'wa_not_connected' }, 503)
-    await admin.from('wa_outbox').insert({ to_phone: to, body })
-    return json({ ok: true, expires_in: 600, phone: to, via: 'autord' })
+    // Log the send (never store the code).
+    await admin.from('wa_notifications').insert({
+      type: kind, to_phone: to,
+      body: kind === 'test' ? 'Codigo de prueba' : 'Codigo de verificacion',
+      status: ok ? 'sent' : 'failed', via, user_id: user.id,
+      meta: errCode ? { error: errCode } : null,
+    })
+
+    if (!ok) return json({ error: errCode }, errCode === 'enqueue_failed' ? 502 : 503)
+    return json({ ok: true, expires_in: 600, phone: to, via })
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

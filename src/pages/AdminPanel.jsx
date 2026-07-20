@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway } from '../data/api'
+import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell } from 'lucide-react'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications } from '../data/api'
+
+const TYPE_META = {
+  otp:           { label: 'OTP', icon: KeyRound },
+  test:          { label: 'Prueba', icon: KeyRound },
+  bank_response: { label: 'Banco respondió', icon: Bell },
+  other:         { label: 'Notificación', icon: Bell },
+}
+const HIST_FILTERS = [{ label: 'Todos', val: null }, { label: 'OTP', val: 'otp' }, { label: 'Notificaciones', val: 'notif' }]
+const fmtWhen = (iso) => { try { return new Date(iso).toLocaleString('es-DO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 
 const STATUS_META = {
   connected:    { label: 'Conectado',          cls: 'chip-green' },
@@ -18,7 +27,12 @@ export default function AdminPanel() {
   const [phone, setPhone] = useState('')
   const [testTo, setTestTo] = useState('')
   const [msg, setMsg] = useState('')
+  const [hist, setHist] = useState([])
+  const [histKind, setHistKind] = useState(null) // null | 'otp' | 'notif'
   const timer = useRef(null)
+
+  const loadHist = (k = histKind) => getNotifications(k).then(setHist).catch(() => {})
+  useEffect(() => { loadHist() }, [histKind]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = async () => { try { setWa(await getWaStatus()) } catch (e) { setMsg(e.message || String(e)) } }
   useEffect(() => {
@@ -33,7 +47,7 @@ export default function AdminPanel() {
   const disconnect = run(() => waDisconnect())
   const testSend = async () => {
     setBusy(true); setMsg('')
-    try { const r = await sendPhoneOtp(testTo); setMsg(r.ok ? `Código de prueba enviado a ${r.phone || testTo}` : `Error: ${r.error || 'no se pudo enviar'}`) }
+    try { const r = await sendPhoneOtp(testTo, 'test'); setMsg(r.ok ? `Código de prueba enviado a ${r.phone || testTo}` : `Error: ${r.error || 'no se pudo enviar'}`); loadHist() }
     catch (e) { setMsg(e.message || String(e)) } finally { setBusy(false) }
   }
 
@@ -135,6 +149,46 @@ export default function AdminPanel() {
           )}
 
           {msg && <div className="notice" style={{ marginTop: 14 }}><Info size={16} /><span>{msg}</span></div>}
+        </div>
+
+        {/* History of sent WhatsApp messages */}
+        <div className="card card-pad" style={{ marginTop: 14 }}>
+          <div className="row between center" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+            <div className="row center gap-8"><History size={18} /><h2 style={{ fontSize: 16 }}>Historial de notificaciones</h2></div>
+            <div className="row gap-8">
+              {HIST_FILTERS.map((f) => (
+                <button key={f.label} className={`btn btn-sm ${histKind === f.val ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setHistKind(f.val)}>{f.label}</button>
+              ))}
+            </div>
+          </div>
+          {hist.length === 0 ? (
+            <div className="muted small">Sin notificaciones todavía.</div>
+          ) : (
+            <div className="col">
+              {hist.map((h) => {
+                const t = TYPE_META[h.type] || TYPE_META.other
+                const TI = t.icon
+                const ok = h.status === 'sent', fail = h.status === 'failed'
+                return (
+                  <div key={h.id} className="row between center" style={{ borderTop: '1px solid var(--line)', padding: '10px 0', gap: 10 }}>
+                    <div className="grow" style={{ minWidth: 0 }}>
+                      <div className="row center gap-8">
+                        <span className="chip" style={{ fontSize: 11 }}><TI size={12} /> {t.label}</span>
+                        <span className="small strong">+{h.to_phone}</span>
+                      </div>
+                      <div className="tiny muted" style={{ marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.body}</div>
+                    </div>
+                    <div className="col" style={{ alignItems: 'flex-end', flexShrink: 0 }}>
+                      <span className="chip" style={{ fontSize: 11, background: ok ? 'var(--green-bg)' : fail ? 'var(--red-bg)' : 'var(--line)', color: ok ? 'var(--green)' : fail ? 'var(--red)' : 'var(--muted)' }}>
+                        {ok ? 'Enviado' : fail ? 'Falló' : 'En cola'}
+                      </span>
+                      <span className="tiny muted" style={{ marginTop: 3 }}>{fmtWhen(h.created_at)}{h.via ? ` · ${h.via}` : ''}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <p className="tiny muted" style={{ textAlign: 'center', marginTop: 12 }}>

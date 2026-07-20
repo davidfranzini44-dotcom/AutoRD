@@ -86,6 +86,12 @@ Deno.serve(async (req) => {
     const body = MSG[ab.status] || `AutoRD: ${b} actualizo tu solicitud de financiamiento: ${link}`
 
     const res = await enqueue(admin, to, body)
+    await admin.from('wa_notifications').insert({
+      type: 'bank_response', to_phone: to, body,
+      status: res.ok ? 'sent' : 'failed', via: res.via || null,
+      application_id: ab.application_id,
+      meta: res.ok ? { bank: b, status: ab.status } : { error: res.error },
+    })
     return json(res, res.ok ? 200 : 503)
   } catch (e) {
     return json({ error: String(e) }, 500)

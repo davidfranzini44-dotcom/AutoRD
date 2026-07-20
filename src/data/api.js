@@ -368,11 +368,18 @@ export async function submitBankResponse(responseId, body) {
 // ---------------- WhatsApp OTP (claim) ----------------
 // Sends a code to the buyer's WhatsApp (from the operator's linked number via
 // the Baileys worker) and verifies it, stamping the verified phone on the profile.
-export async function sendPhoneOtp(phone) {
+export async function sendPhoneOtp(phone, kind = 'otp') {
   if (!LIVE) return { ok: true, simulated: true }
-  const { data, error } = await supabase.functions.invoke('wa-send-otp', { body: { phone } })
+  const { data, error } = await supabase.functions.invoke('wa-send-otp', { body: { phone, kind } })
   if (error) return { ok: false, error: error.message }
   return data
+}
+// Admin: history of WhatsApp messages AutoRD sent. kind = null | 'otp' | 'notif'.
+export async function getNotifications(kind = null, limit = 60) {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('wa_notifications_list', { p_kind: kind, p_limit: limit })
+  if (error) throw error
+  return data || []
 }
 export async function verifyPhoneOtp(phone, code) {
   if (!LIVE) return { ok: true, verified: true, simulated: true }
