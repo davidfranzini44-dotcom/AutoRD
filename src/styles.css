@@ -359,6 +359,11 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .kyc-banner { display:flex; align-items:center; gap: 12px; background: var(--green-bg); border:1px solid var(--green-bd); border-radius: var(--radius); padding: 14px 16px; }
 .kyc-banner .ic { width: 38px; height:38px; border-radius: 9px; background:#fff; color: var(--green); display:flex; align-items:center; justify-content:center; }
 
+/* Embedded Didit verification */
+.kyc-frame-wrap { border:1px solid var(--line); border-radius: var(--radius); overflow:hidden; background:#0b0b0c; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.kyc-frame { width:100%; height: min(660px, 76vh); border:0; display:block; }
+@media (max-width: 720px) { .kyc-frame { height: 78vh; } }
+
 /* Bank response cards */
 .bank-card { display:flex; align-items:center; gap: 14px; padding: 15px 16px; border:1px solid var(--line); border-radius: var(--radius); background:#fff; }
 .bank-mark { width: 42px; height: 42px; border-radius: 9px; display:flex; align-items:center; justify-content:center; font-weight: 800; font-size: 15px; color:#fff; flex:none; }

@@ -151,13 +151,18 @@ export default function Financing() {
   const back = () => setStep((s) => Math.max(s - 1, 0))
   const toggleBank = (id) => setSelBanks((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
 
+  // Single source of truth for reading the Didit decision — used by the poll,
+  // by tab-focus, and by the embedded iframe returning to our callback.
+  const checkStatus = async (sid) => {
+    const id = sid || session?.session_id
+    if (!id) return
+    const st = await getKycStatus(id)
+    if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
+    else if (st.declined) { clearInterval(pollRef.current); setKycError('La verificación fue rechazada o quedó incompleta.'); setKyc('error') }
+  }
   const startPoll = (sid) => {
     clearInterval(pollRef.current)
-    pollRef.current = setInterval(async () => {
-      const st = await getKycStatus(sid)
-      if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
-      else if (st.declined) { clearInterval(pollRef.current); setKyc('error') }
-    }, 4000)
+    pollRef.current = setInterval(() => checkStatus(sid), 4000)
   }
 
   const runKyc = async () => {
@@ -172,16 +177,27 @@ export default function Financing() {
     if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // demo mode only (no Supabase)
     if (res.error || !res.url) { setKycError(res.error || 'No disponible'); setKyc('error'); return }
     setSession(res)
-    window.open(res.url, '_blank', 'noopener')
-    setKyc('pending')
+    setKyc('pending') // renders the embedded Didit iframe; completion is auto-detected
     startPoll(res.session_id)
   }
-  const recheck = async () => {
-    if (!session) return
-    const st = await getKycStatus(session.session_id)
-    if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
-    else if (st.declined) { clearInterval(pollRef.current); setKyc('error') }
+  // The embedded flow redirects back to our callback (/financiamiento?kyc=done)
+  // inside the iframe; when that same-origin load fires we check the result now.
+  const onFrameLoad = (e) => {
+    try {
+      const href = e.target.contentWindow.location.href
+      if (href && href.includes('kyc=done')) checkStatus()
+    } catch { /* still on Didit's cross-origin page — ignore */ }
   }
+
+  // Re-check the moment the user returns to this tab (covers the fallback where
+  // they complete Didit in a separate tab).
+  useEffect(() => {
+    if (kyc !== 'pending') return
+    const onVis = () => { if (document.visibilityState === 'visible') checkStatus() }
+    window.addEventListener('focus', onVis)
+    document.addEventListener('visibilitychange', onVis)
+    return () => { window.removeEventListener('focus', onVis); document.removeEventListener('visibilitychange', onVis) }
+  }, [kyc, session]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitToBanks = async () => {
     // Map selected bank ids (slugs) to real DB uuids for routing.
@@ -219,6 +235,24 @@ export default function Financing() {
     !isPreapproval && seed.inicial && { label: 'Inicial', value: form.inicial },
     seed.plazo && { label: 'Plazo', value: `${form.plazo} años` },
   ].filter(Boolean)
+
+  // Landing tab when Didit redirects back to /financiamiento?kyc=done (e.g. the
+  // "open in a tab" fallback, or the iframe's internal return). The original
+  // flow keeps its state and auto-advances; this is just a friendly hand-off.
+  if (params.get('kyc') === 'done') {
+    return (
+      <main className="page">
+        <div className="container" style={{ maxWidth: 520 }}>
+          <div className="card card-pad" style={{ marginTop: 20, textAlign: 'center' }}>
+            <div className="verify-ic ok" style={{ width: 52, height: 52, margin: '0 auto 10px', background: 'var(--teal-50)', color: 'var(--teal-700)', borderRadius: 14 }}><Check size={24} /></div>
+            <h1 style={{ fontSize: 20 }}>Verificación recibida</h1>
+            <p className="muted small" style={{ marginTop: 6 }}>Estamos confirmando tu identidad. Tu solicitud continúa automáticamente — puedes seguir desde aquí.</p>
+            <Link className="btn btn-primary btn-block btn-lg" to="/mi-financiamiento" style={{ marginTop: 14 }}>Ver mi financiamiento</Link>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="page">
@@ -284,7 +318,7 @@ export default function Financing() {
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
             {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
-            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
@@ -375,7 +409,7 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
 }
 
 /* ---------------- Step 2: Identidad (Didit) ---------------- */
-function StepIdentidad({ state, run, recheck, session, reused, error, authed = true, loginHref = '/ingresar' }) {
+function StepIdentidad({ state, run, onFrameLoad, session, reused, error, authed = true, loginHref = '/ingresar' }) {
   return (
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
@@ -404,12 +438,14 @@ function StepIdentidad({ state, run, recheck, session, reused, error, authed = t
       )}
 
       {state === 'pending' && (
-        <div className="col gap-12">
-          <div className="notice"><Info size={16} /><span>Se abrió la verificación de identidad en una nueva pestaña. Complétala (foto de cédula + selfie) y vuelve aquí.</span></div>
-          <div className="verify-row"><div className="verify-ic"><Loader2 size={20} className="spin" /></div><div className="grow"><div className="strong">Esperando tu verificación…</div><div className="tiny muted">Se actualizará automáticamente al terminar</div></div></div>
-          <div className="row gap-8">
-            <button className="btn btn-primary" onClick={recheck}><Check size={16} /> Ya completé la verificación</button>
-            {session?.url && <a className="btn btn-outline" href={session.url} target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir de nuevo</a>}
+        <div className="col gap-10">
+          <div className="kyc-frame-wrap">
+            <iframe title="Verificación de identidad" src={session?.url} onLoad={onFrameLoad}
+              allow="camera; microphone; fullscreen" className="kyc-frame" />
+          </div>
+          <div className="row center gap-8" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <span className="tiny muted"><Loader2 size={13} className="spin" style={{ verticalAlign: -2 }} /> Toma la foto de tu cédula y la selfie — se detecta automáticamente al terminar.</span>
+            {session?.url && <a className="tiny" href={session.url} target="_blank" rel="noreferrer" style={{ color: 'var(--teal-700)' }}><ExternalLink size={12} style={{ verticalAlign: -2 }} /> ¿La cámara no abre? Ábrela en una pestaña</a>}
           </div>
         </div>
       )}
