@@ -363,6 +363,45 @@ export async function submitBankResponse(responseId, body) {
   return { ok: true }
 }
 
+// ---------------- WhatsApp OTP (claim) ----------------
+// Sends a code to the buyer's WhatsApp (from the operator's linked number via
+// the Baileys worker) and verifies it, stamping the verified phone on the profile.
+export async function sendPhoneOtp(phone) {
+  if (!LIVE) return { ok: true, simulated: true }
+  const { data, error } = await supabase.functions.invoke('wa-send-otp', { body: { phone } })
+  if (error) return { ok: false, error: error.message }
+  return data
+}
+export async function verifyPhoneOtp(phone, code) {
+  if (!LIVE) return { ok: true, verified: true, simulated: true }
+  const { data, error } = await supabase.functions.invoke('wa-verify-otp', { body: { phone, code } })
+  if (error) return { ok: false, error: error.message }
+  return data
+}
+
+// ---------------- Super-admin: WhatsApp sender pairing ----------------
+export async function getWaStatus() {
+  if (!LIVE) return { status: 'disconnected', enabled: false }
+  const { data, error } = await supabase.rpc('wa_connection_status')
+  if (error) throw error
+  return data || { status: 'disconnected', enabled: false }
+}
+export async function waLinkQr() {
+  const { error } = await supabase.rpc('wa_baileys_link')
+  if (error) throw error
+  return { ok: true }
+}
+export async function waStartPairing(phone) {
+  const { error } = await supabase.rpc('wa_start_pairing', { p_phone: phone })
+  if (error) throw error
+  return { ok: true }
+}
+export async function waDisconnect() {
+  const { error } = await supabase.rpc('wa_disconnect')
+  if (error) throw error
+  return { ok: true }
+}
+
 // ---------------- helpers ----------------
 function mapBankStatus(s) {
   return ({ oferta: 'offer', preaprobada: 'offer', en_evaluacion: 'evaluating',

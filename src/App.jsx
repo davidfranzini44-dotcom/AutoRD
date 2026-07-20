@@ -17,6 +17,7 @@ import DealerProfileEdit from './pages/DealerProfileEdit'
 import PostVehicle from './pages/PostVehicle'
 import BankPanel from './pages/BankPanel'
 import BankReports from './pages/BankReports'
+import AdminPanel from './pages/AdminPanel'
 
 export default function App() {
   return (
@@ -49,6 +50,9 @@ export default function App() {
         <Route path="/banco" element={<BankPanel />} />
         <Route path="/banco/reportes" element={<BankReports />} />
       </Route>
+
+      {/* ---------- Super admin ---------- */}
+      <Route path="/admin" element={<ProtectedRoute role="admin"><AdminPanel /></ProtectedRoute>} />
     </Routes>
   )
 }

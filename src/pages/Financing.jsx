@@ -2,10 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
-  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
+  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -321,7 +321,7 @@ export default function Financing() {
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
-            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
+            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} phone={form.telefono} />}
           </div>
 
           {/* Step 0 (Datos) has its own in-card controls (one question at a time). */}
@@ -557,8 +557,62 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPr
   )
 }
 
+/* ---------------- Claim: verify WhatsApp so an anonymous pre-approval is recoverable ---------------- */
+function WhatsAppClaim({ phone }) {
+  const [stage, setStage] = useState('idle') // idle|sent|verified
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  if (!phone) return null
+
+  const send = async () => {
+    setBusy(true); setErr('')
+    try {
+      const r = await sendPhoneOtp(phone)
+      if (r.ok) setStage('sent')
+      else setErr(r.error === 'wa_not_connected' ? 'El envío por WhatsApp no está disponible ahora mismo.' : (r.error || 'No se pudo enviar el código.'))
+    } catch (e) { setErr(e.message || String(e)) } finally { setBusy(false) }
+  }
+  const verify = async () => {
+    setBusy(true); setErr('')
+    try {
+      const r = await verifyPhoneOtp(phone, code)
+      if (r.ok && r.verified) setStage('verified')
+      else setErr(r.error === 'wrong_code' ? 'Código incorrecto.' : r.error === 'expired_or_missing' ? 'El código venció, envíalo de nuevo.' : 'No se pudo verificar.')
+    } catch (e) { setErr(e.message || String(e)) } finally { setBusy(false) }
+  }
+
+  if (stage === 'verified') return (
+    <div className="kyc-banner" style={{ maxWidth: 520, margin: '0 auto 16px' }}>
+      <div className="ic"><ShieldCheck size={20} /></div>
+      <div><div className="strong">WhatsApp verificado</div><div className="tiny" style={{ color: 'var(--green)' }}>Tu pre-aprobación quedó asegurada a tu número.</div></div>
+    </div>
+  )
+  return (
+    <div className="card card-pad" style={{ maxWidth: 520, margin: '0 auto 16px', background: 'var(--teal-50)' }}>
+      <div className="row center gap-8" style={{ marginBottom: 6 }}><MessageCircle size={16} /><div className="strong small">Asegura tu pre-aprobación</div></div>
+      {stage === 'idle' ? (
+        <>
+          <p className="tiny muted" style={{ marginBottom: 10 }}>Verifica tu WhatsApp <strong>{phone}</strong> para recuperar tu solicitud desde cualquier dispositivo y recibir las respuestas.</p>
+          <button className="btn btn-primary btn-block" disabled={busy} onClick={send}>{busy ? <Loader2 size={16} className="spin" /> : <MessageCircle size={16} />} Enviarme un código por WhatsApp</button>
+        </>
+      ) : (
+        <>
+          <p className="tiny muted" style={{ marginBottom: 10 }}>Ingresa el código de 6 dígitos que te enviamos por WhatsApp.</p>
+          <div className="row gap-8">
+            <input className="input" inputMode="numeric" maxLength={6} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))} />
+            <button className="btn btn-primary" disabled={busy || code.length !== 6} onClick={verify}>Verificar</button>
+          </div>
+          <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} disabled={busy} onClick={send}>Reenviar código</button>
+        </>
+      )}
+      {err && <div className="tiny" style={{ color: 'var(--red)', marginTop: 8 }}>{err}</div>}
+    </div>
+  )
+}
+
 /* ---------------- Step 5: Respuestas ---------------- */
-function StepRespuestas({ banks }) {
+function StepRespuestas({ banks, phone }) {
   return (
     <>
       <div className="col center" style={{ alignItems: 'center', textAlign: 'center', padding: '6px 0 18px' }}>
@@ -568,6 +622,9 @@ function StepRespuestas({ banks }) {
           Tu solicitud fue enviada correctamente. Los bancos evaluarán tu historial de forma externa y responderán en la plataforma.
         </p>
       </div>
+
+      <WhatsAppClaim phone={phone} />
+
       <div className="col gap-8" style={{ maxWidth: 520, margin: '0 auto' }}>
         {banks.map((b) => (
           <div className="bank-card" key={b.id}>
