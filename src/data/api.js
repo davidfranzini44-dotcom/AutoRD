@@ -380,6 +380,13 @@ export async function verifyPhoneOtp(phone, code) {
 }
 
 // ---------------- Super-admin: WhatsApp sender pairing ----------------
+// Is the WhatsApp gateway (reuse Reparando's worker) active + ready? No message sent.
+export async function checkWaGateway() {
+  if (!LIVE) return { mode: 'autord', ready: false }
+  const { data, error } = await supabase.functions.invoke('wa-send-otp', { body: { check: true } })
+  if (error) return { mode: 'unknown', ready: false, error: error.message }
+  return data
+}
 export async function getWaStatus() {
   if (!LIVE) return { status: 'disconnected', enabled: false }
   const { data, error } = await supabase.rpc('wa_connection_status')

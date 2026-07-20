@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp } from '../data/api'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway } from '../data/api'
 
 const STATUS_META = {
   connected:    { label: 'Conectado',          cls: 'chip-green' },
@@ -13,6 +13,7 @@ const STATUS_META = {
 
 export default function AdminPanel() {
   const [wa, setWa] = useState(null)
+  const [gw, setGw] = useState(null) // gateway status (reuse Reparando's worker)
   const [busy, setBusy] = useState(false)
   const [phone, setPhone] = useState('')
   const [testTo, setTestTo] = useState('')
@@ -20,7 +21,11 @@ export default function AdminPanel() {
   const timer = useRef(null)
 
   const load = async () => { try { setWa(await getWaStatus()) } catch (e) { setMsg(e.message || String(e)) } }
-  useEffect(() => { load(); timer.current = setInterval(load, 4000); return () => clearInterval(timer.current) }, [])
+  useEffect(() => {
+    load(); checkWaGateway().then(setGw).catch(() => {})
+    timer.current = setInterval(load, 4000)
+    return () => clearInterval(timer.current)
+  }, [])
 
   const run = (fn) => async () => { setBusy(true); setMsg(''); try { await fn(); await load() } catch (e) { setMsg(e.message || String(e)) } finally { setBusy(false) } }
   const linkQr = run(() => waLinkQr())
@@ -35,8 +40,11 @@ export default function AdminPanel() {
   const status = wa?.status || 'disconnected'
   const meta = STATUS_META[status] || STATUS_META.disconnected
   const connected = status === 'connected'
+  // Gateway mode: AutoRD reuses Reparando's running worker + linked number.
+  // When active, the QR/pairing UI here is irrelevant.
+  const gateway = gw?.mode === 'reparando'
   // Heuristic: enabled but no recent heartbeat -> the worker probably isn't running.
-  const stale = wa?.enabled && wa?.last_seen_at && (Date.now() - new Date(wa.last_seen_at).getTime() > 30000)
+  const stale = !gateway && wa?.enabled && wa?.last_seen_at && (Date.now() - new Date(wa.last_seen_at).getTime() > 30000)
 
   return (
     <main className="page">
@@ -49,10 +57,12 @@ export default function AdminPanel() {
               <div className="verify-ic ok" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)' }}><ShieldCheck size={20} /></div>
               <h1 style={{ fontSize: 20 }}>WhatsApp del sistema</h1>
             </div>
-            <span className={`chip ${meta.cls}`}>{meta.label}</span>
+            <span className={`chip ${gateway ? 'chip-green' : meta.cls}`}>{gateway ? 'Conectado (Reparando)' : meta.label}</span>
           </div>
           <p className="muted small" style={{ marginBottom: 16 }}>
-            Vincula tu WhatsApp para enviar los códigos de verificación desde tu número — sin costos de SMS.
+            {gateway
+              ? 'Los códigos se envían por WhatsApp reutilizando tu conexión de Reparando — sin costos de SMS.'
+              : 'Vincula tu WhatsApp para enviar los códigos de verificación desde tu número — sin costos de SMS.'}
           </p>
 
           {stale && (
@@ -62,7 +72,21 @@ export default function AdminPanel() {
           )}
           {wa?.worker_error && <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}><Info size={16} /><span>{wa.worker_error}</span></div>}
 
-          {connected ? (
+          {gateway ? (
+            <div className="col gap-12">
+              <div className="kyc-banner">
+                <div className="ic"><ShieldCheck size={20} /></div>
+                <div><div className="strong">Conectado vía Reparando</div><div className="tiny" style={{ color: 'var(--green)' }}>Los códigos se envían desde {gw.sender ? `+${gw.sender}` : 'tu número de Reparando'}. No necesitas vincular nada aquí.</div></div>
+              </div>
+              <div className="field">
+                <label>Enviar código de prueba</label>
+                <div className="row gap-8">
+                  <input className="input" placeholder="809-000-0000" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
+                  <button className="btn btn-primary" disabled={busy || !testTo} onClick={testSend}><Send size={15} /> Enviar</button>
+                </div>
+              </div>
+            </div>
+          ) : connected ? (
             <div className="col gap-12">
               <div className="kyc-banner">
                 <div className="ic"><ShieldCheck size={20} /></div>
@@ -114,7 +138,9 @@ export default function AdminPanel() {
         </div>
 
         <p className="tiny muted" style={{ textAlign: 'center', marginTop: 12 }}>
-          Requiere el worker <code>autord-wa-worker</code> corriendo 24/7.
+          {gateway
+            ? 'Modo gateway: usa el worker de Reparando. No requiere un worker de AutoRD.'
+            : <>Requiere el worker <code>autord-wa-worker</code> corriendo 24/7.</>}
         </p>
       </div>
     </main>
