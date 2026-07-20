@@ -374,6 +374,27 @@ export async function sendPhoneOtp(phone, kind = 'otp') {
   if (error) return { ok: false, error: error.message }
   return data
 }
+// ---------------- WhatsApp login (phone OTP) ----------------
+// Logged-out buyers sign in with their WhatsApp number: a code is sent to it,
+// they confirm it, and a real Supabase session is minted (re-loginable account
+// keyed to the phone). Reuses the same delivery gateway.
+export async function startPhoneLogin(phone) {
+  if (!LIVE) return { ok: true, simulated: true }
+  const { data, error } = await supabase.functions.invoke('wa-login-start', { body: { phone } })
+  if (error) return { ok: false, error: error.message }
+  return data
+}
+export async function verifyPhoneLogin(phone, code) {
+  if (!LIVE) return { ok: true, simulated: true }
+  const { data, error } = await supabase.functions.invoke('wa-login-verify', { body: { phone, code } })
+  if (error) return { ok: false, error: error.message }
+  if (!data?.ok || !data?.token_hash) return { ok: false, error: data?.error || 'wrong_code' }
+  // Exchange the one-time token for a session in this browser's client.
+  const { error: vErr } = await supabase.auth.verifyOtp({ token_hash: data.token_hash, type: 'magiclink' })
+  if (vErr) return { ok: false, error: vErr.message }
+  return { ok: true }
+}
+
 // Admin: history of WhatsApp messages AutoRD sent. kind = null | 'otp' | 'notif'.
 export async function getNotifications(kind = null, limit = 60) {
   if (!LIVE) return []

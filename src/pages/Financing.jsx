@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -77,7 +77,12 @@ export default function Financing() {
     (q.key === 'plazo' && seed.plazo)
   )
   const baseQuestions = isPreapproval ? PREAP_QUESTIONS : CAR_QUESTIONS
-  const questions = editAll ? baseQuestions : baseQuestions.filter((q) => !seededByCalc(q))
+  const rawQuestions = editAll ? baseQuestions : baseQuestions.filter((q) => !seededByCalc(q))
+  // Logged-in users already have an account + phone on file → don't ask for the
+  // WhatsApp again. Logged-out users LOG IN via that step (OTP over WhatsApp).
+  const questions = authed
+    ? rawQuestions.filter((q) => q.key !== 'telefono')
+    : rawQuestions.map((q) => (q.key === 'telefono' ? { ...q, type: 'login' } : q))
 
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(() => ({
@@ -321,7 +326,7 @@ export default function Financing() {
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
-            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} phone={form.telefono} />}
+            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} phone={form.telefono} showClaim={!authed} />}
           </div>
 
           {/* Step 0 (Datos) has its own in-card controls (one question at a time). */}
@@ -349,6 +354,15 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
    Name + cédula come from the Didit KYC step, so we never ask them here. */
 function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap = [], onEdit }) {
   const [i, setI] = useState(0)
+  // WhatsApp-login sub-state (only used by a q.type === 'login' step).
+  const [loginPhase, setLoginPhase] = useState('enter') // enter | code
+  const [otpCode, setOtpCode] = useState('')
+  const [otpBusy, setOtpBusy] = useState(false)
+  const [otpErr, setOtpErr] = useState('')
+
+  useEffect(() => { if (questions.length === 0) onComplete() }, [questions.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (questions.length === 0) return null
+
   const idx = Math.min(i, questions.length - 1)
   const q = questions[idx]
   const isLast = idx === questions.length - 1
@@ -358,6 +372,28 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
   const advance = () => { if (!ready) return; if (isLast) onComplete(); else go(1) }
   const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); advance() } }
   const onChange = (q.type === 'money' ? setMoney : set)(q.key)
+
+  const phoneReady = (form.telefono || '').replace(/[^0-9]/g, '').length >= 10
+  const sendCode = async () => {
+    if (!phoneReady) { setOtpErr('Ingresa un número válido'); return }
+    setOtpBusy(true); setOtpErr('')
+    try {
+      const r = await startPhoneLogin(form.telefono)
+      if (r.ok || r.simulated) { setLoginPhase('code'); setOtpCode('') }
+      else setOtpErr(r.error === 'wa_not_connected' ? 'El envío por WhatsApp no está disponible ahora mismo.'
+        : r.error === 'too_soon' ? 'Espera unos segundos e intenta de nuevo.' : 'No se pudo enviar el código.')
+    } catch (e) { setOtpErr(e.message || String(e)) } finally { setOtpBusy(false) }
+  }
+  const verify = async () => {
+    if (otpCode.length !== 6) return
+    setOtpBusy(true); setOtpErr('')
+    try {
+      const r = await verifyPhoneLogin(form.telefono, otpCode)
+      if (r.ok || r.simulated) { onComplete() }
+      else setOtpErr(r.error === 'wrong_code' ? 'Código incorrecto.'
+        : r.error === 'expired_or_missing' ? 'El código venció, reenvíalo.' : 'No se pudo verificar.')
+    } catch (e) { setOtpErr(e.message || String(e)) } finally { setOtpBusy(false) }
+  }
 
   return (
     <div className="preap">
@@ -377,32 +413,52 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
       </div>
 
       <div className="preap-slide" key={q.key}>
-        <div className="preap-q">{q.label}</div>
-        <div className="preap-help">{q.help}</div>
-        {q.type === 'plazo' ? (
+        <div className="preap-q">{q.type === 'login' && loginPhase === 'code' ? 'Ingresa el código de WhatsApp' : q.label}</div>
+        <div className="preap-help">
+          {q.type === 'login'
+            ? (loginPhase === 'enter' ? 'Te enviamos un código por WhatsApp para confirmar tu número e iniciar sesión.' : `Enviado a ${form.telefono}. Revisa tu WhatsApp.`)
+            : q.help}
+        </div>
+
+        {q.type === 'login' ? (
+          loginPhase === 'enter' ? (
+            <input className="input preap-input" value={form.telefono || ''} onChange={set('telefono')}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendCode() } }}
+              placeholder={q.placeholder} inputMode="numeric" autoFocus />
+          ) : (
+            <input className="input preap-input" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); verify() } }}
+              placeholder="000000" inputMode="numeric" maxLength={6} autoFocus />
+          )
+        ) : q.type === 'plazo' ? (
           <select className="select preap-input" value={form.plazo} onChange={set('plazo')} autoFocus>
             <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
           </select>
         ) : (
-          <input
-            className="input preap-input"
-            value={val || ''}
-            onChange={onChange}
-            onKeyDown={onKey}
-            placeholder={q.placeholder}
-            inputMode={q.type === 'money' || q.type === 'tel' ? 'numeric' : 'text'}
-            autoFocus
-          />
+          <input className="input preap-input" value={val || ''} onChange={onChange} onKeyDown={onKey}
+            placeholder={q.placeholder} inputMode={q.type === 'money' || q.type === 'tel' ? 'numeric' : 'text'} autoFocus />
         )}
+
+        {q.type === 'login' && loginPhase === 'code' && (
+          <button type="button" onClick={sendCode} disabled={otpBusy} style={{ background: 'none', border: 0, color: 'var(--teal-700)', cursor: 'pointer', padding: '8px 0 0', font: 'inherit' }}>Reenviar código</button>
+        )}
+        {q.type === 'login' && otpErr && <div className="tiny" style={{ color: 'var(--red)', marginTop: 8 }}>{otpErr}</div>}
       </div>
 
       <div className="preap-actions">
         {idx > 0
-          ? <button className="btn btn-outline" onClick={() => go(-1)}><ChevronLeft size={17} /> Atrás</button>
+          ? <button className="btn btn-outline" onClick={() => { if (q.type === 'login' && loginPhase === 'code') { setLoginPhase('enter'); setOtpErr('') } else go(-1) }}><ChevronLeft size={17} /> Atrás</button>
           : <span className="tiny muted"><ShieldCheck size={13} style={{ verticalAlign: -2 }} /> {reused ? 'Identidad ya verificada en tu pre-aprobación' : 'Tu identidad se verifica en el siguiente paso'}</span>}
-        <button className="btn btn-primary" onClick={advance} disabled={!ready}>
-          {isLast ? (reused ? 'Continuar' : 'Continuar a verificación') : 'Continuar'} <ChevronRight size={17} />
-        </button>
+
+        {q.type === 'login' ? (
+          loginPhase === 'enter'
+            ? <button className="btn btn-primary" onClick={sendCode} disabled={otpBusy || !phoneReady}>{otpBusy ? <Loader2 size={16} className="spin" /> : <MessageCircle size={16} />} Enviarme el código <ChevronRight size={17} /></button>
+            : <button className="btn btn-primary" onClick={verify} disabled={otpBusy || otpCode.length !== 6}>{otpBusy ? <Loader2 size={16} className="spin" /> : null} Verificar e iniciar sesión <ChevronRight size={17} /></button>
+        ) : (
+          <button className="btn btn-primary" onClick={advance} disabled={!ready}>
+            {isLast ? (reused ? 'Continuar' : 'Continuar a verificación') : 'Continuar'} <ChevronRight size={17} />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -612,7 +668,7 @@ function WhatsAppClaim({ phone }) {
 }
 
 /* ---------------- Step 5: Respuestas ---------------- */
-function StepRespuestas({ banks, phone }) {
+function StepRespuestas({ banks, phone, showClaim = true }) {
   return (
     <>
       <div className="col center" style={{ alignItems: 'center', textAlign: 'center', padding: '6px 0 18px' }}>
@@ -623,7 +679,7 @@ function StepRespuestas({ banks, phone }) {
         </p>
       </div>
 
-      <WhatsAppClaim phone={phone} />
+      {showClaim && <WhatsAppClaim phone={phone} />}
 
       <div className="col gap-8" style={{ maxWidth: 520, margin: '0 auto' }}>
         {banks.map((b) => (
