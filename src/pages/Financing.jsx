@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
-  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, LogIn,
+  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
 import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication } from '../data/api'
@@ -50,9 +50,10 @@ export default function Financing() {
   const location = useLocation()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
-  const { profile, user, configured } = useAuth() || {}
-  // Identity verification needs a real account (the KYC session is tied to the
-  // user's id). In demo mode (no Supabase) we let it through as a simulation.
+  const { profile, user, configured, signInAnon } = useAuth() || {}
+  // Identity verification needs a user id (the KYC session is tied to it), but
+  // NOT a signup — we create an anonymous session on demand. `authed` just
+  // controls whether we still offer a "log in" shortcut for returning users.
   const authed = !configured || !!user
   const loginHref = `/ingresar?next=${encodeURIComponent(location.pathname + location.search)}`
   const [editAll, setEditAll] = useState(false)
@@ -160,8 +161,13 @@ export default function Financing() {
   }
 
   const runKyc = async () => {
-    if (!authed) { setKycError('Inicia sesión o crea tu cuenta para verificar tu identidad.'); setKyc('error'); return }
     setKyc('launching'); setKycError('')
+    // No account required: mint an anonymous session so the KYC call is authed.
+    try {
+      if (configured && !user) await signInAnon()
+    } catch (e) {
+      setKycError('No pudimos iniciar tu verificación. Si ya tienes cuenta, inicia sesión.'); setKyc('error'); return
+    }
     const res = await createKycSession()
     if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // demo mode only (no Supabase)
     if (res.error || !res.url) { setKycError(res.error || 'No disponible'); setKyc('error'); return }
@@ -374,27 +380,23 @@ function StepIdentidad({ state, run, recheck, session, reused, error, authed = t
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
 
-      {!authed && (
-        <div className="col gap-12">
-          <div className="notice"><Info size={16} /><span>Para verificar tu identidad y recibir respuestas de los bancos necesitas una cuenta. Tus datos de la solicitud se conservan.</span></div>
-          <Link className="btn btn-navy btn-lg" to={loginHref}><LogIn size={18} /> Inicia sesión o crea tu cuenta</Link>
-        </div>
-      )}
-
-      {authed && reused && (
+      {reused && (
         <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
           <ShieldCheck size={16} /><span>Ya verificaste tu identidad en tu pre-aprobación — no necesitas repetirla.</span>
         </div>
       )}
 
-      {authed && (<>
       <div className="row center gap-8" style={{ marginBottom: 16 }}>
         <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación de identidad segura</span>
         <span className="tiny muted">Cédula (OCR) · Prueba de vida · Face match</span>
       </div>
 
       {state === 'idle' && (
-        <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad</button>
+        <div className="col gap-8">
+          <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad</button>
+          <div className="tiny muted">Sin crear cuenta — validamos tu identidad con tu cédula.</div>
+          {!authed && <Link className="tiny" to={loginHref} style={{ color: 'var(--teal-700)' }}>¿Ya tienes una cuenta? Inicia sesión</Link>}
+        </div>
       )}
 
       {state === 'launching' && (
@@ -432,7 +434,6 @@ function StepIdentidad({ state, run, recheck, session, reused, error, authed = t
           </div>
         </div>
       )}
-      </>)}
     </>
   )
 }

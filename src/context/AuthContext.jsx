@@ -39,6 +39,14 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }, [])
 
+  // Frictionless identity: create a real (but account-less) user so KYC + the
+  // financing pipeline work without a signup screen. The cédula + Didit are the
+  // actual identity; a WhatsApp "claim" can upgrade this later.
+  const signInAnon = useCallback(async () => {
+    const { error } = await supabase.auth.signInAnonymously({ options: { data: { role: 'buyer' } } })
+    if (error) throw error
+  }, [])
+
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut()
     setSession(null); setProfile(null)
@@ -51,7 +59,7 @@ export function AuthProvider({ children }) {
     profile,
     role: profile?.role || null,
     loading,
-    signIn, signUp, signOut,
+    signIn, signUp, signInAnon, signOut,
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
