@@ -360,6 +360,8 @@ export async function submitBankResponse(responseId, body) {
     responded_at: new Date().toISOString(),
   }).eq('id', responseId)
   if (error) throw error
+  // Fire-and-forget: ping the buyer on WhatsApp that a bank responded.
+  supabase.functions.invoke('wa-notify', { body: { response_id: responseId, event: 'bank_response' } }).catch(() => {})
   return { ok: true }
 }
 
