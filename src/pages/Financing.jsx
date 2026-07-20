@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
-  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car,
+  ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, LogIn,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
 import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication } from '../data/api'
@@ -47,9 +47,14 @@ const numStr = (n) => (n != null && n !== '' ? String(n) : '')
 
 export default function Financing() {
   const [params] = useSearchParams()
+  const location = useLocation()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
-  const { profile } = useAuth() || {}
+  const { profile, user, configured } = useAuth() || {}
+  // Identity verification needs a real account (the KYC session is tied to the
+  // user's id). In demo mode (no Supabase) we let it through as a simulation.
+  const authed = !configured || !!user
+  const loginHref = `/ingresar?next=${encodeURIComponent(location.pathname + location.search)}`
   const [editAll, setEditAll] = useState(false)
 
   // Reuse whatever the customer entered on the homepage calculator (URL params
@@ -155,6 +160,7 @@ export default function Financing() {
   }
 
   const runKyc = async () => {
+    if (!authed) { setKycError('Inicia sesión o crea tu cuenta para verificar tu identidad.'); setKyc('error'); return }
     setKyc('launching'); setKycError('')
     const res = await createKycSession()
     if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // demo mode only (no Supabase)
@@ -272,7 +278,7 @@ export default function Financing() {
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
             {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
-            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} error={kycError} />}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} recheck={recheck} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} />}
@@ -363,17 +369,25 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
 }
 
 /* ---------------- Step 2: Identidad (Didit) ---------------- */
-function StepIdentidad({ state, run, recheck, session, reused, error }) {
+function StepIdentidad({ state, run, recheck, session, reused, error, authed = true, loginHref = '/ingresar' }) {
   return (
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
 
-      {reused && (
+      {!authed && (
+        <div className="col gap-12">
+          <div className="notice"><Info size={16} /><span>Para verificar tu identidad y recibir respuestas de los bancos necesitas una cuenta. Tus datos de la solicitud se conservan.</span></div>
+          <Link className="btn btn-navy btn-lg" to={loginHref}><LogIn size={18} /> Inicia sesión o crea tu cuenta</Link>
+        </div>
+      )}
+
+      {authed && reused && (
         <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--teal-700)', background: 'var(--teal-50)' }}>
           <ShieldCheck size={16} /><span>Ya verificaste tu identidad en tu pre-aprobación — no necesitas repetirla.</span>
         </div>
       )}
 
+      {authed && (<>
       <div className="row center gap-8" style={{ marginBottom: 16 }}>
         <span className="chip chip-navy"><ShieldCheck size={13} /> Verificación de identidad segura</span>
         <span className="tiny muted">Cédula (OCR) · Prueba de vida · Face match</span>
@@ -418,6 +432,7 @@ function StepIdentidad({ state, run, recheck, session, reused, error }) {
           </div>
         </div>
       )}
+      </>)}
     </>
   )
 }

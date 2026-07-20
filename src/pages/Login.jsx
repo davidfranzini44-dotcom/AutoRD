@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { LogIn, UserPlus, ShieldCheck, Info, User, Store, Landmark } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -15,6 +15,8 @@ const DEMO_ACCOUNTS = [
 export default function Login() {
   const { signIn, signUp, configured } = useAuth()
   const nav = useNavigate()
+  const [sp] = useSearchParams()
+  const next = sp.get('next') // return here after login (e.g. the financing flow)
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'buyer' })
   const [err, setErr] = useState('')
@@ -25,7 +27,7 @@ export default function Login() {
     setErr(''); setBusy(true)
     try {
       await signIn(email, DEMO_PASSWORD)
-      nav(dest)
+      nav(dest === '/' && next ? next : dest)
     } catch (e2) {
       setErr(e2.message || 'No se pudo iniciar la demo.')
     } finally { setBusy(false) }
@@ -42,7 +44,7 @@ export default function Login() {
         try {
           const { data: { user } } = await supabase.auth.getUser()
           const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-          dest = prof?.role === 'dealer' ? '/dealer' : prof?.role === 'bank' ? '/banco' : '/'
+          dest = prof?.role === 'dealer' ? '/dealer' : prof?.role === 'bank' ? '/banco' : (next || '/')
         } catch (_) { /* default to home */ }
         nav(dest)
       } else {
