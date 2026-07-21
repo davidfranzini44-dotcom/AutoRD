@@ -236,6 +236,19 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .fav-btn:hover { background: rgba(12,32,51,.6); }
 .fav-btn.active { color: #ff7b93; }
 .fav-btn.active svg { fill: #ff7b93; }
+.share-toast {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  z-index: 3;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(12,32,51,.84);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
 .compare-float {
   position: absolute;
   top: 52px;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck, Scale,
+  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck, Scale, Share2,
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
@@ -11,6 +11,7 @@ import { carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
+import { shareVehicle } from '../data/shareVehicle'
 import { useFicha } from '../context/FichaContext'
 
 // Slide-in "ficha" drawer: preview a vehicle without leaving the current page.
@@ -27,6 +28,7 @@ export default function VehicleFicha() {
 function FichaShell({ v, close }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
   const [cmp, setCmp] = useState(() => isCompared(v.id))
+  const [shareMsg, setShareMsg] = useState('')
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close() }
@@ -47,6 +49,12 @@ function FichaShell({ v, close }) {
     { ic: Palette, l: 'Color', val: v.color },
   ]
   const initials = String(v.dealer || '').split(' ').map((w) => w[0]).slice(0, 2).join('')
+  const shareCurrentVehicle = async () => {
+    const result = await shareVehicle(v)
+    if (result === 'cancelled') return
+    setShareMsg(result === 'shared' ? 'Compartido' : 'Link copiado')
+    window.setTimeout(() => setShareMsg(''), 1800)
+  }
 
   return (
     <div className="ficha-overlay" onClick={close}>
@@ -115,6 +123,9 @@ function FichaShell({ v, close }) {
           <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" onClick={close}>Solicitar financiamiento</Link>
           <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'} btn-block`} onClick={() => setCmp(toggleCompare(v.id).on)}>
             <Scale size={16} /> {cmp ? 'Quitar de comparar' : 'Comparar vehiculo'}
+          </button>
+          <button className="btn btn-outline btn-block" onClick={shareCurrentVehicle}>
+            <Share2 size={16} /> {shareMsg || 'Compartir link'}
           </button>
           <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
           <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>

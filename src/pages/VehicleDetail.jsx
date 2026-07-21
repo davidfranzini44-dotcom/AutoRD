@@ -11,6 +11,7 @@ import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToA
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
+import { shareVehicle } from '../data/shareVehicle'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -25,6 +26,7 @@ export default function VehicleDetail() {
   const [calcOpen, setCalcOpen] = useState(false)
   const [calcDownPct, setCalcDownPct] = useState(20)
   const [calcTerm, setCalcTerm] = useState(null) // months; null = use the car's own term
+  const [shareMsg, setShareMsg] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -80,6 +82,12 @@ export default function VehicleDetail() {
       nav('/mi-financiamiento')
     } catch (_) { setAttaching(false) }
   }
+  const shareCurrentVehicle = async () => {
+    const result = await shareVehicle(v)
+    if (result === 'cancelled') return
+    setShareMsg(result === 'shared' ? 'Compartido' : 'Link copiado')
+    window.setTimeout(() => setShareMsg(''), 1800)
+  }
 
   // Inline "ver cálculo de cuota" — monthly payment for this car.
   const calcApr = v.apr || BANK_RATES.popular
@@ -105,12 +113,13 @@ export default function VehicleDetail() {
               <div style={{ position: 'relative' }}>
                 <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${active}`} tone={v.tone} photo={activePhoto} className="tall" label={`${v.make} ${v.model}`} />
                 <div className="row gap-8" style={{ position: 'absolute', top: 12, right: 12 }}>
-                  <button className="fav-btn" style={{ position: 'static' }} aria-label="Compartir"><Share2 size={16} /></button>
+                  <button className="fav-btn" style={{ position: 'static' }} aria-label="Compartir" onClick={shareCurrentVehicle}><Share2 size={16} /></button>
                   <button className={`fav-btn ${cmp ? 'active' : ''}`} style={{ position: 'static', borderRadius: 8, width: 'auto', padding: '0 10px' }} onClick={() => setCmp(toggleCompare(v.id).on)} aria-label="Comparar">
                     <Scale size={15} />
                   </button>
                   <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'static' }} onClick={() => setFav(!fav)} aria-label="Guardar"><Heart size={16} /></button>
                 </div>
+                {shareMsg && <span className="share-toast">{shareMsg}</span>}
                 <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(12,32,51,.8)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
                   {Math.min(active + 1, galleryCount)} / {galleryCount}
                 </span>
