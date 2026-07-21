@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Heart, Share2, MapPin, BadgeCheck, Gauge, Cog, Fuel, Palette,
-  Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2, Scale,
+  Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2, Scale, Navigation,
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import ContactDealer from '../components/ContactDealer'
+import MiniMap from '../components/MiniMap'
 import PriceSignal from '../components/PriceSignal'
+import { directionsUrl } from '../data/geo'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
@@ -278,6 +280,18 @@ export default function VehicleDetail() {
               </div>
               <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
             </div>
+
+            {/* Vehicle location (precise coords inherited from the dealer's branch) */}
+            {v.lat != null && v.lng != null && (
+              <div className="card card-pad">
+                <div className="small strong" style={{ marginBottom: 10 }}>Ubicación</div>
+                <MiniMap lat={v.lat} lng={v.lng} label={`${v.make} ${v.model}`} />
+                <div className="tiny muted row center gap-6" style={{ marginTop: 8 }}><MapPin size={13} /> {v.location}</div>
+                <a className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }} href={directionsUrl({ lat: v.lat, lng: v.lng })} target="_blank" rel="noreferrer">
+                  <Navigation size={14} /> Cómo llegar
+                </a>
+              </div>
+            )}
           </aside>
         </div>
 

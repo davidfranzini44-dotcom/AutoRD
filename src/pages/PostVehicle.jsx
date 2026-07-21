@@ -14,6 +14,7 @@ export default function PostVehicle() {
     make: '', model: '', year: '2022', trim: '', transmission: 'Automática',
     fuel: 'Gasolina', engine: '', mileage: '', color: '', bodyType: 'SUV',
     price: '', condition: 'usado', certified: false, location: '', description: '',
+    lat: null, lng: null,
   })
   // The car sits at the dealer's location — default it from the dealer's profile
   // (branches if they have several) instead of asking for a generic city.
@@ -40,16 +41,23 @@ export default function PostVehicle() {
             const nm = String(l.name || '').trim()
             const ct = String(l.city || '').trim()
             const label = nm && ct && !nm.toLowerCase().includes(ct.toLowerCase()) ? `${nm} — ${ct}` : (nm || ct)
-            return { value: ct || nm, label }
+            return { value: ct || nm, label, lat: l.lat ?? null, lng: l.lng ?? null }
           })
-        : (d.city ? [{ value: d.city, label: d.city }] : [])
+        : (d.city ? [{ value: d.city, label: d.city, lat: null, lng: null }] : [])
       const seen = new Set()
       const uniq = opts.filter((o) => (seen.has(o.value) ? false : seen.add(o.value)))
       setDealerLocs(uniq)
-      if (uniq.length) setF((prev) => ({ ...prev, location: prev.location || uniq[0].value }))
+      if (uniq.length) setF((prev) => (prev.location ? prev : { ...prev, location: uniq[0].value, lat: uniq[0].lat, lng: uniq[0].lng }))
     }).catch(() => {})
     return () => { alive = false }
   }, [profile?.dealer_id])
+
+  // Selecting a branch also captures its coordinates for the listing.
+  const onLocationChange = (e) => {
+    const val = e.target.value
+    const branch = dealerLocs.find((o) => o.value === val)
+    setF((prev) => ({ ...prev, location: val, lat: branch?.lat ?? null, lng: branch?.lng ?? null }))
+  }
 
   const addPhotos = (files) => {
     setError('')
@@ -143,7 +151,7 @@ export default function PostVehicle() {
           <F label="Ubicación">
             {dealerLocs.length > 0 ? (
               <>
-                <select className="select" value={f.location} onChange={set('location')}>
+                <select className="select" value={f.location} onChange={onLocationChange}>
                   {dealerLocs.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
                 <span className="help">Ubicación de tu dealer · <Link to="/dealer/perfil" className="link-teal">editar sucursales</Link></span>

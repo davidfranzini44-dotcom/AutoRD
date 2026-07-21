@@ -9,6 +9,7 @@ import {
   dealerInventory, dealerLeads, bankApplications, bankStatusMeta,
 } from './demo'
 import { withPriceInsights } from './priceInsights'
+import { DR_CITY_COORDS } from './geo'
 
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
@@ -42,6 +43,7 @@ function mapVehicle(r) {
     certified: r.certified,
     location: r.location, dealer: dealer.name, dealerVerified: dealer.verified,
     dealerSlug: dealer.slug || null, dealerWhatsapp: dealer.whatsapp || null, dealerPhone: dealer.phone || null,
+    lat: r.lat != null ? Number(r.lat) : null, lng: r.lng != null ? Number(r.lng) : null,
     financing: r.financing, tone: r.tone,
     monthly: Number(r.monthly), downPct: 20, apr: Number(r.apr), termYears: r.term_years,
     photos: photoUrls.length || r.photos_count || 0,
@@ -59,6 +61,12 @@ function mapVehicle(r) {
 const VEHICLE_PHOTOS_SELECT = 'photo_rows:vehicle_photos(id, url, storage_path, position, is_cover)'
 const VEHICLE_SELECT = `*, dealer:dealers(name, verified, slug, initials, whatsapp, phone), ${VEHICLE_PHOTOS_SELECT}`
 
+function withDemoCoords(v) {
+  if (v.lat != null && v.lng != null) return v
+  const coords = DR_CITY_COORDS[v.location]
+  return coords ? { ...v, lat: coords.lat, lng: coords.lng } : v
+}
+
 // ---------------- Vehicles ----------------
 export async function listVehicles({ tab = 'todos' } = {}) {
   if (!LIVE) {
@@ -67,7 +75,7 @@ export async function listVehicles({ tab = 'todos' } = {}) {
       if (tab === 'cert') return v.certified
       if (tab === 'fin') return v.financing
       return true
-    }))
+    }).map(withDemoCoords))
   }
   let q = supabase.from('vehicles').select(VEHICLE_SELECT).eq('status', 'publicado')
   if (tab === 'nuevos') q = q.eq('condition', 'nuevo')
@@ -79,7 +87,7 @@ export async function listVehicles({ tab = 'todos' } = {}) {
 }
 
 export async function getVehicleBySlug(slug) {
-  if (!LIVE) return withPriceInsights(demoVehicles).find((v) => v.id === slug) || null
+  if (!LIVE) return withPriceInsights(demoVehicles.map(withDemoCoords)).find((v) => v.id === slug) || null
   const { data, error } = await supabase.from('vehicles').select(VEHICLE_SELECT).eq('slug', slug).single()
   if (error) return null
   return mapVehicle(data)
@@ -109,7 +117,7 @@ export async function listDealers() {
       }
       byName[name].vehicles.push(v)
     })
-    return Object.values(byName).map((d) => ({ ...d, vehicles: withPriceInsights(d.vehicles) }))
+    return Object.values(byName).map((d) => ({ ...d, vehicles: withPriceInsights(d.vehicles.map(withDemoCoords)) }))
   }
   const { data, error } = await supabase
     .from('dealers')
@@ -561,6 +569,8 @@ export async function createVehicle(v) {
     mileage: Number(v.mileage) || 0, color: v.color, body_type: v.bodyType,
     price: Number(v.price), condition: v.condition, certified: !!v.certified,
     location: v.location, description: v.description,
+    lat: v.lat != null && v.lat !== '' ? Number(v.lat) : null,
+    lng: v.lng != null && v.lng !== '' ? Number(v.lng) : null,
     monthly: Math.round((Number(v.price) * 0.8 * 0.013) || 0), apr: 9.75, term_years: 7,
     status: 'publicado',
   }).select().single()
