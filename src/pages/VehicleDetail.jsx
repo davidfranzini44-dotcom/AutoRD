@@ -9,7 +9,7 @@ import ContactDealer from '../components/ContactDealer'
 import MiniMap from '../components/MiniMap'
 import PriceSignal from '../components/PriceSignal'
 import { directionsUrl } from '../data/geo'
-import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
+import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication, trackEvent } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
@@ -36,6 +36,7 @@ export default function VehicleDetail() {
     setV(undefined)
     setActive(0)
     getVehicleBySlug(id).then((data) => { if (alive) { setV(data); setCmp(data ? isCompared(data.id) : false); if (data) recordRecentlyViewed(data) } })
+    trackEvent(id, 'view')
     listVehicles().then((all) => {
       if (!alive) return
       const enriched = all.find((x) => x.id === id)
@@ -88,6 +89,7 @@ export default function VehicleDetail() {
   const shareCurrentVehicle = async () => {
     const result = await shareVehicle(v)
     if (result === 'cancelled') return
+    trackEvent(v.id, 'share')
     setShareMsg(result === 'shared' ? 'Compartido' : 'Link copiado')
     window.setTimeout(() => setShareMsg(''), 1800)
   }
@@ -212,7 +214,7 @@ export default function VehicleDetail() {
                       <Info size={16} /><span>Este vehículo ({fmtRD(v.price)}) supera tu pre-aprobación de {fmtRD(preApp.approvedAmount)}. Puedes solicitar financiamiento igualmente.</span>
                     </div>
                   )}
-                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }}>
+                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => trackEvent(v.id, 'financing')}>
                     Solicitar financiamiento
                   </Link>
                   <button className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={() => setCalcOpen((o) => !o)}>
@@ -311,7 +313,7 @@ export default function VehicleDetail() {
           <div className="tiny muted">Desde</div>
           <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{fmtRD(v.monthly)}/mes</div>
         </div>
-        <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }}>Solicitar financiamiento</Link>
+        <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }} onClick={() => trackEvent(v.id, 'financing')}>Solicitar financiamiento</Link>
       </div>
     </main>
   )

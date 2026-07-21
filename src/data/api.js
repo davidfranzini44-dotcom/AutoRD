@@ -93,6 +93,19 @@ export async function getVehicleBySlug(slug) {
   return mapVehicle(data)
 }
 
+// ---------------- Lead tracking (views / share / contact / financing) ----------------
+export function trackEvent(slug, kind) {
+  if (!LIVE || !slug) return
+  try { supabase.rpc('track_event', { p_slug: slug, p_kind: kind }).catch(() => {}) } catch { /* ignore */ }
+}
+export async function getDealerLeadCounts() {
+  if (!LIVE) return {}
+  try {
+    const { data } = await supabase.rpc('my_dealer_lead_counts')
+    return Object.fromEntries((data || []).map((r) => [r.kind, Number(r.total)]))
+  } catch { return {} }
+}
+
 export async function listBanks() {
   if (!LIVE) return demoBanks
   const { data, error } = await supabase.from('banks').select('*').eq('active', true).order('name')

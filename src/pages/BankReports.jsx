@@ -1,4 +1,7 @@
 import { Inbox, CheckCircle2, XCircle, Clock, TrendingUp } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import BankLogo from '../components/BankLogo'
+import useBankIdentity from '../hooks/useBankIdentity'
 import { fmtRD } from '../data/demo'
 
 const KPIS = [
@@ -15,9 +18,22 @@ const BY_DEALER = [
 const max = Math.max(...BY_DEALER.map((d) => d.apps))
 
 export default function BankReports() {
+  const { profile } = useAuth() || {}
+  const bank = useBankIdentity(profile)
+
   return (
     <div>
-      <div className="admin-head"><div><h1 style={{ fontSize: 22 }}>Reportes</h1><p className="tiny muted">Desempeño de tu portafolio de solicitudes</p></div></div>
+      <div className="admin-head">
+        <div className="row center gap-8">
+          <div className="bank-console-logo">
+            <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={32} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 22 }}>Reportes - {bank.name}</h1>
+            <p className="tiny muted">Desempeño de tu portafolio de solicitudes</p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-4" style={{ marginBottom: 18 }}>
         {KPIS.map((k) => {

@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
   Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight,
+  MessageCircle, Share2, FileText,
 } from 'lucide-react'
 import { fmtRD } from '../data/demo'
-import { getDealerData } from '../data/api'
+import { getDealerData, getDealerLeadCounts } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 
@@ -24,6 +25,7 @@ export default function DealerPanel({ view = 'resumen' }) {
   const { profile } = useAuth() || {}
   const [inventory, setInventory] = useState([])
   const [leads, setLeads] = useState([])
+  const [engagement, setEngagement] = useState({})
 
   useEffect(() => {
     let alive = true
@@ -32,6 +34,7 @@ export default function DealerPanel({ view = 'resumen' }) {
       setInventory(d.inventory || [])
       setLeads(d.leads || [])
     })
+    getDealerLeadCounts().then((c) => { if (alive) setEngagement(c || {}) })
     return () => { alive = false }
   }, [profile?.dealer_id])
 
@@ -75,6 +78,31 @@ export default function DealerPanel({ view = 'resumen' }) {
               )
             })}
           </div>
+
+          {/* Buyer engagement — real events tracked from the marketplace */}
+          <div className="card card-pad" style={{ marginBottom: 18 }}>
+            <div className="small strong" style={{ marginBottom: 12 }}>Interés de compradores</div>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+              {[
+                { ic: Eye, label: 'Vistas', v: engagement.view || 0 },
+                { ic: MessageCircle, label: 'Contactos WhatsApp', v: engagement.contact || 0 },
+                { ic: FileText, label: 'Clics de financiamiento', v: engagement.financing || 0 },
+                { ic: Share2, label: 'Compartidos', v: engagement.share || 0 },
+              ].map((e) => {
+                const Icon = e.ic
+                return (
+                  <div key={e.label} className="row center gap-10" style={{ padding: '4px 2px' }}>
+                    <div className="verify-ic" style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--teal-50)', color: 'var(--teal-700)', flex: 'none' }}><Icon size={18} /></div>
+                    <div>
+                      <div className="strong" style={{ fontSize: 18 }}>{Number(e.v).toLocaleString('es-DO')}</div>
+                      <div className="tiny muted">{e.label}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="card">
             <div className="row between center" style={{ padding: '14px 16px 4px' }}>
               <h3 style={{ fontSize: 15 }}>Leads recientes</h3>

@@ -5,6 +5,8 @@ import {
   ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import BankLogo from './BankLogo'
+import useBankIdentity from '../hooks/useBankIdentity'
 
 const DEALER_NAV = [
   { to: '/dealer', label: 'Resumen', icon: LayoutDashboard, end: true },
@@ -25,12 +27,13 @@ export default function ConsoleLayout() {
   const loc = useLocation()
   const { profile, signOut } = useAuth() || {}
   const [open, setOpen] = useState(false)
+  const bank = useBankIdentity(profile)
   useEffect(() => { setOpen(false); window.scrollTo(0, 0) }, [loc.pathname])
 
   const isBank = loc.pathname.startsWith('/banco')
   const nav = isBank ? BANK_NAV : DEALER_NAV
   const RoleIcon = isBank ? Landmark : Store
-  const orgName = isBank ? 'BHD' : 'Auto América'
+  const orgName = isBank ? bank.name : 'Auto América'
   const roleLabel = isBank ? 'Portal de banco' : 'Portal de dealer'
 
   return (
@@ -42,7 +45,13 @@ export default function ConsoleLayout() {
         </div>
 
         <div className="side-org">
-          <div className="side-org-ic"><RoleIcon size={18} /></div>
+          <div className={`side-org-ic ${isBank ? 'bank-side-logo' : ''}`}>
+            {isBank ? (
+              <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={24} />
+            ) : (
+              <RoleIcon size={18} />
+            )}
+          </div>
           <div>
             <div className="side-org-name">{orgName}</div>
             <div className="side-org-role">{roleLabel}</div>
@@ -72,7 +81,14 @@ export default function ConsoleLayout() {
         <div className="console-topbar">
           <button className="hamburger" onClick={() => setOpen(true)} aria-label="Abrir menú"><Menu size={22} /></button>
           <div className="logo" style={{ fontSize: 17 }}><span className="a1">Auto</span><span className="a2">RD</span></div>
-          <span className="chip chip-navy" style={{ marginLeft: 'auto' }}>{roleLabel}</span>
+          {isBank ? (
+            <span className="bank-topbar-logo" style={{ marginLeft: 'auto' }}>
+              <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={18} />
+              <strong>{bank.name}</strong>
+            </span>
+          ) : (
+            <span className="chip chip-navy" style={{ marginLeft: 'auto' }}>{roleLabel}</span>
+          )}
         </div>
         <div className="console-main">
           <Outlet />

@@ -14,6 +14,8 @@ import {
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
+import BankLogo from '../components/BankLogo'
+import useBankIdentity from '../hooks/useBankIdentity'
 
 const FILTERS = [
   { id: 'todas', label: 'Todas' },
@@ -44,6 +46,7 @@ export default function BankPanel() {
   const [apps, setApps] = useState([])
   const [selId, setSelId] = useState(null)
   const { profile } = useAuth() || {}
+  const bank = useBankIdentity(profile)
 
   useEffect(() => {
     let alive = true
@@ -63,9 +66,11 @@ export default function BankPanel() {
       <div className="container">
         <div className="admin-head">
           <div className="row center gap-8">
-            <div className="avatar" style={{ background: '#12805c' }}>BHD</div>
+            <div className="bank-console-logo">
+              <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={32} />
+            </div>
             <div>
-              <h1 style={{ fontSize: 22 }}>Panel del banco — BHD</h1>
+              <h1 style={{ fontSize: 22 }}>Panel del banco - {bank.name}</h1>
               <p className="tiny muted">Revisa solicitudes y registra tus respuestas de crédito</p>
             </div>
           </div>

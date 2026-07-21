@@ -1,6 +1,7 @@
 import { MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { fmtRD } from '../data/demo'
+import { trackEvent } from '../data/api'
 
 // Normalize a DR number for wa.me (digits only, ensure the +1 country code).
 function waDigits(s) {
@@ -25,6 +26,7 @@ export default function ContactDealer({ vehicle, triggerClass = 'btn btn-outline
     // Always render as a clearly-WhatsApp (green) button, whatever the caller class.
     return (
       <a className={triggerClass} href={href} target="_blank" rel="noreferrer"
+        onClick={() => trackEvent(vehicle.id, 'contact')}
         style={{ ...style, background: '#25D366', borderColor: '#25D366', color: '#fff' }}>
         <MessageCircle size={block ? 16 : 15} /> {label}
       </a>
