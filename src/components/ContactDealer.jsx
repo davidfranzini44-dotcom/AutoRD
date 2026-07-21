@@ -22,8 +22,10 @@ export default function ContactDealer({ vehicle, triggerClass = 'btn btn-outline
 
   if (num) {
     const href = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+    // Always render as a clearly-WhatsApp (green) button, whatever the caller class.
     return (
-      <a className={triggerClass} href={href} target="_blank" rel="noreferrer" style={style}>
+      <a className={triggerClass} href={href} target="_blank" rel="noreferrer"
+        style={{ ...style, background: '#25D366', borderColor: '#25D366', color: '#fff' }}>
         <MessageCircle size={block ? 16 : 15} /> {label}
       </a>
     )
