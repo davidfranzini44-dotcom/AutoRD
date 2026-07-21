@@ -1,6 +1,7 @@
 import { Car, Heart, MapPin, BadgeCheck, ShieldCheck, Scale } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import CarImage from './CarImage'
+import PriceSignal from './PriceSignal'
 import { fmtRD } from '../data/demo'
 import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
@@ -61,6 +62,7 @@ export default function VehicleCard({ v }) {
         <div className="vspecs">{specs}</div>
         <div className="vloc"><MapPin size={13} /> {v.location}</div>
         <div className="vprice">{fmtRD(v.price)}</div>
+        <PriceSignal insight={v.priceInsight} />
         {v.financing && (
           <div style={{ marginTop: 10 }}>
             <span className="chip chip-teal"><BadgeCheck size={13} /> Financiamiento disponible</span>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import ContactDealer from '../components/ContactDealer'
+import PriceSignal from '../components/PriceSignal'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
@@ -30,7 +31,12 @@ export default function VehicleDetail() {
     setV(undefined)
     setActive(0)
     getVehicleBySlug(id).then((data) => { if (alive) { setV(data); setCmp(data ? isCompared(data.id) : false); if (data) recordRecentlyViewed(data) } })
-    listVehicles().then((all) => { if (alive) setSimilar(all.filter((x) => x.id !== id).slice(0, 4)) })
+    listVehicles().then((all) => {
+      if (!alive) return
+      const enriched = all.find((x) => x.id === id)
+      if (enriched) setV(enriched)
+      setSimilar(all.filter((x) => x.id !== id).slice(0, 4))
+    })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
     getMyFinancing()
       .then((d) => { if (alive && d && d.isPreapproval && !d.vehicle) setPreApp(d) })
@@ -160,6 +166,10 @@ export default function VehicleDetail() {
             <div className="card card-pad">
               <div className="tiny muted">Precio de venta</div>
               <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.02em', margin: '2px 0 2px' }}>{fmtRD(v.price)}</div>
+              <PriceSignal insight={v.priceInsight} />
+              {v.priceInsight?.marketPrice && (
+                <div className="tiny muted" style={{ marginTop: 6 }}>Referencia AutoRD: {fmtRD(v.priceInsight.marketPrice)}</div>
+              )}
               <div className="row center gap-6 tiny muted"><MapPin size={13} /> {v.location}</div>
 
               <div className="est-card" style={{ marginTop: 16 }}>

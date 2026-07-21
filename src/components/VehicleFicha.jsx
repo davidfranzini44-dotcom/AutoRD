@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
+import PriceSignal from './PriceSignal'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
@@ -68,6 +69,7 @@ function FichaShell({ v, close }) {
 
           <div className="vloc small"><MapPin size={14} /> {v.location}</div>
           <div className="ficha-price">{fmtRD(v.price)}</div>
+          <PriceSignal insight={v.priceInsight} />
 
           {v.price ? (
             <div className="est-card">

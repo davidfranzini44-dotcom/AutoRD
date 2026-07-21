@@ -1976,6 +1976,46 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .fin-badge { position: absolute; bottom: 10px; left: 10px; z-index: 2; display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,.95); color: var(--green); border: 1px solid var(--green-bd); font-size: 11.5px; font-weight: 700; padding: 5px 9px; border-radius: 8px; }
 .vtitle { font-size: 16px; font-weight: 700; }
 .vprice { font-size: 18px; font-weight: 800; letter-spacing: 0; white-space: nowrap; }
+.price-signal {
+  width: max-content;
+  max-width: 100%;
+  margin-top: 8px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1;
+}
+.price-signal svg { width: 13px; height: 13px; flex: none; }
+.price-signal.good {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.price-signal.fair {
+  background: #f1fbfa;
+  border-color: var(--teal-100);
+  color: var(--teal-800);
+}
+.price-signal.review {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+.price-signal.compact {
+  margin-top: 2px;
+  min-height: 21px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+}
 .vspecs { font-size: 12.5px; color: var(--muted); margin-top: 0; }
 .monthly-pill { flex: none; background: var(--surface-2); color: var(--ink-2); font-size: 11.5px; font-weight: 700; padding: 5px 9px; border-radius: 7px; white-space: nowrap; }
 .vmeta { display: flex; gap: 16px; margin-top: 10px; }

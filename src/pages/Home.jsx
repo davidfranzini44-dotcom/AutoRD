@@ -9,6 +9,7 @@ import {
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import BrandLogo from '../components/BrandLogo'
+import PriceSignal from '../components/PriceSignal'
 import heroVehiclePhoto from '../assets/cars/suv-1.jpg'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { listVehicles, listDealers } from '../data/api'
@@ -546,6 +547,7 @@ function RecentCard({ v }) {
         <strong>{v.make} {v.model}</strong>
         <span>{v.year} · {v.trim} · {Number(v.mileage).toLocaleString('es-DO')} km</span>
         <b>{fmtRD(v.price)}</b>
+        <PriceSignal insight={v.priceInsight} compact />
         <em><MapPin size={12} /> {v.location}</em>
       </div>
     </div>

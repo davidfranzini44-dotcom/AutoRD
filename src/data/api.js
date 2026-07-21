@@ -8,6 +8,7 @@ import {
   vehicles as demoVehicles, banks as demoBanks, financingCase,
   dealerInventory, dealerLeads, bankApplications, bankStatusMeta,
 } from './demo'
+import { withPriceInsights } from './priceInsights'
 
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
@@ -61,12 +62,12 @@ const VEHICLE_SELECT = `*, dealer:dealers(name, verified, slug, initials, whatsa
 // ---------------- Vehicles ----------------
 export async function listVehicles({ tab = 'todos' } = {}) {
   if (!LIVE) {
-    return demoVehicles.filter((v) => {
+    return withPriceInsights(demoVehicles.filter((v) => {
       if (tab === 'nuevos') return v.condition === 'Nuevo'
       if (tab === 'cert') return v.certified
       if (tab === 'fin') return v.financing
       return true
-    })
+    }))
   }
   let q = supabase.from('vehicles').select(VEHICLE_SELECT).eq('status', 'publicado')
   if (tab === 'nuevos') q = q.eq('condition', 'nuevo')
@@ -74,11 +75,11 @@ export async function listVehicles({ tab = 'todos' } = {}) {
   if (tab === 'fin') q = q.eq('financing', true)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
-  return (data || []).map(mapVehicle)
+  return withPriceInsights((data || []).map(mapVehicle))
 }
 
 export async function getVehicleBySlug(slug) {
-  if (!LIVE) return demoVehicles.find((v) => v.id === slug) || null
+  if (!LIVE) return withPriceInsights(demoVehicles).find((v) => v.id === slug) || null
   const { data, error } = await supabase.from('vehicles').select(VEHICLE_SELECT).eq('slug', slug).single()
   if (error) return null
   return mapVehicle(data)
@@ -108,7 +109,7 @@ export async function listDealers() {
       }
       byName[name].vehicles.push(v)
     })
-    return Object.values(byName)
+    return Object.values(byName).map((d) => ({ ...d, vehicles: withPriceInsights(d.vehicles) }))
   }
   const { data, error } = await supabase
     .from('dealers')
@@ -120,9 +121,9 @@ export async function listDealers() {
     phone: d.phone, whatsapp: d.whatsapp,
     initials: d.initials || initialsOf(d.name),
     // Map each vehicle and stamp the dealer (the nested select omits the dealer join).
-    vehicles: (d.vehicles || [])
+    vehicles: withPriceInsights((d.vehicles || [])
       .filter((v) => v.status === 'publicado')
-      .map((v) => ({ ...mapVehicle(v), dealer: d.name, dealerVerified: d.verified, dealerDbId: d.id })),
+      .map((v) => ({ ...mapVehicle(v), dealer: d.name, dealerVerified: d.verified, dealerDbId: d.id }))),
   }))
 }
 
@@ -143,9 +144,9 @@ export async function getDealerBySlug(slug) {
     ratingCount: data.rating_count || 0, foundedYear: data.founded_year || null,
     locations: Array.isArray(data.locations) ? data.locations : [],
     initials: data.initials || initialsOf(data.name),
-    vehicles: (data.vehicles || [])
+    vehicles: withPriceInsights((data.vehicles || [])
       .filter((v) => v.status === 'publicado')
-      .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id })),
+      .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id }))),
   }
 }
 
