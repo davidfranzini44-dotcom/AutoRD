@@ -5,8 +5,9 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, markKycVerified, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
+import { kycValidity, fmtKycDate } from '../data/kyc'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -50,7 +51,7 @@ export default function Financing() {
   const location = useLocation()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
-  const { profile, user, configured, signInAnon } = useAuth() || {}
+  const { profile, user, configured, signInAnon, refreshProfile } = useAuth() || {}
   // Identity verification needs a user id (the KYC session is tied to it), but
   // NOT a signup — we create an anonymous session on demand. `authed` just
   // controls whether we still offer a "log in" shortcut for returning users.
@@ -93,6 +94,7 @@ export default function Financing() {
     plazo: seed.plazo || '7',
   }))
   const [kyc, setKyc] = useState('idle') // idle|launching|pending|ok|error
+  const [kycFromProfile, setKycFromProfile] = useState(false) // reusing a still-valid prior KYC
   const [kycError, setKycError] = useState('')
   const [session, setSession] = useState(null) // { url, session_id }
   const [consent, setConsent] = useState(false)
@@ -149,6 +151,14 @@ export default function Financing() {
     return () => { alive = false }
   }, [isPreapproval])
 
+  // Reuse a still-valid identity (verified within the last 12 months): skip Didit
+  // and pre-mark the KYC step as done, while still offering "Volver a verificar".
+  const kycOnFile = kycValidity(profile)
+  useEffect(() => {
+    if (preApp) return // pre-approval reuse already sets kyc='ok'
+    if (kycOnFile.valid) { setKyc((k) => (k === 'idle' ? 'ok' : k)); setKycFromProfile(true) }
+  }, [profile, preApp]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   // Money fields format as the user types: "85000" -> "RD$ 85,000".
   const setMoney = (k) => (e) => setForm((f) => ({ ...f, [k]: fmtMoneyInput(e.target.value) }))
@@ -156,13 +166,20 @@ export default function Financing() {
   const back = () => setStep((s) => Math.max(s - 1, 0))
   const toggleBank = (id) => setSelBanks((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
 
+  // A fresh KYC just passed: mark it 'ok', record the verified-on date so it can
+  // be reused for 12 months, and refresh the profile so the account hub updates.
+  const onKycVerified = () => {
+    setKyc('ok'); setKycFromProfile(false)
+    markKycVerified().then(() => refreshProfile?.()).catch(() => {})
+  }
+
   // Single source of truth for reading the Didit decision — used by the poll,
   // by tab-focus, and by the embedded iframe returning to our callback.
   const checkStatus = async (sid) => {
     const id = sid || session?.session_id
     if (!id) return
     const st = await getKycStatus(id)
-    if (st.approved) { clearInterval(pollRef.current); setKyc('ok') }
+    if (st.approved) { clearInterval(pollRef.current); onKycVerified() }
     else if (st.declined) { clearInterval(pollRef.current); setKycError('La verificación fue rechazada o quedó incompleta.'); setKyc('error') }
   }
   const startPoll = (sid) => {
@@ -179,12 +196,14 @@ export default function Financing() {
       setKycError('No pudimos iniciar tu verificación. Si ya tienes cuenta, inicia sesión.'); setKyc('error'); return
     }
     const res = await createKycSession()
-    if (res.simulated) { setTimeout(() => setKyc('ok'), 1800); return } // demo mode only (no Supabase)
+    if (res.simulated) { setTimeout(onKycVerified, 1800); return } // demo mode only (no Supabase)
     if (res.error || !res.url) { setKycError(res.error || 'No disponible'); setKyc('error'); return }
     setSession(res)
     setKyc('pending') // renders the embedded Didit iframe; completion is auto-detected
     startPoll(res.session_id)
   }
+  // Re-verify on demand even when a valid KYC is on file (e.g. renewed cédula).
+  const reverify = () => { setKycFromProfile(false); runKyc() }
   // The embedded flow redirects back to our callback (/financiamiento?kyc=done)
   // inside the iframe; when that same-origin load fires we check the result now.
   const onFrameLoad = (e) => {
@@ -323,7 +342,7 @@ export default function Financing() {
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
             {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
-            {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} />}
+            {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} fromProfile={kycFromProfile} onReverify={reverify} onFile={kycOnFile} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} phone={form.telefono} showClaim={!authed} />}
@@ -465,7 +484,7 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
 }
 
 /* ---------------- Step 2: Identidad (Didit) ---------------- */
-function StepIdentidad({ state, run, onFrameLoad, session, reused, error, authed = true, loginHref = '/ingresar' }) {
+function StepIdentidad({ state, run, onFrameLoad, session, reused, error, authed = true, loginHref = '/ingresar', fromProfile = false, onReverify, onFile }) {
   return (
     <>
       <StepHead icon={ScanFace} title="Verificar identidad" sub="Validamos tu cédula dominicana y hacemos una prueba de vida (verificación facial en tiempo real). Tus datos biométricos no se comparten con dealers." />
@@ -483,6 +502,11 @@ function StepIdentidad({ state, run, onFrameLoad, session, reused, error, authed
 
       {state === 'idle' && (
         <div className="col gap-8">
+          {onFile?.verified && !onFile?.valid && (
+            <div className="notice" style={{ borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)', marginBottom: 4 }}>
+              <Info size={16} /><span>Tu verificación anterior venció el {fmtKycDate(onFile.expires)}. Verifícala de nuevo para continuar.</span>
+            </div>
+          )}
           <button className="btn btn-navy btn-lg" onClick={run}><IdCard size={18} /> Verificar mi identidad</button>
           <div className="tiny muted">Sin crear cuenta — validamos tu identidad con tu cédula.</div>
           {!authed && <Link className="tiny" to={loginHref} style={{ color: 'var(--teal-700)' }}>¿Ya tienes una cuenta? Inicia sesión</Link>}
@@ -516,7 +540,22 @@ function StepIdentidad({ state, run, onFrameLoad, session, reused, error, authed
         </div>
       )}
 
-      {state === 'ok' && (
+      {state === 'ok' && fromProfile && (
+        <div className="col gap-10">
+          <div className="verify-row ok">
+            <div className="verify-ic"><ShieldCheck size={20} /></div>
+            <div className="grow">
+              <div className="strong">Identidad ya verificada</div>
+              <div className="tiny muted">Verificada el {fmtKycDate(onFile?.at)} · válida hasta {fmtKycDate(onFile?.expires)}</div>
+            </div>
+            <StatusChip status="approved">Vigente</StatusChip>
+          </div>
+          <div className="notice"><Info size={16} /><span>Reutilizamos tu verificación de identidad — no necesitas repetir la cédula ni la prueba de vida.</span></div>
+          {onReverify && <button className="btn btn-outline" onClick={onReverify}><IdCard size={16} /> Volver a verificar</button>}
+        </div>
+      )}
+
+      {state === 'ok' && !fromProfile && (
         <div className="col gap-8">
           <VRow icon={IdCard} title="Cédula validada" sub="Cédula de identidad y electoral verificada" />
           <VRow icon={ScanFace} title="Prueba de vida completada" sub="Verificación facial en tiempo real exitosa" />

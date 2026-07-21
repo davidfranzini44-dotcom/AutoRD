@@ -183,6 +183,19 @@ export async function getKycStatus(sessionId) {
   }
 }
 
+// Stamp the buyer's identity as verified "now" so it can be reused for 12 months
+// (see src/data/kyc.js). Called when the KYC step succeeds. Best-effort.
+export async function markKycVerified() {
+  if (!LIVE) return { at: new Date().toISOString() }
+  try {
+    const { data, error } = await supabase.rpc('mark_kyc_verified')
+    if (error) return {}
+    return { at: data }
+  } catch {
+    return {}
+  }
+}
+
 // ---------------- Financing application ----------------
 export async function createApplication(payload) {
   if (!LIVE) {

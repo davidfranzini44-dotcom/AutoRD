@@ -63,6 +63,7 @@ export function AuthProvider({ children }) {
     role: profile?.role || null,
     loading,
     signIn, signUp, signInAnon, signOut,
+    refreshProfile: () => loadProfile(session?.user?.id),
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

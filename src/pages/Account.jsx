@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import { getMyFinancing } from '../data/api'
 import { favoriteCount } from '../data/favorites'
+import { kycValidity, fmtKycDate } from '../data/kyc'
 
 // Buyer account hub: one place for saved cars, financing status, verified
 // identity and WhatsApp contact. Read-only summary that links out to the
@@ -32,8 +33,8 @@ export default function Account() {
   const name = profile?.full_name || (user?.email && user.email.split('@')[0]) || 'Comprador'
   const email = profile?.email || user?.email || ''
   const phone = profile?.phone || ''
-  const verified = !!profile?.phone_verified_at
   const anon = !!user?.is_anonymous
+  const kyc = kycValidity(profile)
 
   const finState = fin === undefined ? 'loading'
     : !fin ? 'none'
@@ -90,16 +91,18 @@ export default function Account() {
             badge={finState === 'offers' ? 'Ofertas' : finState === 'preapproved' ? 'Pre-aprobado' : null}
           />
 
-          {/* Identity */}
+          {/* Identity (KYC) — valid for 12 months, then re-verify */}
           <HubRow
             to="/financiamiento"
-            icon={verified ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
-            tone={verified ? 'green' : 'amber'}
+            icon={kyc.valid ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
+            tone={kyc.valid ? 'green' : 'amber'}
             title="Identidad"
-            sub={verified
-              ? `Verificada${profile?.phone_verified_at ? ` · ${new Date(profile.phone_verified_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}`
-              : 'Sin verificar — verifica tu cédula para agilizar el financiamiento'}
-            badge={verified ? 'Verificado' : null}
+            sub={kyc.valid
+              ? `Verificada · válida hasta ${fmtKycDate(kyc.expires)}${kyc.daysLeft <= 30 ? ` · vence pronto` : ''}`
+              : kyc.verified
+                ? `Venció el ${fmtKycDate(kyc.expires)} — vuelve a verificar`
+                : 'Sin verificar — verifica tu cédula para agilizar el financiamiento'}
+            badge={kyc.valid ? 'Vigente' : kyc.verified ? 'Vencida' : null}
           />
 
           {/* WhatsApp */}
