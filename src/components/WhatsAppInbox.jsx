@@ -158,8 +158,7 @@ export default function WhatsAppInbox() {
                 ) : (
                   <div className="wa-compose" style={{ display: 'block' }}>
                     <div className="tiny muted" style={{ padding: '4px 2px' }}>
-                      <Info size={13} style={{ verticalAlign: -2 }} /> Vincula tu WhatsApp arriba para responder desde aquí, o escríbele directo:{' '}
-                      <a href={`https://wa.me/${active.wa_phone}`} target="_blank" rel="noreferrer" style={{ color: 'var(--teal-700)', fontWeight: 600 }}>+{active.wa_phone}</a>
+                      <Info size={13} style={{ verticalAlign: -2 }} /> Vincula tu WhatsApp arriba para responder a este cliente desde aquí.
                     </div>
                   </div>
                 )}
