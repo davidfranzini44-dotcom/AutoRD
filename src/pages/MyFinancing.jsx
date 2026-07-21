@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Check, ShieldCheck, FileSignature, Send, Landmark, Clock, Loader2,
-  ChevronRight, Upload, Info, Car, FileWarning,
+  ChevronRight, Upload, Info, Car, FileWarning, FileText,
 } from 'lucide-react'
 import { banks, fmtRD } from '../data/demo'
-import { getMyFinancing } from '../data/api'
+import { getApplicationDocuments, getMyFinancing, uploadApplicationDocument } from '../data/api'
 import StatusChip from '../components/StatusChip'
 import CarImage from '../components/CarImage'
 import BankLogo from '../components/BankLogo'
@@ -14,11 +14,29 @@ const TL_ICON = { kyc: ShieldCheck, consent: FileSignature, sent: Send, eval: Lo
 
 export default function MyFinancing() {
   const [c, setC] = useState(undefined)
+  const [docs, setDocs] = useState([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState(null)
+  const [docError, setDocError] = useState('')
+
   useEffect(() => {
     let alive = true
     getMyFinancing().then((d) => { if (alive) setC(d) })
     return () => { alive = false }
   }, [])
+
+  useEffect(() => {
+    if (c === undefined) return undefined
+    if (!c) { setDocs([]); return undefined }
+    let alive = true
+    const appId = c.id || c.code || 'demo'
+    setDocsLoading(true)
+    getApplicationDocuments(appId)
+      .then((rows) => { if (alive) setDocs(rows) })
+      .catch(() => { if (alive) setDocs([]) })
+      .finally(() => { if (alive) setDocsLoading(false) })
+    return () => { alive = false }
+  }, [c])
 
   if (c === undefined) return <main className="page"><div className="container muted">Cargando…</div></main>
   if (!c) {
@@ -35,7 +53,33 @@ export default function MyFinancing() {
   const v = c.vehicle
   const offers = c.responses.filter((r) => r.status === 'offer')
   const docsRequested = c.responses.find((r) => r.status === 'docs')
+  const docRows = docs.length ? docs : docsRequested ? [{
+    id: 'pending-doc-fallback',
+    type: 'Comprobante de ingresos',
+    bankId: docsRequested.bankId,
+    bankName: banks.find((b) => b.id === docsRequested.bankId)?.name || 'Banco',
+    status: 'solicitado',
+    demoFallback: true,
+  }] : []
+  const openDocs = docRows.some((d) => d.status !== 'subido')
   const preApproved = c.approvedAmount && c.approvedAmount > 0
+
+  async function handleUpload(doc, file) {
+    if (!file) return
+    setDocError('')
+    setUploadingDoc(doc.id)
+    try {
+      const updated = await uploadApplicationDocument(doc, file)
+      setDocs((cur) => {
+        const exists = cur.some((d) => d.id === updated.id)
+        return exists ? cur.map((d) => (d.id === updated.id ? updated : d)) : [updated, ...cur]
+      })
+    } catch (e) {
+      setDocError(e?.message || 'No se pudo subir el documento.')
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
 
   return (
     <main className="page">
@@ -86,19 +130,29 @@ export default function MyFinancing() {
             )}
 
             {/* Document request banner */}
-            {docsRequested && (
+            {(docsRequested || openDocs) && (
               <div className="card card-pad" style={{ borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
                 <div className="row between center wrap gap-12">
                   <div className="row center gap-12">
                     <div className="verify-ic" style={{ background: '#fff', color: 'var(--amber)' }}><FileWarning size={20} /></div>
                     <div>
-                      <div className="strong">Banco solicita comprobante de ingresos</div>
-                      <div className="tiny" style={{ color: 'var(--amber)' }}>{banks.find((b) => b.id === docsRequested.bankId).name} necesita documentos para continuar</div>
+                      <div className="strong">Banco solicita documentos adicionales</div>
+                      <div className="tiny" style={{ color: 'var(--amber)' }}>{docRows[0]?.bankName || banks.find((b) => b.id === docsRequested?.bankId)?.name || 'El banco'} necesita información para continuar</div>
                     </div>
                   </div>
-                  <button className="btn btn-navy"><Upload size={16} /> Enviar documentos adicionales</button>
+                  <a href="#documentos" className="btn btn-navy"><Upload size={16} /> Enviar documentos</a>
                 </div>
               </div>
+            )}
+
+            {(docRows.length > 0 || docsLoading) && (
+              <DocumentCenter
+                docs={docRows}
+                loading={docsLoading}
+                uploadingDoc={uploadingDoc}
+                error={docError}
+                onUpload={handleUpload}
+              />
             )}
 
             {/* Bank response cards */}
@@ -167,6 +221,69 @@ export default function MyFinancing() {
   )
 }
 
+function DocumentCenter({ docs, loading, uploadingDoc, error, onUpload }) {
+  return (
+    <div className="card card-pad" id="documentos">
+      <div className="section-title">
+        <div>
+          <h2 style={{ fontSize: 18 }}>Documentos solicitados</h2>
+          <p className="tiny muted" style={{ margin: '3px 0 0' }}>Sube solo PDF, JPG, PNG o WebP. Los archivos quedan privados para ti, el banco y AutoRD.</p>
+        </div>
+        {loading ? <span className="chip chip-blue"><Loader2 size={13} className="spin" /> Cargando</span> : null}
+      </div>
+      <div className="doc-list">
+        {docs.map((doc) => (
+          <DocumentRow key={doc.id} doc={doc} busy={uploadingDoc === doc.id} onUpload={onUpload} />
+        ))}
+      </div>
+      {error && <div className="notice" style={{ marginTop: 12, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}><FileWarning size={16} /><span>{error}</span></div>}
+    </div>
+  )
+}
+
+function DocumentRow({ doc, busy, onUpload }) {
+  const uploaded = doc.status === 'subido'
+  const inputId = `doc-upload-${doc.id}`
+  const requestedDate = doc.requestedAt ? new Date(doc.requestedAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' }) : null
+  return (
+    <div className="doc-row">
+      <div className={`doc-icon ${uploaded ? 'ok' : ''}`}>{uploaded ? <Check size={18} strokeWidth={3} /> : <FileText size={18} />}</div>
+      <div className="grow">
+        <div className="row center gap-8 wrap">
+          <div className="strong small">{doc.type}</div>
+          <span className={`chip ${uploaded ? 'chip-green' : 'chip-amber'}`}>{uploaded ? 'Subido' : 'Solicitado'}</span>
+        </div>
+        <div className="tiny muted">
+          {doc.bankName || 'Banco'}{requestedDate ? ` · Solicitado ${requestedDate}` : ''}{doc.fileName ? ` · ${doc.fileName}` : ''}
+        </div>
+        {doc.notes ? <div className="tiny" style={{ color: 'var(--ink-2)', marginTop: 3 }}>{doc.notes}</div> : null}
+      </div>
+      {uploaded ? (
+        <span className="chip chip-green"><Check size={13} /> Recibido</span>
+      ) : doc.demoFallback ? (
+        <span className="chip chip-amber">Pendiente</span>
+      ) : busy ? (
+        <button className="btn btn-outline btn-sm" disabled><Loader2 size={15} className="spin" /> Subiendo</button>
+      ) : (
+        <>
+          <input
+            id={inputId}
+            className="sr-only"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              onUpload(doc, file)
+            }}
+          />
+          <label htmlFor={inputId} className="btn btn-primary btn-sm"><Upload size={15} /> Subir archivo</label>
+        </>
+      )}
+    </div>
+  )
+}
+
 function BankResponse({ r }) {
   const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
@@ -203,7 +320,7 @@ function BankResponse({ r }) {
       )}
       {r.status === 'docs' && (
         <div style={{ background: 'var(--amber-bg)', borderTop: '1px solid var(--amber-bd)', padding: '10px 16px' }}>
-          <button className="btn btn-navy btn-sm"><Upload size={15} /> Enviar comprobante de ingresos</button>
+          <a href="#documentos" className="btn btn-navy btn-sm"><Upload size={15} /> Enviar documentos solicitados</a>
         </div>
       )}
     </div>

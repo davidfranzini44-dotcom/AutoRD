@@ -11,6 +11,7 @@ import {
 
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
+const DOC_BUCKET = 'application-documents'
 
 // Parse a free-text money field ("RD$ 85,000") into a number, or null.
 export function parseMoney(s) {
@@ -303,6 +304,176 @@ export async function getMyFinancing() {
   }
 }
 
+// ---------------- Supporting documents ----------------
+const DEMO_DOCS = [
+  {
+    id: 'demo-income-proof',
+    applicationId: 'demo',
+    bankId: 'scotiabank',
+    bankName: 'Scotiabank',
+    type: 'Comprobante de ingresos',
+    status: 'solicitado',
+    requestedAt: '2026-07-15T12:00:00.000Z',
+    notes: 'Sube una carta de trabajo o tus ultimos estados de cuenta.',
+  },
+]
+
+function mapDocument(r) {
+  const bank = r.bank || {}
+  return {
+    id: r.id,
+    applicationId: r.application_id || r.applicationId,
+    bankId: bank.slug || r.bankId,
+    bankName: bank.name || r.bankName || 'Banco',
+    bankColor: bank.color || r.bankColor,
+    bankInitials: bank.initials || r.bankInitials,
+    type: r.doc_type || r.type || 'Documento solicitado',
+    status: r.status || 'solicitado',
+    storagePath: r.storage_path || r.storagePath || null,
+    fileName: r.file_name || r.fileName || null,
+    mimeType: r.mime_type || r.mimeType || null,
+    fileSize: r.file_size || r.fileSize || null,
+    notes: r.notes || '',
+    requestedAt: r.requested_at || r.requestedAt || r.created_at || null,
+    uploadedAt: r.uploaded_at || r.uploadedAt || null,
+  }
+}
+
+export async function getApplicationDocuments(applicationId) {
+  if (!LIVE) return DEMO_DOCS.map((d) => ({ ...d, applicationId: applicationId || d.applicationId }))
+  if (!applicationId) return []
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*, bank:banks(name, slug, color, initials)')
+    .eq('application_id', applicationId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map(mapDocument)
+}
+
+export async function requestApplicationDocuments(responseId, docTypes, notes = '') {
+  const types = [...new Set((docTypes || []).map((d) => String(d).trim()).filter(Boolean))]
+  if (!types.length) throw new Error('Selecciona por lo menos un documento.')
+
+  if (!LIVE) {
+    return {
+      ok: true,
+      documents: types.map((type, i) => ({
+        id: `demo-request-${Date.now()}-${i}`,
+        applicationId: 'demo',
+        bankId: 'bhd',
+        bankName: 'BHD',
+        type,
+        status: 'solicitado',
+        requestedAt: new Date().toISOString(),
+        notes,
+      })),
+    }
+  }
+
+  const { data: response, error: responseError } = await supabase
+    .from('application_banks')
+    .select('id, application_id, bank_id')
+    .eq('id', responseId)
+    .single()
+  if (responseError) throw responseError
+
+  const requestedAt = new Date().toISOString()
+  const rows = types.map((doc_type) => ({
+    application_id: response.application_id,
+    requested_by_bank: response.bank_id,
+    doc_type,
+    status: 'solicitado',
+    requested_at: requestedAt,
+    notes: notes || null,
+  }))
+
+  const { data: docs, error: docsError } = await supabase
+    .from('documents')
+    .insert(rows)
+    .select('*, bank:banks(name, slug, color, initials)')
+  if (docsError) throw docsError
+
+  const responseNote = notes || `Documentos solicitados: ${types.join(', ')}`
+  const { error: updateError } = await supabase
+    .from('application_banks')
+    .update({ status: 'pendiente_docs', notes: responseNote, responded_at: requestedAt })
+    .eq('id', responseId)
+  if (updateError) throw updateError
+
+  supabase.functions.invoke('wa-notify', {
+    body: { response_id: responseId, event: 'bank_response' },
+  }).catch(() => {})
+
+  return { ok: true, documents: (docs || []).map(mapDocument) }
+}
+
+function safeFileName(name) {
+  const cleaned = String(name || 'documento')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w.-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 120)
+  return cleaned || 'documento'
+}
+
+export async function uploadApplicationDocument(doc, file) {
+  if (!file) throw new Error('Selecciona un archivo.')
+  if (!LIVE) {
+    return {
+      ...doc,
+      status: 'subido',
+      fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+      uploadedAt: new Date().toISOString(),
+    }
+  }
+
+  const applicationId = doc.applicationId || doc.application_id
+  if (!applicationId || !doc.id) throw new Error('No se encontro la solicitud de documento.')
+
+  const { data: userRes } = await supabase.auth.getUser()
+  const uid = userRes?.user?.id
+  const path = `${applicationId}/${doc.id}/${Date.now()}-${safeFileName(file.name)}`
+  const { error: uploadError } = await supabase.storage
+    .from(DOC_BUCKET)
+    .upload(path, file, {
+      cacheControl: '3600',
+      contentType: file.type || undefined,
+      upsert: false,
+    })
+  if (uploadError) throw uploadError
+
+  const { data, error } = await supabase
+    .from('documents')
+    .update({
+      status: 'subido',
+      storage_path: path,
+      uploaded_by: uid || null,
+      uploaded_at: new Date().toISOString(),
+      file_name: file.name,
+      mime_type: file.type || null,
+      file_size: file.size || null,
+    })
+    .eq('id', doc.id)
+    .select('*, bank:banks(name, slug, color, initials)')
+    .single()
+  if (error) throw error
+  return mapDocument(data)
+}
+
+export async function getDocumentDownloadUrl(doc) {
+  if (!LIVE || !doc?.storagePath) return null
+  const { data, error } = await supabase.storage
+    .from(DOC_BUCKET)
+    .createSignedUrl(doc.storagePath, 60 * 10)
+  if (error) throw error
+  return data?.signedUrl || null
+}
+
 // Attach a chosen vehicle to an existing (car-agnostic) pre-approval, so the
 // customer can convert "pre-aprobado hasta RD$X" into a real application for a
 // specific car WITHOUT repeating KYC. Reuses the same application row.
@@ -381,7 +552,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       income: fin?.income, employment: fin?.employment_type,
       approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
-      status: filterFromResponse(r.status), responseId: r.id,
+      status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
     }
   })
 }

@@ -2,9 +2,16 @@ import { useState, useEffect } from 'react'
 import {
   Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search,
   ShieldCheck, FileCheck2, Car, Building2, Upload, Info, Landmark, Send,
+  FileText, ExternalLink, Plus,
 } from 'lucide-react'
 import { bankStatusMeta, fmtRD } from '../data/demo'
-import { getBankApplications, submitBankResponse } from '../data/api'
+import {
+  getApplicationDocuments,
+  getBankApplications,
+  getDocumentDownloadUrl,
+  requestApplicationDocuments,
+  submitBankResponse,
+} from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 
@@ -22,6 +29,14 @@ const METRIC = [
   { icon: Loader2, value: 18, label: 'En evaluación' },
   { icon: FileWarning, value: 5, label: 'Pendiente docs' },
   { icon: CheckCircle2, value: 22, label: 'Pre-aprobadas' },
+]
+
+const DOC_TYPES = [
+  'Comprobante de ingresos',
+  'Carta de trabajo',
+  'Estados de cuenta',
+  'Certificacion laboral',
+  'Formulario del banco',
 ]
 
 export default function BankPanel() {
@@ -127,6 +142,22 @@ function ApplicationDetail({ a }) {
   const [approvedAmount, setApprovedAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [sent, setSent] = useState(false)
+  const [docSelection, setDocSelection] = useState(['Comprobante de ingresos'])
+  const [docNote, setDocNote] = useState('')
+  const [docBusy, setDocBusy] = useState(false)
+  const [docSent, setDocSent] = useState(false)
+  const [docError, setDocError] = useState('')
+  const [docs, setDocs] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    const appId = a.applicationId || (a.status === 'docs' ? a.id : null)
+    if (!appId) { setDocs([]); return () => { alive = false } }
+    getApplicationDocuments(appId)
+      .then((rows) => { if (alive) setDocs(rows) })
+      .catch(() => { if (alive) setDocs([]) })
+    return () => { alive = false }
+  }, [a.applicationId, a.id, a.status])
 
   const decisions = [
     { id: 'approved', label: 'Pre-aprobar', icon: CheckCircle2, cls: 'btn-primary' },
@@ -135,6 +166,41 @@ function ApplicationDetail({ a }) {
     { id: 'rejected', label: 'Rechazar', icon: XCircle, cls: 'btn-outline' },
   ]
   const needTerms = decision === 'approved' || decision === 'conditional'
+
+  const toggleDoc = (name) => {
+    setDocSelection((cur) => (
+      cur.includes(name) ? cur.filter((d) => d !== name) : [...cur, name]
+    ))
+  }
+
+  async function sendDocRequest() {
+    setDocError('')
+    setDocBusy(true)
+    try {
+      const res = await requestApplicationDocuments(a.responseId, docSelection, docNote)
+      const nextDocs = res?.documents || []
+      setDocs((cur) => {
+        const seen = new Set(cur.map((d) => d.id))
+        return [...nextDocs.filter((d) => !seen.has(d.id)), ...cur]
+      })
+      setDocSent(true)
+      setDecision('docs')
+    } catch (e) {
+      setDocError(e?.message || 'No se pudo enviar la solicitud de documentos.')
+    } finally {
+      setDocBusy(false)
+    }
+  }
+
+  async function openDocument(doc) {
+    setDocError('')
+    try {
+      const url = await getDocumentDownloadUrl(doc)
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      setDocError(e?.message || 'No se pudo abrir el documento.')
+    }
+  }
 
   return (
     <aside className="side-panel col gap-16">
@@ -187,12 +253,73 @@ function ApplicationDetail({ a }) {
       {/* Document request */}
       <div className="card card-pad">
         <SectionLabel icon={Upload} text="Solicitar documentos" />
+        <p className="tiny muted" style={{ margin: '-2px 0 10px' }}>El cliente recibe la solicitud en AutoRD y una notificacion por WhatsApp.</p>
         <div className="row wrap gap-8" style={{ marginTop: 4 }}>
-          {['Comprobante de ingresos', 'Carta de trabajo', 'Estados de cuenta'].map((d) => (
-            <button key={d} className="chip" style={{ cursor: 'pointer', height: 30, border: '1px solid var(--line)', background: '#fff' }}>+ {d}</button>
-          ))}
+          {DOC_TYPES.map((d) => {
+            const selected = docSelection.includes(d)
+            return (
+              <button
+                key={d}
+                type="button"
+                className={`chip ${selected ? 'chip-teal' : ''}`}
+                onClick={() => toggleDoc(d)}
+                style={{ cursor: 'pointer', height: 30, border: selected ? '1px solid var(--teal-100)' : '1px solid var(--line)', background: selected ? 'var(--teal-50)' : '#fff' }}
+              >
+                {selected ? <CheckCircle2 size={13} /> : <Plus size={13} />} {d}
+              </button>
+            )
+          })}
         </div>
-        <button className="btn btn-outline btn-block btn-sm" style={{ marginTop: 12 }}><Upload size={15} /> Enviar solicitud de documentos</button>
+        <textarea
+          className="input"
+          rows={2}
+          value={docNote}
+          onChange={(e) => setDocNote(e.target.value)}
+          placeholder="Mensaje opcional para el cliente"
+          style={{ marginTop: 12 }}
+        />
+        <button
+          className="btn btn-outline btn-block btn-sm"
+          style={{ marginTop: 12 }}
+          disabled={docBusy || docSelection.length === 0}
+          onClick={sendDocRequest}
+        >
+          {docBusy ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} Enviar solicitud de documentos
+        </button>
+
+        {docSent && (
+          <div className="notice" style={{ marginTop: 12, background: 'var(--teal-50)', borderColor: 'var(--teal-100)' }}>
+            <CheckCircle2 size={16} /><span>Solicitud enviada. El cliente puede subir los archivos desde Mi financiamiento.</span>
+          </div>
+        )}
+        {docError && (
+          <div className="notice" style={{ marginTop: 12, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
+            <FileWarning size={16} /><span>{docError}</span>
+          </div>
+        )}
+
+        {docs.length > 0 && (
+          <div className="doc-list doc-list-compact" style={{ marginTop: 14 }}>
+            <div className="tiny strong muted" style={{ marginBottom: 6 }}>Documentos de esta solicitud</div>
+            {docs.map((doc) => {
+              const uploaded = doc.status === 'subido'
+              return (
+                <div className="doc-row" key={doc.id}>
+                  <div className={`doc-icon ${uploaded ? 'ok' : ''}`}>{uploaded ? <FileCheck2 size={17} /> : <FileText size={17} />}</div>
+                  <div className="grow">
+                    <div className="strong tiny">{doc.type}</div>
+                    <div className="tiny muted">{uploaded ? doc.fileName || 'Archivo recibido' : 'Pendiente del cliente'}</div>
+                  </div>
+                  {uploaded ? (
+                    <button className="btn btn-outline btn-sm" onClick={() => openDocument(doc)}><ExternalLink size={14} /> Ver</button>
+                  ) : (
+                    <span className="chip chip-amber">Pendiente</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Manual response form */}
