@@ -67,6 +67,67 @@ function withDemoCoords(v) {
   return coords ? { ...v, lat: coords.lat, lng: coords.lng } : v
 }
 
+const JOSELITO_SLUG = 'joselito-auto-import'
+const JOSELITO_FALLBACK_DEALER = {
+  id: JOSELITO_SLUG,
+  name: 'Joselito Auto Import',
+  slug: JOSELITO_SLUG,
+  city: 'Santiago',
+  verified: true,
+  initials: 'JA',
+  phone: '+1 809-724-9999',
+  whatsapp: '+1 809-501-5858',
+  hours: 'Lunes a sábado',
+  description: 'Dealer importador en Santiago con inventario premium, atención por WhatsApp y opciones de financiamiento disponibles en AutoRD.',
+  rating: 4.8,
+  ratingCount: 94,
+  foundedYear: 2014,
+  locations: [{ name: 'Principal', address: 'Av. Estrella Sadhalá #172, Centro, Santiago', city: 'Santiago', lat: 19.4517, lng: -70.6970 }],
+}
+
+function tabMatchesVehicle(v, tab) {
+  if (tab === 'nuevos') return v.condition === 'Nuevo'
+  if (tab === 'cert') return v.certified
+  if (tab === 'fin') return v.financing
+  return true
+}
+
+function joselitoFallbackVehicles({ tab = 'todos', dealer = JOSELITO_FALLBACK_DEALER } = {}) {
+  return demoVehicles
+    .filter((v) => v.dealerSlug === JOSELITO_SLUG)
+    .filter((v) => tabMatchesVehicle(v, tab))
+    .map((v) => withDemoCoords({
+      ...v,
+      dealer: dealer.name || v.dealer,
+      dealerVerified: dealer.verified ?? v.dealerVerified,
+      dealerSlug: dealer.slug || v.dealerSlug,
+      dealerWhatsapp: dealer.whatsapp || v.dealerWhatsapp,
+      dealerPhone: dealer.phone || v.dealerPhone,
+      dealerDbId: dealer.id && dealer.id !== JOSELITO_SLUG ? dealer.id : v.dealerDbId || null,
+    }))
+}
+
+function mergeVehiclesById(primary, fallback) {
+  const seen = new Set(primary.map((v) => v.id))
+  return [...primary, ...fallback.filter((v) => !seen.has(v.id))]
+}
+
+function joselitoFallbackDealer() {
+  return {
+    ...JOSELITO_FALLBACK_DEALER,
+    vehicles: withPriceInsights(joselitoFallbackVehicles()),
+  }
+}
+
+function withJoselitoDealerFallback(dealer) {
+  if (!dealer || dealer.slug !== JOSELITO_SLUG) return dealer
+  const vehicles = mergeVehiclesById(
+    dealer.vehicles || [],
+    joselitoFallbackVehicles({ dealer }),
+  )
+  return { ...dealer, vehicles: withPriceInsights(vehicles) }
+}
+
 // ---------------- Vehicles ----------------
 export async function listVehicles({ tab = 'todos' } = {}) {
   if (!LIVE) {
@@ -83,13 +144,19 @@ export async function listVehicles({ tab = 'todos' } = {}) {
   if (tab === 'fin') q = q.eq('financing', true)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
-  return withPriceInsights((data || []).map(mapVehicle))
+  return withPriceInsights(mergeVehiclesById(
+    (data || []).map(mapVehicle),
+    joselitoFallbackVehicles({ tab }),
+  ))
 }
 
 export async function getVehicleBySlug(slug) {
   if (!LIVE) return withPriceInsights(demoVehicles.map(withDemoCoords)).find((v) => v.id === slug) || null
   const { data, error } = await supabase.from('vehicles').select(VEHICLE_SELECT).eq('slug', slug).single()
-  if (error) return null
+  if (error) {
+    const fallback = joselitoFallbackVehicles().find((v) => v.id === slug)
+    return fallback ? withPriceInsights([fallback])[0] : null
+  }
   return mapVehicle(data)
 }
 
@@ -151,7 +218,7 @@ export async function listDealers() {
     .select(`id, name, slug, city, verified, initials, phone, whatsapp, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
     .order('name')
   if (error) throw error
-  return (data || []).map((d) => ({
+  const dealers = (data || []).map((d) => ({
     id: d.id, name: d.name, slug: d.slug, city: d.city, verified: d.verified,
     phone: d.phone, whatsapp: d.whatsapp,
     initials: d.initials || initialsOf(d.name),
@@ -159,7 +226,10 @@ export async function listDealers() {
     vehicles: withPriceInsights((d.vehicles || [])
       .filter((v) => v.status === 'publicado')
       .map((v) => ({ ...mapVehicle(v), dealer: d.name, dealerVerified: d.verified, dealerDbId: d.id }))),
-  }))
+  })).map(withJoselitoDealerFallback)
+  return dealers.some((d) => d.slug === JOSELITO_SLUG)
+    ? dealers
+    : [...dealers, joselitoFallbackDealer()]
 }
 
 export async function getDealerBySlug(slug) {
@@ -171,8 +241,8 @@ export async function getDealerBySlug(slug) {
     .from('dealers')
     .select(`id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
     .eq('slug', slug).single()
-  if (error) return null
-  return {
+  if (error) return slug === JOSELITO_SLUG ? joselitoFallbackDealer() : null
+  return withJoselitoDealerFallback({
     id: data.id, name: data.name, slug: data.slug, city: data.city, verified: data.verified,
     phone: data.phone, whatsapp: data.whatsapp, hours: data.hours,
     description: data.description || '', rating: data.rating != null ? Number(data.rating) : null,
@@ -182,7 +252,7 @@ export async function getDealerBySlug(slug) {
     vehicles: withPriceInsights((data.vehicles || [])
       .filter((v) => v.status === 'publicado')
       .map((v) => ({ ...mapVehicle(v), dealer: data.name, dealerVerified: data.verified, dealerDbId: data.id }))),
-  }
+  })
 }
 
 // Dealer console: read + update the signed-in dealer's own editable profile.
