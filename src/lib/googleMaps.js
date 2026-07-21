@@ -9,7 +9,7 @@
 // Geocoding API. Then RESTRICT the key by HTTP referrer to your domains
 // (https://auto-rd-2uh5.vercel.app/* and http://localhost:*) so it can't be
 // abused for billing if it leaks (the key ships in the browser bundle).
-const DEFAULT_MAPS_KEY = '' // ← PASTE KEY HERE, e.g. 'AIzaSy...'
+const DEFAULT_MAPS_KEY = 'AIzaSyBaoxvrEuRnnJt1JrWJr7xiqCM_yAaEkXU'
 // ▲▲▲ PASTE YOUR GOOGLE MAPS API KEY BETWEEN THE QUOTES ABOVE ▲▲▲
 
 const mapsKey = () => import.meta.env.VITE_GOOGLE_MAPS_API_KEY || DEFAULT_MAPS_KEY
