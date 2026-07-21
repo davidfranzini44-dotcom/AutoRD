@@ -3,14 +3,21 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, ArrowRight, Check, Image as ImageIcon, Info, Plus, Star, UploadCloud, X,
 } from 'lucide-react'
-import { createVehicle } from '../data/api'
+import { createVehicle, getMyDealer } from '../data/api'
+import { useAuth } from '../context/AuthContext'
+
+const FALLBACK_CITIES = ['Santo Domingo', 'Santiago', 'La Romana', 'Punta Cana']
 
 export default function PostVehicle() {
+  const { profile } = useAuth() || {}
   const [f, setF] = useState({
     make: '', model: '', year: '2022', trim: '', transmission: 'Automática',
     fuel: 'Gasolina', engine: '', mileage: '', color: '', bodyType: 'SUV',
-    price: '', condition: 'usado', certified: false, location: 'Santo Domingo', description: '',
+    price: '', condition: 'usado', certified: false, location: '', description: '',
   })
+  // The car sits at the dealer's location — default it from the dealer's profile
+  // (branches if they have several) instead of asking for a generic city.
+  const [dealerLocs, setDealerLocs] = useState([]) // [{ value, label }]
   const [photos, setPhotos] = useState([])
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -21,6 +28,28 @@ export default function PostVehicle() {
   useEffect(() => () => {
     photoUrls.current.forEach((url) => URL.revokeObjectURL(url))
   }, [])
+
+  // Load the dealer's own locations and default the vehicle's location to them.
+  useEffect(() => {
+    let alive = true
+    getMyDealer(profile?.dealer_id).then((d) => {
+      if (!alive || !d) return
+      const raw = (d.locations || []).filter((l) => l && (l.city || l.name))
+      const opts = raw.length
+        ? raw.map((l) => {
+            const nm = String(l.name || '').trim()
+            const ct = String(l.city || '').trim()
+            const label = nm && ct && !nm.toLowerCase().includes(ct.toLowerCase()) ? `${nm} — ${ct}` : (nm || ct)
+            return { value: ct || nm, label }
+          })
+        : (d.city ? [{ value: d.city, label: d.city }] : [])
+      const seen = new Set()
+      const uniq = opts.filter((o) => (seen.has(o.value) ? false : seen.add(o.value)))
+      setDealerLocs(uniq)
+      if (uniq.length) setF((prev) => ({ ...prev, location: prev.location || uniq[0].value }))
+    }).catch(() => {})
+    return () => { alive = false }
+  }, [profile?.dealer_id])
 
   const addPhotos = (files) => {
     setError('')
@@ -111,7 +140,21 @@ export default function PostVehicle() {
           <F label="Tipo"><select className="select" value={f.bodyType} onChange={set('bodyType')}><option>SUV</option><option>Sedán</option><option>Pickup</option><option>Coupé</option><option>Hatchback</option></select></F>
           <F label="Color"><input className="input" value={f.color} onChange={set('color')} placeholder="Gris" /></F>
           <F label="Precio (RD$)"><input className="input" type="number" value={f.price} onChange={set('price')} placeholder="1250000" required /></F>
-          <F label="Ubicación"><select className="select" value={f.location} onChange={set('location')}><option>Santo Domingo</option><option>Santiago</option><option>La Romana</option><option>Punta Cana</option></select></F>
+          <F label="Ubicación">
+            {dealerLocs.length > 0 ? (
+              <>
+                <select className="select" value={f.location} onChange={set('location')}>
+                  {dealerLocs.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <span className="help">Ubicación de tu dealer · <Link to="/dealer/perfil" className="link-teal">editar sucursales</Link></span>
+              </>
+            ) : (
+              <select className="select" value={f.location} onChange={set('location')}>
+                <option value="" disabled>Selecciona…</option>
+                {FALLBACK_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+          </F>
           <F label="Condición"><select className="select" value={f.condition} onChange={set('condition')}><option value="usado">Usado</option><option value="nuevo">Nuevo</option><option value="certificado">Usado certificado</option></select></F>
         </div>
 
