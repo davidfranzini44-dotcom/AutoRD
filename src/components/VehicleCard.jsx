@@ -37,7 +37,7 @@ export default function VehicleCard({ v }) {
         {v.dealerVerified && (
           <span className="verified-shield" title="Dealer verificado"><ShieldCheck size={14} /></span>
         )}
-        <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
+        <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
       </div>
 
       <div className="vcard-body">

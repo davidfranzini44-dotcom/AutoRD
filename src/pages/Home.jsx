@@ -524,7 +524,7 @@ function RecentCard({ v }) {
           <BadgeIcon size={13} strokeWidth={2.5} />
           {badgeText}
         </span>
-        <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
+        <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
       </div>
       <div className="recent-body">
         <strong>{v.make} {v.model}</strong>

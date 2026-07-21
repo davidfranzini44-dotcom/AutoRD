@@ -44,7 +44,7 @@ function FichaShell({ v, close }) {
     <div className="ficha-overlay" onClick={close}>
       <aside className="ficha-panel" role="dialog" aria-modal="true" aria-label={`${v.make} ${v.model}`} onClick={(e) => e.stopPropagation()}>
         <div className="ficha-photo">
-          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
+          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
           <button className="ficha-close" onClick={close} aria-label="Cerrar"><X size={19} /></button>
           <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'absolute', top: 12, right: 54 }} onClick={() => setFav(toggleFavorite(v.id))} aria-label="Guardar en favoritos"><Heart size={17} /></button>
           {v.dealerVerified && <span className="verified-shield" title="Dealer verificado" style={{ left: 12, top: 12, right: 'auto' }}><ShieldCheck size={14} /></span>}

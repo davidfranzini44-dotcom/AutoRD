@@ -25,6 +25,7 @@ export default function VehicleDetail() {
   useEffect(() => {
     let alive = true
     setV(undefined)
+    setActive(0)
     getVehicleBySlug(id).then((data) => { if (alive) setV(data) })
     listVehicles().then((all) => { if (alive) setSimilar(all.filter((x) => x.id !== id).slice(0, 4)) })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
@@ -50,6 +51,11 @@ export default function VehicleDetail() {
     { ic: Fuel, l: 'Combustible', v: v.fuel },
     { ic: Palette, l: 'Color', v: v.color },
   ]
+  const galleryPhotos = v.photoUrls?.length
+    ? v.photoUrls
+    : Array.from({ length: Math.max(1, Math.min(v.photos || 5, 5)) }, () => null)
+  const galleryCount = galleryPhotos.length
+  const activePhoto = galleryPhotos[Math.min(active, galleryCount - 1)]
 
   // Reuse an existing pre-approval instead of restarting KYC.
   const canUsePre = preApp && (!preApp.approvedAmount || v.price <= preApp.approvedAmount)
@@ -88,21 +94,21 @@ export default function VehicleDetail() {
           <div className="col gap-16">
             <div className="card" style={{ overflow: 'hidden' }}>
               <div style={{ position: 'relative' }}>
-                <CarImage tone={v.tone} className="tall" label={`${v.make} ${v.model}`} />
+                <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${active}`} tone={v.tone} photo={activePhoto} className="tall" label={`${v.make} ${v.model}`} />
                 <div className="row gap-8" style={{ position: 'absolute', top: 12, right: 12 }}>
                   <button className="fav-btn" style={{ position: 'static' }} aria-label="Compartir"><Share2 size={16} /></button>
                   <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'static' }} onClick={() => setFav(!fav)} aria-label="Guardar"><Heart size={16} /></button>
                 </div>
                 <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(12,32,51,.8)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
-                  {active + 1} / {v.photos}
+                  {Math.min(active + 1, galleryCount)} / {galleryCount}
                 </span>
               </div>
               <div className="row gap-8" style={{ padding: 12, overflowX: 'auto' }}>
-                {[0, 1, 2, 3, 4].map((i) => (
+                {galleryPhotos.map((photo, i) => (
                   <button key={i} onClick={() => setActive(i)}
                     className="gallery-thumb"
                     style={{ width: 92, flex: 'none', outline: active === i ? '2px solid var(--teal-700)' : 'none' }}>
-                    <CarImage tone={v.tone} />
+                    <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-thumb-${i}`} tone={v.tone} photo={photo} />
                   </button>
                 ))}
               </div>
@@ -274,7 +280,7 @@ export default function VehicleDetail() {
 function SimilarCard({ v }) {
   return (
     <Link to={`/vehiculo/${v.id}`} className="vcard" style={{ display: 'block' }}>
-      <CarImage tone={v.tone} label={`${v.make} ${v.model}`} />
+      <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
       <div className="vcard-body">
         <div className="vtitle" style={{ fontSize: 14.5 }}>{v.make} {v.model}</div>
         <div className="vspecs">{v.year} · {v.mileage === 0 ? 'Nuevo' : v.mileage.toLocaleString('es-DO') + ' km'}</div>

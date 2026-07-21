@@ -182,7 +182,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
         <div className="dealer-cars">
           {cars.slice(0, 6).map((v) => (
             <button key={v.id} type="button" className="dealer-car" onClick={(e) => { e.stopPropagation(); onOpenCar(v) }}>
-              <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} label={`${v.make} ${v.model}`} />
+              <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
               <div className="dealer-car-b">
                 <span className="strong tiny">{v.make} {v.model}</span>
                 <span className="tiny muted">{fmtRD(v.price)}</span>

@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Check, Info, Image as ImageIcon } from 'lucide-react'
+import {
+  ArrowLeft, ArrowRight, Check, Image as ImageIcon, Info, Plus, Star, UploadCloud, X,
+} from 'lucide-react'
 import { createVehicle } from '../data/api'
 
 export default function PostVehicle() {
@@ -9,15 +11,71 @@ export default function PostVehicle() {
     fuel: 'Gasolina', engine: '', mileage: '', color: '', bodyType: 'SUV',
     price: '', condition: 'usado', certified: false, location: 'Santo Domingo', description: '',
   })
+  const [photos, setPhotos] = useState([])
   const [done, setDone] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const photoUrls = useRef([])
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
+
+  useEffect(() => () => {
+    photoUrls.current.forEach((url) => URL.revokeObjectURL(url))
+  }, [])
+
+  const addPhotos = (files) => {
+    setError('')
+    const accepted = []
+    for (const file of Array.from(files || [])) {
+      if (!file.type.startsWith('image/')) continue
+      if (file.size > 12 * 1024 * 1024) {
+        setError('Cada foto debe pesar menos de 12 MB.')
+        continue
+      }
+      const preview = URL.createObjectURL(file)
+      photoUrls.current.push(preview)
+      accepted.push({ id: `${file.name}-${file.lastModified}-${Math.random()}`, file, preview })
+    }
+    if (accepted.length) setPhotos((cur) => [...cur, ...accepted].slice(0, 20))
+  }
+
+  const removePhoto = (id) => {
+    setPhotos((cur) => {
+      const photo = cur.find((p) => p.id === id)
+      if (photo) {
+        URL.revokeObjectURL(photo.preview)
+        photoUrls.current = photoUrls.current.filter((url) => url !== photo.preview)
+      }
+      return cur.filter((p) => p.id !== id)
+    })
+  }
+
+  const movePhoto = (index, dir) => {
+    setPhotos((cur) => {
+      const next = cur.slice()
+      const to = index + dir
+      if (to < 0 || to >= next.length) return cur
+      const [item] = next.splice(index, 1)
+      next.splice(to, 0, item)
+      return next
+    })
+  }
 
   const submit = async (e) => {
     e.preventDefault()
+    setError('')
+    if (!photos.length) {
+      setError('Agrega al menos una foto del vehiculo antes de publicar.')
+      return
+    }
     setBusy(true)
-    try { await createVehicle(f) } catch (_) { /* demo/offline */ }
-    setBusy(false); setDone(true)
+    try {
+      await createVehicle({ ...f, photos: photos.map((p) => p.file) })
+      setDone(true)
+    } catch (e) {
+      setError(e?.message || 'No se pudo publicar el vehiculo.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (done) {
@@ -67,13 +125,58 @@ export default function PostVehicle() {
           <span className="small">Marcar como <strong>usado certificado</strong></span>
         </label>
 
-        <div style={{ marginTop: 14, border: '1.5px dashed var(--line)', borderRadius: 8, padding: 20, textAlign: 'center', color: 'var(--muted)', background: 'var(--surface-2)' }}>
+        <div className="field" style={{ marginTop: 14 }}>
+          <label>Fotos del vehiculo</label>
+          <input
+            id="vehicle-photo-upload"
+            className="sr-only"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(e) => {
+              addPhotos(e.target.files)
+              e.target.value = ''
+            }}
+          />
+          <label htmlFor="vehicle-photo-upload" className="photo-drop">
+            <span className="photo-drop-ic"><UploadCloud size={22} /></span>
+            <span>
+              <span className="strong small">Agrega fotos reales del vehiculo</span>
+              <span className="tiny muted">JPG, PNG o WebP. Hasta 20 fotos, 12 MB por imagen.</span>
+            </span>
+            <span className="btn btn-outline btn-sm"><ImageIcon size={15} /> Elegir fotos</span>
+          </label>
+
+          {photos.length > 0 && (
+            <div className="photo-editor-grid">
+              {photos.map((p, i) => (
+                <div className="photo-edit-card" key={p.id}>
+                  <img src={p.preview} alt={`Foto ${i + 1}`} />
+                  {i === 0 && <span className="photo-cover-badge"><Star size={12} /> Portada</span>}
+                  <div className="photo-edit-actions">
+                    <button type="button" className="icon-mini" disabled={i === 0} onClick={() => movePhoto(i, -1)} aria-label="Mover a la izquierda"><ArrowLeft size={14} /></button>
+                    <button type="button" className="icon-mini" disabled={i === photos.length - 1} onClick={() => movePhoto(i, 1)} aria-label="Mover a la derecha"><ArrowRight size={14} /></button>
+                    <button type="button" className="icon-mini danger" onClick={() => removePhoto(p.id)} aria-label="Eliminar foto"><X size={14} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div hidden style={{ marginTop: 14, border: '1.5px dashed var(--line)', borderRadius: 8, padding: 20, textAlign: 'center', color: 'var(--muted)', background: 'var(--surface-2)' }}>
           <ImageIcon size={22} style={{ marginBottom: 4 }} /><div className="small">Subida de fotos — próximamente</div>
         </div>
 
         <div className="notice" style={{ marginTop: 14 }}>
           <Info size={16} /><span>La cuota estimada se calcula automáticamente. Podrás editarla luego.</span>
         </div>
+
+        {error && (
+          <div className="notice" style={{ marginTop: 12, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
+            <Info size={16} /><span>{error}</span>
+          </div>
+        )}
 
         <div className="row between" style={{ marginTop: 18, borderTop: '1px solid var(--line)', paddingTop: 16 }}>
           <Link to="/dealer/inventario" className="btn btn-ghost">Cancelar</Link>

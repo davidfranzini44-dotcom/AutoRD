@@ -500,6 +500,96 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .doc-row .btn { width: 100%; }
 }
 
+/* dealer vehicle photo editor */
+.photo-drop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border: 1.5px dashed #cfd8e3;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.photo-drop:hover { border-color: var(--teal-600); background: var(--teal-50); }
+.photo-drop > span:nth-child(2) { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.photo-drop-ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--teal-700);
+  border: 1px solid var(--line);
+  flex: none;
+}
+.photo-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.photo-edit-card {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-3);
+}
+.photo-edit-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-cover-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.94);
+  color: var(--teal-800);
+  border: 1px solid var(--teal-100);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.photo-edit-actions {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 5px;
+}
+.icon-mini {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255,255,255,.55);
+  border-radius: 7px;
+  background: rgba(12,32,51,.72);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  backdrop-filter: blur(4px);
+}
+.icon-mini:hover { background: rgba(12,32,51,.9); }
+.icon-mini:disabled { opacity: .42; cursor: not-allowed; }
+.icon-mini.danger { background: rgba(179,38,30,.82); }
+@media (max-width: 760px) {
+  .photo-drop { align-items: flex-start; flex-wrap: wrap; }
+  .photo-drop .btn { width: 100%; }
+  .photo-editor-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ============================================================
    Marketplace (buyer home)
    ============================================================ */

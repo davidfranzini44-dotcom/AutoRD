@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import suv1 from '../assets/cars/suv-1.jpg'
 import suv3 from '../assets/cars/suv-3.jpg'
 import heroSuv from '../assets/cars/hero-suv.jpg'
@@ -30,6 +30,11 @@ export default function CarImage({ tone = '#4b5563', className = '', label, make
   const [ok, setOk] = useState(false)
   const [dead, setDead] = useState(false)
   const src = photo || (seed === 'hero' ? heroSuv : (make || bodyType ? photoFor(bodyType, seed, make, model) : null))
+
+  useEffect(() => {
+    setOk(false)
+    setDead(false)
+  }, [src])
 
   return (
     <div className={`vphoto ${className}`}>

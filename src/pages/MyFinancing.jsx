@@ -188,7 +188,7 @@ export default function MyFinancing() {
               <div className="card card-pad">
                 <div className="small strong" style={{ marginBottom: 10 }}>Vehículo</div>
                 <Link to={`/vehiculo/${v.id}`} className="row center gap-12">
-                  <div style={{ width: 76, flex: 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}><CarImage tone={v.tone} /></div>
+                  <div style={{ width: 76, flex: 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}><CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} /></div>
                   <div className="grow">
                     <div className="strong small">{v.make} {v.model} {v.year}</div>
                     <div className="tiny muted">{v.dealer}</div>

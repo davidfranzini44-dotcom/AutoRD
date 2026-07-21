@@ -115,7 +115,10 @@ export default function DealerPanel({ view = 'resumen' }) {
                   const estado = (r.status === 'reservado' || r.status === 'Reservado') ? 'Reservado' : 'Publicado'
                   return (
                     <tr key={r.id}>
-                      <td className="strong">{name}</td>
+                      <td>
+                        <div className="strong">{name}</div>
+                        <div className="tiny muted">{r.photos || 0} foto{Number(r.photos || 0) === 1 ? '' : 's'}</div>
+                      </td>
                       <td className="num">{fmtRD(r.price)}</td>
                       <td><span className={`chip ${estado === 'Publicado' ? 'chip-green' : 'chip-amber'}`}>{estado}</span></td>
                       <td className="num"><span className="row center gap-4" style={{ justifyContent: 'flex-end' }}><Eye size={13} className="muted" /> {(r.views || 0).toLocaleString('es-DO')}</span></td>

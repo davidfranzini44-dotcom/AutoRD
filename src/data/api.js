@@ -12,6 +12,7 @@ import {
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
 const DOC_BUCKET = 'application-documents'
+const PHOTO_BUCKET = 'vehicle-photos'
 
 // Parse a free-text money field ("RD$ 85,000") into a number, or null.
 export function parseMoney(s) {
@@ -23,6 +24,11 @@ export function parseMoney(s) {
 // Map a DB vehicle row (+ joined dealer) to the shape the UI components expect.
 function mapVehicle(r) {
   const dealer = r.dealer || {}
+  const photoRows = (r.photo_rows || r.vehicle_photos || [])
+    .slice()
+    .sort((a, b) => (a.position || 0) - (b.position || 0))
+  const cover = photoRows.find((p) => p.is_cover) || photoRows[0] || null
+  const photoUrls = photoRows.map((p) => p.url).filter(Boolean)
   return {
     id: r.slug,
     dbId: r.id,
@@ -37,13 +43,20 @@ function mapVehicle(r) {
     dealerSlug: dealer.slug || null, dealerWhatsapp: dealer.whatsapp || null, dealerPhone: dealer.phone || null,
     financing: r.financing, tone: r.tone,
     monthly: Number(r.monthly), downPct: 20, apr: Number(r.apr), termYears: r.term_years,
-    photos: r.photos_count, description: r.description,
+    photos: photoUrls.length || r.photos_count || 0,
+    coverPhoto: cover?.url || null,
+    photoUrls,
+    photoRows: photoRows.map((p) => ({
+      id: p.id, url: p.url, storagePath: p.storage_path, position: p.position || 0, isCover: !!p.is_cover,
+    })),
+    description: r.description,
     features: Array.isArray(r.features) ? r.features : [],
     status: r.status,
   }
 }
 
-const VEHICLE_SELECT = '*, dealer:dealers(name, verified, slug, initials, whatsapp, phone)'
+const VEHICLE_PHOTOS_SELECT = 'photo_rows:vehicle_photos(id, url, storage_path, position, is_cover)'
+const VEHICLE_SELECT = `*, dealer:dealers(name, verified, slug, initials, whatsapp, phone), ${VEHICLE_PHOTOS_SELECT}`
 
 // ---------------- Vehicles ----------------
 export async function listVehicles({ tab = 'todos' } = {}) {
@@ -99,7 +112,7 @@ export async function listDealers() {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, verified, initials, phone, whatsapp, vehicles(*)')
+    .select(`id, name, slug, city, verified, initials, phone, whatsapp, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
     .order('name')
   if (error) throw error
   return (data || []).map((d) => ({
@@ -120,7 +133,7 @@ export async function getDealerBySlug(slug) {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, vehicles(*)')
+    .select(`id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
     .eq('slug', slug).single()
   if (error) return null
   return {
@@ -509,8 +522,32 @@ export async function getDealerData(dealerDbId) {
   }
 }
 
+async function uploadVehiclePhoto(vehicleId, file, position) {
+  const path = `${vehicleId}/${Date.now()}-${position}-${safeFileName(file.name)}`
+  const { error: uploadError } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, file, {
+      cacheControl: '31536000',
+      contentType: file.type || undefined,
+      upsert: false,
+    })
+  if (uploadError) throw uploadError
+
+  const { data: publicData } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path)
+  const { data, error } = await supabase.from('vehicle_photos').insert({
+    vehicle_id: vehicleId,
+    url: publicData?.publicUrl,
+    storage_path: path,
+    position,
+    is_cover: position === 0,
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
 export async function createVehicle(v) {
-  if (!LIVE) return { ok: true, demo: true }
+  const photos = Array.from(v.photos || []).slice(0, 20)
+  if (!LIVE) return { ok: true, demo: true, photos: photos.length }
   const { data: userRes } = await supabase.auth.getUser()
   const uid = userRes?.user?.id
   const { data: prof } = await supabase.from('profiles').select('dealer_id').eq('id', uid).single()
@@ -527,6 +564,12 @@ export async function createVehicle(v) {
     status: 'publicado',
   }).select().single()
   if (error) throw error
+  for (let i = 0; i < photos.length; i += 1) {
+    await uploadVehiclePhoto(data.id, photos[i], i)
+  }
+  if (photos.length) {
+    await supabase.from('vehicles').update({ photos_count: photos.length }).eq('id', data.id)
+  }
   return data
 }
 
