@@ -108,8 +108,9 @@ export default function WhatsAppInbox() {
 
       {note && <div className="notice" style={{ marginBottom: 12 }}><Info size={16} /><span>{note}</span></div>}
 
-      {/* Inbox */}
-      {connected && (
+      {/* Inbox — visible whenever there are conversations, so leads from the
+          marketplace show up even before the dealer links their WhatsApp. */}
+      {(connected || convs.length > 0) && (
         <div className={`wa-inbox ${active ? 'has-active' : ''}`}>
           <aside className="wa-list">
             <div className="row between center" style={{ padding: '4px 6px 8px' }}>
@@ -148,11 +149,20 @@ export default function WhatsAppInbox() {
                     </div>
                   ))}
                 </div>
-                <div className="wa-compose">
-                  <input className="input" placeholder="Escribe un mensaje…" value={text}
-                    onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send() } }} />
-                  <button className="btn btn-primary" onClick={send} disabled={!text.trim()}><Send size={16} /></button>
-                </div>
+                {connected ? (
+                  <div className="wa-compose">
+                    <input className="input" placeholder="Escribe un mensaje…" value={text}
+                      onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send() } }} />
+                    <button className="btn btn-primary" onClick={send} disabled={!text.trim()}><Send size={16} /></button>
+                  </div>
+                ) : (
+                  <div className="wa-compose" style={{ display: 'block' }}>
+                    <div className="tiny muted" style={{ padding: '4px 2px' }}>
+                      <Info size={13} style={{ verticalAlign: -2 }} /> Vincula tu WhatsApp arriba para responder desde aquí, o escríbele directo:{' '}
+                      <a href={`https://wa.me/${active.wa_phone}`} target="_blank" rel="noreferrer" style={{ color: 'var(--teal-700)', fontWeight: 600 }}>+{active.wa_phone}</a>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </section>

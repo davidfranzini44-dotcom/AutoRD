@@ -159,6 +159,22 @@ export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locatio
   return { ok: true }
 }
 
+// Buyer contacts a dealer about a specific car — seeds a conversation into the
+// dealer's WhatsApp inbox. Requires an auth session (mint an anonymous one if
+// needed). Returns { ok } or { error: <code> }.
+export async function startDealerChat({ vehicleSlug, phone, name, text }) {
+  if (!LIVE) return { ok: true, simulated: true }
+  try {
+    const { data, error } = await supabase.rpc('start_dealer_chat', {
+      p_vehicle_slug: vehicleSlug, p_phone: phone, p_name: name || '', p_text: text,
+    })
+    if (error) return { error: error.message || 'no_enviado' }
+    return { ok: true, conversationId: data }
+  } catch (e) {
+    return { error: String(e?.message || e) }
+  }
+}
+
 // ---------------- KYC (Didit) ----------------
 // Creates a real Didit verification session via the edge function.
 // - Demo mode (no Supabase at all): { simulated: true } -> the UI auto-approves

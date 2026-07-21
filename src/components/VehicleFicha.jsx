@@ -4,6 +4,7 @@ import {
   X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck,
 } from 'lucide-react'
 import CarImage from './CarImage'
+import ContactDealer from './ContactDealer'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { isFavorite, toggleFavorite } from '../data/favorites'
@@ -103,7 +104,8 @@ function FichaShell({ v, close }) {
 
         <div className="ficha-actions">
           <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" onClick={close}>Solicitar financiamiento</Link>
-          <Link to={`/vehiculo/${v.id}`} className="btn btn-outline btn-block" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
+          <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
+          <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
         </div>
       </aside>
     </div>

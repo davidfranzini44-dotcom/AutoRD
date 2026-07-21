@@ -5,6 +5,7 @@ import {
   Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2,
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
+import ContactDealer from '../components/ContactDealer'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 
@@ -243,8 +244,8 @@ export default function VehicleDetail() {
                   </div>
                   <div className="tiny muted">{v.dealerVerified ? 'Concesionario verificado' : 'Vendedor particular'}</div>
                 </div>
-                <Link to="/ingresar" className="link-teal">Contactar <ChevronRight size={14} /></Link>
               </div>
+              <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
             </div>
           </aside>
         </div>
