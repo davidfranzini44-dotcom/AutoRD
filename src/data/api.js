@@ -33,6 +33,7 @@ function mapVehicle(r) {
     condition: r.condition === 'nuevo' ? 'Nuevo' : 'Usado',
     certified: r.certified,
     location: r.location, dealer: dealer.name, dealerVerified: dealer.verified,
+    dealerSlug: dealer.slug || null, dealerWhatsapp: dealer.whatsapp || null, dealerPhone: dealer.phone || null,
     financing: r.financing, tone: r.tone,
     monthly: Number(r.monthly), downPct: 20, apr: Number(r.apr), termYears: r.term_years,
     photos: r.photos_count, description: r.description,
@@ -41,7 +42,7 @@ function mapVehicle(r) {
   }
 }
 
-const VEHICLE_SELECT = '*, dealer:dealers(name, verified, slug, initials)'
+const VEHICLE_SELECT = '*, dealer:dealers(name, verified, slug, initials, whatsapp, phone)'
 
 // ---------------- Vehicles ----------------
 export async function listVehicles({ tab = 'todos' } = {}) {
