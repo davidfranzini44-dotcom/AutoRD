@@ -3,12 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, ChevronLeft,
   Calculator, BadgeCheck, ShieldCheck, Landmark, Gauge, Bell, CheckCircle2,
+  MapPin, Crosshair, Loader2,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import BrandLogo from '../components/BrandLogo'
 import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
+import { haversineKm, nearestCity } from '../data/geo'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 import { isSearchSaved, saveSearchAlert } from '../data/savedSearches'
 
@@ -41,6 +43,7 @@ const SORT_OPTIONS = [
   { value: 'nuevo', label: 'Año más reciente' },
   { value: 'cuota', label: 'Menor cuota' },
   { value: 'km', label: 'Menor kilometraje' },
+  { value: 'cerca', label: 'Más cerca de mí' },
 ]
 
 const normalize = (value) =>
@@ -75,6 +78,9 @@ export default function Buscar() {
   const [loading, setLoading] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [alertMsg, setAlertMsg] = useState('')
+  // "Near me" filter: capture the buyer's location once (kept for the session).
+  const [userLoc, setUserLoc] = useState(() => { try { return JSON.parse(sessionStorage.getItem('autord_userloc') || 'null') } catch { return null } })
+  const [geoBusy, setGeoBusy] = useState(false)
 
   const marca = params.get('marca') || ''
   const modelo = params.get('modelo') || ''
@@ -83,6 +89,7 @@ export default function Buscar() {
   const precioMin = params.get('precioMin') || ''
   const precioMax = params.get('precioMax') || ''
   const cuotaMax = params.get('cuotaMax') || ''
+  const distKm = params.get('distKm') || ''
   const anioMin = params.get('anioMin') || ''
   const anioMax = params.get('anioMax') || ''
   const kmMax = params.get('kmMax') || ''
@@ -119,6 +126,18 @@ export default function Buscar() {
     setParam('features', next.join(','))
   }
 
+  const askLocation = () => {
+    if (!navigator.geolocation) return
+    setGeoBusy(true)
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+      setUserLoc(loc)
+      try { sessionStorage.setItem('autord_userloc', JSON.stringify(loc)) } catch { /* private mode */ }
+      setGeoBusy(false)
+      if (!distKm) setParam('distKm', '25') // sensible default radius once located
+    }, () => setGeoBusy(false), { enableHighAccuracy: true, timeout: 10000 })
+  }
+
   useEffect(() => {
     let alive = true
     listVehicles({ tab: 'todos' })
@@ -151,6 +170,11 @@ export default function Buscar() {
       if (precioMin && v.price < num(precioMin)) return false
       if (precioMax && v.price > num(precioMax)) return false
       if (cuotaMax && monthlyFor(v) > num(cuotaMax)) return false
+      if (distKm && userLoc) {
+        if (v.lat == null || v.lng == null) return false
+        const d = haversineKm(userLoc, { lat: Number(v.lat), lng: Number(v.lng) })
+        if (d == null || d > num(distKm)) return false
+      }
       if (anioMin && v.year < num(anioMin)) return false
       if (anioMax && v.year > num(anioMax)) return false
       if (kmMax && Number(v.mileage || 0) > num(kmMax)) return false
@@ -174,11 +198,15 @@ export default function Buscar() {
       if (sort === 'nuevo') return b.year - a.year
       if (sort === 'cuota') return monthlyFor(a) - monthlyFor(b)
       if (sort === 'km') return Number(a.mileage || 0) - Number(b.mileage || 0)
+      if (sort === 'cerca' && userLoc) {
+        const dOf = (v) => (v.lat == null || v.lng == null) ? Infinity : (haversineKm(userLoc, { lat: Number(v.lat), lng: Number(v.lng) }) ?? Infinity)
+        return dOf(a) - dOf(b)
+      }
       return 0
     })
     return results
   }, [
-    all, marca, modelo, tipo, ubicacion, precioMin, precioMax, cuotaMax,
+    all, marca, modelo, tipo, ubicacion, precioMin, precioMax, cuotaMax, distKm, userLoc,
     anioMin, anioMax, kmMax, condicion, transmision, combustible, traccion,
     color, financiamiento, dealerVerificado, selectedFeatures, q, sort,
   ])
@@ -197,6 +225,7 @@ export default function Buscar() {
     precioMin && { key: 'precioMin', label: `Desde ${fmtRD(precioMin)}`, clear: () => setParam('precioMin', '') },
     precioMax && { key: 'precioMax', label: `Hasta ${fmtRD(precioMax)}`, clear: () => setParam('precioMax', '') },
     cuotaMax && { key: 'cuotaMax', label: `Cuota hasta ${fmtRD(cuotaMax)}`, clear: () => setParam('cuotaMax', '') },
+    distKm && userLoc && { key: 'distKm', label: `A ${distKm} km o menos`, clear: () => setParam('distKm', '') },
     anioMin && { key: 'anioMin', label: `Año desde ${anioMin}`, clear: () => setParam('anioMin', '') },
     anioMax && { key: 'anioMax', label: `Año hasta ${anioMax}`, clear: () => setParam('anioMax', '') },
     kmMax && { key: 'kmMax', label: `Hasta ${kmLabel(kmMax)}`, clear: () => setParam('kmMax', '') },
@@ -266,6 +295,26 @@ export default function Buscar() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="filter-group">
+        <div className="filter-group-title">
+          <MapPin size={16} />
+          <span>Cerca de mí</span>
+        </div>
+        <button type="button" className="btn btn-outline btn-block btn-sm" onClick={askLocation} disabled={geoBusy}>
+          {geoBusy ? <Loader2 size={14} className="spin" /> : <Crosshair size={14} />}
+          {userLoc ? `Ubicación activa${nearestCity(userLoc) ? ` · ${nearestCity(userLoc)}` : ''}` : 'Usar mi ubicación'}
+        </button>
+        <select className="select" style={{ marginTop: 8 }} value={distKm} onChange={(e) => setParam('distKm', e.target.value)} disabled={!userLoc}>
+          <option value="">Cualquier distancia</option>
+          <option value="5">Hasta 5 km</option>
+          <option value="10">Hasta 10 km</option>
+          <option value="25">Hasta 25 km</option>
+          <option value="50">Hasta 50 km</option>
+          <option value="100">Hasta 100 km</option>
+        </select>
+        {!userLoc && <span className="help">Activa tu ubicación para filtrar y ordenar por distancia.</span>}
       </div>
 
       <div className="filter-group finance-filter-group">

@@ -14,6 +14,7 @@ import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
 import { shareVehicle } from '../data/shareVehicle'
+import { pickSimilar } from '../data/similar'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -39,7 +40,7 @@ export default function VehicleDetail() {
       if (!alive) return
       const enriched = all.find((x) => x.id === id)
       if (enriched) setV(enriched)
-      setSimilar(all.filter((x) => x.id !== id).slice(0, 4))
+      setSimilar(pickSimilar(enriched || { id }, all, 4))
     })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
     getMyFinancing()
