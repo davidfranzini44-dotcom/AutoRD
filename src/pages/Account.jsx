@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMyFinancing } from '../data/api'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
+import { recentlyViewedCount } from '../data/recentlyViewed'
 import { kycValidity, fmtKycDate } from '../data/kyc'
 
 // Buyer account hub: one place for saved cars, financing status, verified
@@ -17,6 +18,7 @@ export default function Account() {
   const { user, profile, signOut } = useAuth() || {}
   const [favs, setFavs] = useState(favoriteCount())
   const [alerts, setAlerts] = useState(savedSearchCount())
+  const [viewed, setViewed] = useState(recentlyViewedCount())
   const [fin, setFin] = useState(undefined)
 
   useEffect(() => {
@@ -31,6 +33,13 @@ export default function Account() {
     sync()
     window.addEventListener('autord-search-alerts', sync)
     return () => window.removeEventListener('autord-search-alerts', sync)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setViewed(recentlyViewedCount())
+    sync()
+    window.addEventListener('autord-recently-viewed', sync)
+    return () => window.removeEventListener('autord-recently-viewed', sync)
   }, [])
 
   useEffect(() => {
@@ -97,6 +106,15 @@ export default function Account() {
             title="Alertas de busqueda"
             sub={alerts === 0 ? 'Guarda filtros para volver rapido' : `${alerts} alerta${alerts === 1 ? '' : 's'} guardada${alerts === 1 ? '' : 's'}`}
             badge={alerts > 0 ? String(alerts) : null}
+          />
+
+          <HubRow
+            to="/vistos"
+            icon={<Clock size={20} />}
+            tone="teal"
+            title="Vistos recientemente"
+            sub={viewed === 0 ? 'Tu historial de carros aparecera aqui' : `${viewed} vehiculo${viewed === 1 ? '' : 's'} visto${viewed === 1 ? '' : 's'}`}
+            badge={viewed > 0 ? String(viewed) : null}
           />
 
           {/* Financing */}

@@ -625,7 +625,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.alerts-empty {
+.alerts-empty,
+.recently-empty {
   max-width: 560px;
   margin: 24px auto 0;
   text-align: center;

@@ -15,6 +15,7 @@ import { listVehicles, listDealers } from '../data/api'
 import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
 import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
+import { getRecentlyViewedIds } from '../data/recentlyViewed'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', shortLabel: 'Todos', icon: Car },
@@ -87,6 +88,7 @@ export default function Home() {
   const [calcDownPct, setCalcDownPct] = useState(20)
   const [calcTerm, setCalcTerm] = useState(60)
   const [calcIncome, setCalcIncome] = useState('')
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState(() => getRecentlyViewedIds())
 
   useEffect(() => {
     let alive = true
@@ -102,6 +104,12 @@ export default function Home() {
     let alive = true
     listDealers().then((d) => { if (alive) setDealers(d) }).catch(() => {})
     return () => { alive = false }
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setRecentlyViewedIds(getRecentlyViewedIds())
+    window.addEventListener('autord-recently-viewed', sync)
+    return () => window.removeEventListener('autord-recently-viewed', sync)
   }, [])
   const homeDealers = dealers.length
     ? [...dealers].sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0)).slice(0, 3)
@@ -149,6 +157,12 @@ export default function Home() {
 
   const featuredList = list.slice(0, 5)
   const recentList = all.slice(5, 10)
+  const recentlyViewedList = recentlyViewedIds
+    .map((id) => all.find((v) => v.id === id))
+    .filter(Boolean)
+    .slice(0, 5)
+  const recentRailList = recentlyViewedList.length ? recentlyViewedList : recentList
+  const recentRailIsHistory = recentlyViewedList.length > 0
   const calcApr = BANK_RATES.popular
   const calcDown = Math.round(calcPrice * (calcDownPct / 100))
   const calcPrincipal = Math.max(0, calcPrice - calcDown)
@@ -419,14 +433,16 @@ export default function Home() {
         </section>
 
         {/* ---------------- Recent listings ---------------- */}
-        {!loading && recentList.length > 0 && (
+        {!loading && recentRailList.length > 0 && (
           <section className="home-section">
             <div className="section-title">
-              <h2>Recién publicados</h2>
-              <Link to="/buscar" className="link-teal">Ver todos <ArrowRight size={15} /></Link>
+              <h2>{recentRailIsHistory ? 'Vistos recientemente' : 'Recién publicados'}</h2>
+              <Link to={recentRailIsHistory ? '/vistos' : '/buscar'} className="link-teal">
+                {recentRailIsHistory ? 'Ver historial' : 'Ver todos'} <ArrowRight size={15} />
+              </Link>
             </div>
             <div className="recent-row">
-              {recentList.map((v) => <RecentCard key={v.id} v={v} />)}
+              {recentRailList.map((v) => <RecentCard key={v.id} v={v} />)}
             </div>
           </section>
         )}

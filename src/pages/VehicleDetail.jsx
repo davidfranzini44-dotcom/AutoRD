@@ -9,6 +9,7 @@ import ContactDealer from '../components/ContactDealer'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
+import { recordRecentlyViewed } from '../data/recentlyViewed'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -28,7 +29,7 @@ export default function VehicleDetail() {
     let alive = true
     setV(undefined)
     setActive(0)
-    getVehicleBySlug(id).then((data) => { if (alive) { setV(data); setCmp(data ? isCompared(data.id) : false) } })
+    getVehicleBySlug(id).then((data) => { if (alive) { setV(data); setCmp(data ? isCompared(data.id) : false); if (data) recordRecentlyViewed(data) } })
     listVehicles().then((all) => { if (alive) setSimilar(all.filter((x) => x.id !== id).slice(0, 4)) })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
     getMyFinancing()

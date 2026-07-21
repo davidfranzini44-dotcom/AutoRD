@@ -9,6 +9,7 @@ import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
+import { recordRecentlyViewed } from '../data/recentlyViewed'
 import { useFicha } from '../context/FichaContext'
 
 // Slide-in "ficha" drawer: preview a vehicle without leaving the current page.
@@ -32,6 +33,10 @@ function FichaShell({ v, close }) {
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = '' }
   }, [close])
+
+  useEffect(() => {
+    recordRecentlyViewed(v)
+  }, [v])
 
   const km = v.mileage === 0 ? '0 km (nuevo)' : Number(v.mileage).toLocaleString('es-DO') + ' km'
   const specs = [
