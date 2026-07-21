@@ -1,6 +1,6 @@
 import popular from '../assets/banks/popular.png'
 import banreservas from '../assets/banks/banreservas.png'
-import bhd from '../assets/banks/bhd.svg'
+import bhd from '../assets/banks/bhd.png'
 import scotiabank from '../assets/banks/scotiabank.png'
 
 // Real bank logos, bundled locally. Falls back to the colored-initials
