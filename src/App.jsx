@@ -15,6 +15,7 @@ import Compare from './pages/Compare'
 import SearchAlerts from './pages/SearchAlerts'
 import RecentlyViewed from './pages/RecentlyViewed'
 import SeoLanding from './pages/SeoLanding'
+import Notifications from './pages/Notifications'
 import ComoFunciona from './pages/ComoFunciona'
 import Login from './pages/Login'
 import DealerPanel from './pages/DealerPanel'
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/vistos" element={<RecentlyViewed />} />
         <Route path="/mi-cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/mi-financiamiento" element={<ProtectedRoute><MyFinancing /></ProtectedRoute>} />
+        <Route path="/notificaciones" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
         {/* SEO landing pages (/toyota, /honda-civic, /suvs) — keep LAST so it only
             catches single-segment paths not matched above. */}
         <Route path="/:seoSlug" element={<SeoLanding />} />

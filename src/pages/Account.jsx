@@ -5,7 +5,7 @@ import {
   ChevronRight, LogOut, User, Landmark, Clock, Bell,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMyFinancing } from '../data/api'
+import { getMyFinancing, myUnreadCount } from '../data/api'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
 import { recentlyViewedCount } from '../data/recentlyViewed'
@@ -20,6 +20,7 @@ export default function Account() {
   const [alerts, setAlerts] = useState(savedSearchCount())
   const [viewed, setViewed] = useState(recentlyViewedCount())
   const [fin, setFin] = useState(undefined)
+  const [unread, setUnread] = useState(0)
 
   useEffect(() => {
     const sync = () => setFavs(favoriteCount())
@@ -47,6 +48,15 @@ export default function Account() {
     getMyFinancing().then((d) => { if (alive) setFin(d) }).catch(() => { if (alive) setFin(null) })
     return () => { alive = false }
   }, [])
+
+  useEffect(() => {
+    if (!user) { setUnread(0); return undefined }
+    let alive = true
+    const sync = () => myUnreadCount().then((n) => { if (alive) setUnread(n) })
+    sync()
+    window.addEventListener('autord-notifs', sync)
+    return () => { alive = false; window.removeEventListener('autord-notifs', sync) }
+  }, [user])
 
   const name = profile?.full_name || (user?.email && user.email.split('@')[0]) || 'Comprador'
   const email = profile?.email || user?.email || ''
@@ -89,6 +99,16 @@ export default function Account() {
         </div>
 
         <div className="col gap-12">
+          {/* Notifications (bank responses etc.) */}
+          <HubRow
+            to="/notificaciones"
+            icon={<Bell size={20} />}
+            tone={unread > 0 ? 'green' : 'teal'}
+            title="Notificaciones"
+            sub={unread === 0 ? 'Respuestas de bancos y novedades' : `${unread} nueva${unread === 1 ? '' : 's'} sin leer`}
+            badge={unread > 0 ? String(unread) : null}
+          />
+
           {/* Saved cars */}
           <HubRow
             to="/favoritos"

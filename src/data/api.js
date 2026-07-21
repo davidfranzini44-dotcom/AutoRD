@@ -106,6 +106,20 @@ export async function getDealerLeadCounts() {
   } catch { return {} }
 }
 
+// ---------------- In-app notifications (bell) ----------------
+export async function myNotifications(limit = 30) {
+  if (!LIVE) return []
+  try { const { data } = await supabase.rpc('my_notifications', { p_limit: limit }); return data || [] } catch { return [] }
+}
+export async function myUnreadCount() {
+  if (!LIVE) return 0
+  try { const { data } = await supabase.rpc('my_unread_count'); return Number(data) || 0 } catch { return 0 }
+}
+export async function markNotificationsRead() {
+  if (!LIVE) return
+  try { await supabase.rpc('mark_notifications_read'); window.dispatchEvent(new Event('autord-notifs')) } catch { /* ignore */ }
+}
+
 export async function listBanks() {
   if (!LIVE) return demoBanks
   const { data, error } = await supabase.from('banks').select('*').eq('active', true).order('name')
@@ -633,8 +647,9 @@ export async function submitBankResponse(responseId, body) {
     responded_at: new Date().toISOString(),
   }).eq('id', responseId)
   if (error) throw error
-  // Fire-and-forget: ping the buyer on WhatsApp that a bank responded.
+  // Fire-and-forget: WhatsApp ping + in-app notification for the buyer & dealer.
   supabase.functions.invoke('wa-notify', { body: { response_id: responseId, event: 'bank_response' } }).catch(() => {})
+  supabase.rpc('notify_bank_response', { p_response_id: responseId }).catch(() => {})
   return { ok: true }
 }
 
