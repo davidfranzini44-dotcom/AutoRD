@@ -12,7 +12,7 @@ import { carDefaultMonthly } from '../data/finance'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
 
 const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
-const PAYMENT_OPTIONS = [20000, 30000, 40000, 50000, 65000, 80000]
+const PAYMENT_OPTIONS = [20000, 35000, 50000, 75000, 100000, 150000]
 const KM_OPTIONS = [10000, 25000, 50000, 75000, 100000, 150000]
 const YEARS = Array.from({ length: 2026 - 2010 + 1 }, (_, i) => 2026 - i)
 
@@ -274,6 +274,14 @@ export default function Buscar() {
             </button>
           ))}
         </div>
+        <input
+          className="input"
+          style={{ marginTop: 8 }}
+          inputMode="numeric"
+          placeholder="Otra cuota máx. (RD$/mes)"
+          value={cuotaMax ? Number(cuotaMax).toLocaleString('es-DO') : ''}
+          onChange={(e) => setParam('cuotaMax', e.target.value.replace(/[^0-9]/g, ''))}
+        />
         <button
           type="button"
           className={`filter-check ${financiamiento === 'si' ? 'active' : ''}`}
