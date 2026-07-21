@@ -58,9 +58,12 @@ export default function Layout() {
               </Link>
             )}
             {user ? (
-              <button className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }} onClick={signOut}>
-                <LogOut size={15} /> Salir
-              </button>
+              <>
+                <Link to="/mi-cuenta" className="icon-label hide-mobile" aria-label="Mi cuenta"><User size={18} /><span className="hide-mobile">Mi cuenta</span></Link>
+                <button className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }} onClick={signOut}>
+                  <LogOut size={15} /> Salir
+                </button>
+              </>
             ) : (
               <Link to="/ingresar" className="btn btn-primary btn-sm hide-mobile" style={{ height: 40, background: 'var(--teal-800)' }}>Ingresar / Registrar</Link>
             )}
@@ -103,7 +106,7 @@ export default function Layout() {
         <NavLink to="/buscar"><Search size={20} /> Buscar</NavLink>
         <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>
         <NavLink to="/favoritos"><Heart size={20} /> Favoritos</NavLink>
-        <NavLink to={user ? '/mi-financiamiento' : '/ingresar'}><User size={20} /> Perfil</NavLink>
+        <NavLink to={user ? '/mi-cuenta' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
 
       <VehicleFicha />

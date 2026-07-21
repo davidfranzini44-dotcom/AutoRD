@@ -9,6 +9,7 @@ import DealerProfile from './pages/DealerProfile'
 import VehicleDetail from './pages/VehicleDetail'
 import Financing from './pages/Financing'
 import MyFinancing from './pages/MyFinancing'
+import Account from './pages/Account'
 import Favorites from './pages/Favorites'
 import ComoFunciona from './pages/ComoFunciona'
 import Login from './pages/Login'
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/como-funciona" element={<ComoFunciona />} />
         <Route path="/ingresar" element={<Login />} />
         <Route path="/favoritos" element={<Favorites />} />
+        <Route path="/mi-cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/mi-financiamiento" element={<ProtectedRoute><MyFinancing /></ProtectedRoute>} />
       </Route>
 

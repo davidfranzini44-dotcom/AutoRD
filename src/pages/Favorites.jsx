@@ -6,18 +6,25 @@ import { listVehicles } from '../data/api'
 import { getFavoriteIds } from '../data/favorites'
 
 export default function Favorites() {
-  const [vehicles, setVehicles] = useState([])
+  const [all, setAll] = useState([])
+  const [ids, setIds] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let alive = true
-    Promise.all([listVehicles(), getFavoriteIds()]).then(([all, ids]) => {
+    Promise.all([listVehicles(), getFavoriteIds()]).then(([list, savedIds]) => {
       if (!alive) return
-      setVehicles(all.filter((v) => ids.includes(v.id)))
+      setAll(list)
+      setIds(savedIds)
       setLoading(false)
     })
-    return () => { alive = false }
+    // Re-read when favorites change (e.g. DB hydration completes after login).
+    const sync = () => getFavoriteIds().then((s) => { if (alive) setIds(s) })
+    window.addEventListener('autord-favs', sync)
+    return () => { alive = false; window.removeEventListener('autord-favs', sync) }
   }, [])
+
+  const vehicles = ids ? all.filter((v) => ids.includes(v.id)) : []
 
   return (
     <main className="page">

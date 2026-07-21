@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { hydrateFavorites } from '../data/favorites'
 
 const AuthContext = createContext(null)
 
@@ -18,10 +19,12 @@ export function AuthProvider({ children }) {
     if (!isSupabaseConfigured) { setLoading(false); return }
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
+      hydrateFavorites(data.session?.user?.id)
       loadProfile(data.session?.user?.id).finally(() => setLoading(false))
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
+      hydrateFavorites(s?.user?.id)
       loadProfile(s?.user?.id)
     })
     return () => sub.subscription.unsubscribe()
