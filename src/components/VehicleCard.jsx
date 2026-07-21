@@ -1,17 +1,25 @@
-import { Car, Heart, MapPin, BadgeCheck, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
+import { Car, Heart, MapPin, BadgeCheck, ShieldCheck, Scale } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import CarImage from './CarImage'
 import { fmtRD } from '../data/demo'
+import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
 import { useFicha } from '../context/FichaContext'
 
 export default function VehicleCard({ v }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
+  const [cmp, setCmp] = useState(() => isCompared(v.id))
   const { open } = useFicha()
   const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : 'used'
   const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
   const BadgeIcon = badge === 'nuevo' ? BadgeCheck : badge === 'certified' ? ShieldCheck : Car
   const specs = [v.year, v.trim, v.transmission, v.engine].filter(Boolean).join(' · ')
+
+  useEffect(() => {
+    const sync = () => setCmp(isCompared(v.id))
+    window.addEventListener('autord-compare', sync)
+    return () => window.removeEventListener('autord-compare', sync)
+  }, [v.id])
 
   return (
     <article
@@ -33,6 +41,14 @@ export default function VehicleCard({ v }) {
           onClick={(e) => { e.stopPropagation(); setFav(toggleFavorite(v.id)) }}
         >
           <Heart size={17} />
+        </button>
+        <button
+          className={`compare-float ${cmp ? 'active' : ''}`}
+          aria-label={cmp ? 'Quitar de comparar' : 'Comparar vehiculo'}
+          onClick={(e) => { e.stopPropagation(); setCmp(toggleCompare(v.id).on) }}
+        >
+          <Scale size={14} />
+          <span>{cmp ? 'Comparando' : 'Comparar'}</span>
         </button>
         {v.dealerVerified && (
           <span className="verified-shield" title="Dealer verificado"><ShieldCheck size={14} /></span>

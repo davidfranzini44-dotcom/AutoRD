@@ -2,12 +2,13 @@ import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   MapPin, Heart, Bell, Menu, X, ChevronDown,
-  Home, Search, Landmark, User, LogOut, LayoutDashboard,
+  Home, Search, Landmark, User, LogOut, LayoutDashboard, Scale,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { FichaProvider } from '../context/FichaContext'
 import VehicleFicha from './VehicleFicha'
 import autordLogo from '../assets/autord-logo-reference.png'
+import { compareCount } from '../data/compare'
 
 function Logo() {
   return (
@@ -20,9 +21,15 @@ function Logo() {
 // Buyer-facing shell: marketplace header + mobile bottom nav + footer.
 export default function Layout() {
   const [menu, setMenu] = useState(false)
+  const [cmp, setCmp] = useState(compareCount())
   const { user, profile, signOut } = useAuth() || {}
   const loc = useLocation()
   useEffect(() => { setMenu(false); window.scrollTo(0, 0) }, [loc.pathname])
+  useEffect(() => {
+    const sync = () => setCmp(compareCount())
+    window.addEventListener('autord-compare', sync)
+    return () => window.removeEventListener('autord-compare', sync)
+  }, [])
 
   const links = [
     { to: '/', label: 'Comprar', end: true },
@@ -50,6 +57,7 @@ export default function Layout() {
           </nav>
           <div className="header-right">
             <button className="loc-pill"><MapPin size={15} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
+            <Link to="/comparar" className="icon-label"><Scale size={18} /><span className="hide-mobile">Comparar</span>{cmp > 0 && <span className="dot-badge">{cmp}</span>}</Link>
             <Link to="/favoritos" className="icon-label"><Heart size={18} /><span className="hide-mobile">Favoritos</span></Link>
             <button className="icon-label" aria-label="Notificaciones"><Bell size={18} /><span className="dot-badge">3</span></button>
             {consoleLink && (
@@ -104,8 +112,8 @@ export default function Layout() {
       <nav className="bottom-nav">
         <NavLink to="/" end><Home size={20} /> Inicio</NavLink>
         <NavLink to="/buscar"><Search size={20} /> Buscar</NavLink>
+        <NavLink to="/comparar"><Scale size={20} /> Comparar</NavLink>
         <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>
-        <NavLink to="/favoritos"><Heart size={20} /> Favoritos</NavLink>
         <NavLink to={user ? '/mi-cuenta' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
 

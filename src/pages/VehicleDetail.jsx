@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Heart, Share2, MapPin, BadgeCheck, Gauge, Cog, Fuel, Palette,
-  Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2,
+  Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2, Scale,
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import ContactDealer from '../components/ContactDealer'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication } from '../data/api'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
+import { isCompared, toggleCompare } from '../data/compare'
 
 export default function VehicleDetail() {
   const { id } = useParams()
@@ -16,6 +17,7 @@ export default function VehicleDetail() {
   const [similar, setSimilar] = useState([])
   const [active, setActive] = useState(0)
   const [fav, setFav] = useState(false)
+  const [cmp, setCmp] = useState(false)
   const [preApp, setPreApp] = useState(null) // open car-agnostic pre-approval, if any
   const [attaching, setAttaching] = useState(false)
   const [calcOpen, setCalcOpen] = useState(false)
@@ -26,7 +28,7 @@ export default function VehicleDetail() {
     let alive = true
     setV(undefined)
     setActive(0)
-    getVehicleBySlug(id).then((data) => { if (alive) setV(data) })
+    getVehicleBySlug(id).then((data) => { if (alive) { setV(data); setCmp(data ? isCompared(data.id) : false) } })
     listVehicles().then((all) => { if (alive) setSimilar(all.filter((x) => x.id !== id).slice(0, 4)) })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
     getMyFinancing()
@@ -97,6 +99,9 @@ export default function VehicleDetail() {
                 <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${active}`} tone={v.tone} photo={activePhoto} className="tall" label={`${v.make} ${v.model}`} />
                 <div className="row gap-8" style={{ position: 'absolute', top: 12, right: 12 }}>
                   <button className="fav-btn" style={{ position: 'static' }} aria-label="Compartir"><Share2 size={16} /></button>
+                  <button className={`fav-btn ${cmp ? 'active' : ''}`} style={{ position: 'static', borderRadius: 8, width: 'auto', padding: '0 10px' }} onClick={() => setCmp(toggleCompare(v.id).on)} aria-label="Comparar">
+                    <Scale size={15} />
+                  </button>
                   <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'static' }} onClick={() => setFav(!fav)} aria-label="Guardar"><Heart size={16} /></button>
                 </div>
                 <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(12,32,51,.8)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>

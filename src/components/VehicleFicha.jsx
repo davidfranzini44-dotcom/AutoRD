@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck,
+  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck, Scale,
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
+import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
 import { useFicha } from '../context/FichaContext'
 
@@ -23,6 +24,7 @@ export default function VehicleFicha() {
 
 function FichaShell({ v, close }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
+  const [cmp, setCmp] = useState(() => isCompared(v.id))
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close() }
@@ -104,6 +106,9 @@ function FichaShell({ v, close }) {
 
         <div className="ficha-actions">
           <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" onClick={close}>Solicitar financiamiento</Link>
+          <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'} btn-block`} onClick={() => setCmp(toggleCompare(v.id).on)}>
+            <Scale size={16} /> {cmp ? 'Quitar de comparar' : 'Comparar vehiculo'}
+          </button>
           <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
           <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
         </div>
