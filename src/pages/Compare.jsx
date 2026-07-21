@@ -5,12 +5,13 @@ import CarImage from '../components/CarImage'
 import { fmtRD, listVehicles } from '../data/api'
 import { carDefaultMonthly } from '../data/finance'
 import { clearCompare, getCompareIds, removeCompare } from '../data/compare'
+import { mileageLabel } from '../data/vehicleLabels'
 
 const ROWS = [
   ['Precio', (v) => fmtRD(v.price)],
   ['Cuota estimada', (v) => `${fmtRD(carDefaultMonthly(v))}/mes`],
   ['Ano', (v) => v.year],
-  ['Kilometraje', (v) => (v.mileage === 0 ? '0 km' : `${Number(v.mileage || 0).toLocaleString('es-DO')} km`)],
+  ['Kilometraje', (v) => mileageLabel(v, { newText: '0 km' })],
   ['Condicion', (v) => v.certified ? 'Usado certificado' : v.condition],
   ['Version', (v) => v.trim || '-'],
   ['Transmision', (v) => v.transmission || '-'],

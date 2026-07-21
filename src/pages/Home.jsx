@@ -17,6 +17,7 @@ import { useFicha } from '../context/FichaContext'
 import { fmtRD } from '../data/demo'
 import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
 import { getRecentlyViewedIds } from '../data/recentlyViewed'
+import { mileageLabel } from '../data/vehicleLabels'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', shortLabel: 'Todos', icon: Car },
@@ -134,7 +135,7 @@ export default function Home() {
 
   const list = useMemo(() => {
     let r = all.filter((v) => {
-      if (segment === 'nuevos' && !(v.condition === 'Nuevo' || v.year >= 2024 || v.mileage === 0)) return false
+      if (segment === 'nuevos' && v.condition !== 'Nuevo') return false
       if (segment === 'certificados' && !v.certified) return false
       if (tipo !== 'todos' && v.bodyType !== tipo) return false
       if (marca && v.make !== marca) return false
@@ -526,6 +527,7 @@ function RecentCard({ v }) {
   const badge = v.condition === 'Nuevo' ? 'nuevo' : v.certified ? 'certified' : 'used'
   const badgeText = v.condition === 'Nuevo' ? 'Nuevo' : v.certified ? 'Usado certificado' : 'Usado'
   const BadgeIcon = badge === 'nuevo' ? BadgeCheck : badge === 'certified' ? ShieldCheck : Car
+  const km = mileageLabel(v, { newText: 'Nuevo' })
 
   return (
     <div
@@ -545,7 +547,7 @@ function RecentCard({ v }) {
       </div>
       <div className="recent-body">
         <strong>{v.make} {v.model}</strong>
-        <span>{v.year} · {v.trim} · {Number(v.mileage).toLocaleString('es-DO')} km</span>
+        <span>{v.year} · {v.trim} · {km}</span>
         <b>{fmtRD(v.price)}</b>
         <PriceSignal insight={v.priceInsight} compact />
         <em><MapPin size={12} /> {v.location}</em>

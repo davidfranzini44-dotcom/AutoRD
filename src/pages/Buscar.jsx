@@ -184,7 +184,7 @@ export default function Buscar() {
       if (color && v.color !== color) return false
       if (financiamiento === 'si' && !v.financing) return false
       if (dealerVerificado === 'si' && !v.dealerVerified) return false
-      if (condicion === 'nuevo' && !(v.condition === 'Nuevo' || v.mileage === 0)) return false
+      if (condicion === 'nuevo' && v.condition !== 'Nuevo') return false
       if (condicion === 'certified' && !v.certified) return false
       if (condicion === 'usado' && (v.condition !== 'Usado' || v.certified)) return false
       if (selectedFeatures.length && !selectedFeatures.every((featureId) => hasFeature(v, featureId))) return false

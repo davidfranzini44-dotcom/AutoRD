@@ -14,6 +14,7 @@ import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
 import { shareVehicle } from '../data/shareVehicle'
+import { mileageLabel } from '../data/vehicleLabels'
 import { pickSimilar } from '../data/similar'
 
 export default function VehicleDetail() {
@@ -60,8 +61,10 @@ export default function VehicleDetail() {
       </div></main>
     )
   }
+  const km = mileageLabel(v)
+  const summaryKm = mileageLabel(v, { newText: 'Nuevo' })
   const specs = [
-    { ic: Gauge, l: 'Kilometraje', v: v.mileage === 0 ? '0 km (nuevo)' : v.mileage.toLocaleString('es-DO') + ' km' },
+    { ic: Gauge, l: 'Kilometraje', v: km },
     { ic: Cog, l: 'Transmisión', v: v.transmission },
     { ic: Fuel, l: 'Combustible', v: v.fuel },
     { ic: Palette, l: 'Color', v: v.color },
@@ -144,7 +147,7 @@ export default function VehicleDetail() {
               <div className="row between center wrap gap-8">
                 <div>
                   <h1 style={{ fontSize: 24 }}>{v.make} {v.model} {v.year}</h1>
-                  <div className="vspecs" style={{ fontSize: 14, marginTop: 4 }}>{v.trim} · {v.transmission} · {v.fuel} · {v.mileage === 0 ? 'Nuevo' : v.mileage.toLocaleString('es-DO') + ' km'}</div>
+                  <div className="vspecs" style={{ fontSize: 14, marginTop: 4 }}>{v.trim} · {v.transmission} · {v.fuel} · {summaryKm}</div>
                 </div>
                 <span className={`chip ${v.condition === 'Nuevo' ? 'chip-navy' : 'chip-teal'}`} style={{ height: 28 }}>{v.condition}</span>
               </div>
@@ -320,12 +323,13 @@ export default function VehicleDetail() {
 }
 
 function SimilarCard({ v }) {
+  const km = mileageLabel(v, { newText: 'Nuevo' })
   return (
     <Link to={`/vehiculo/${v.id}`} className="vcard" style={{ display: 'block' }}>
       <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
       <div className="vcard-body">
         <div className="vtitle" style={{ fontSize: 14.5 }}>{v.make} {v.model}</div>
-        <div className="vspecs">{v.year} · {v.mileage === 0 ? 'Nuevo' : v.mileage.toLocaleString('es-DO') + ' km'}</div>
+        <div className="vspecs">{v.year} · {km}</div>
         <div className="vprice" style={{ fontSize: 17 }}>{fmtRD(v.price)}</div>
       </div>
     </Link>

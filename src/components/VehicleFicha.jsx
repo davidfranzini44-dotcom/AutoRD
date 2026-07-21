@@ -12,6 +12,7 @@ import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
 import { shareVehicle } from '../data/shareVehicle'
+import { mileageLabel } from '../data/vehicleLabels'
 import { useFicha } from '../context/FichaContext'
 
 // Slide-in "ficha" drawer: preview a vehicle without leaving the current page.
@@ -41,7 +42,7 @@ function FichaShell({ v, close }) {
     recordRecentlyViewed(v)
   }, [v])
 
-  const km = v.mileage === 0 ? '0 km (nuevo)' : Number(v.mileage).toLocaleString('es-DO') + ' km'
+  const km = mileageLabel(v)
   const specs = [
     { ic: Gauge, l: 'Kilometraje', val: km },
     { ic: Cog, l: 'Transmisión', val: v.transmission },
