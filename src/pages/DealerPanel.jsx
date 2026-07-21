@@ -4,7 +4,7 @@ import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
   Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight,
 } from 'lucide-react'
-import { dealerMetrics, fmtRD } from '../data/demo'
+import { fmtRD } from '../data/demo'
 import { getDealerData } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -37,6 +37,18 @@ export default function DealerPanel({ view = 'resumen' }) {
 
   const [title, sub] = TITLES[view]
 
+  // Real dashboard stats, computed from this dealer's own inventory + leads.
+  const invValue = inventory.reduce((s, v) => s + (Number(v.price) || 0), 0)
+  const offers = leads.filter((l) => l.bank === 'offer').length
+  const evaluating = leads.filter((l) => ['evaluating', 'pending', 'docs'].includes(l.bank)).length
+  const metrics = [
+    { icon: 'inventory', label: 'Vehículos', value: inventory.length },
+    { icon: 'sales', label: 'Valor inventario', value: fmtRD(invValue) },
+    { icon: 'leads', label: 'Leads', value: leads.length },
+    { icon: 'finance', label: 'En evaluación', value: evaluating },
+    { icon: 'approved', label: 'Con oferta', value: offers },
+  ]
+
   return (
     <div>
       <div className="admin-head">
@@ -52,7 +64,7 @@ export default function DealerPanel({ view = 'resumen' }) {
       {view === 'resumen' && (
         <>
           <div className="grid" style={{ gridTemplateColumns: 'repeat(5,1fr)', marginBottom: 18 }}>
-            {dealerMetrics.map((m) => {
+            {metrics.map((m) => {
               const Icon = METRIC_IC[m.icon]
               return (
                 <div className="metric-card" key={m.label}>

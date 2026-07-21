@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, MapPin, MessageCircle, Clock, CheckCircle2 } from 'lucide-react'
+import { Plus, Trash2, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays } from 'lucide-react'
 import { getMyDealer, updateDealerProfile } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 
@@ -11,6 +11,8 @@ export default function DealerProfileEdit() {
   const [name, setName] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [hours, setHours] = useState('')
+  const [description, setDescription] = useState('')
+  const [foundedYear, setFoundedYear] = useState('')
   const [locs, setLocs] = useState([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -23,6 +25,8 @@ export default function DealerProfileEdit() {
         setName(d.name || '')
         setWhatsapp(d.whatsapp || '')
         setHours(d.hours || '')
+        setDescription(d.description || '')
+        setFoundedYear(d.founded_year ? String(d.founded_year) : '')
         setLocs((d.locations || []).map((l) => ({ name: l.name || '', address: l.address || '', city: l.city || '', lat: l.lat ?? '', lng: l.lng ?? '' })))
       }
       setLoading(false)
@@ -41,7 +45,10 @@ export default function DealerProfileEdit() {
       lat: l.lat === '' ? null : Number(l.lat), lng: l.lng === '' ? null : Number(l.lng),
     }))
     try {
-      await updateDealerProfile(profile?.dealer_id, { whatsapp: whatsapp.replace(/[^\d]/g, ''), hours, locations: cleanLocs })
+      await updateDealerProfile(profile?.dealer_id, {
+        whatsapp: whatsapp.replace(/[^\d]/g, ''), hours, locations: cleanLocs,
+        description, foundedYear: foundedYear ? Number(foundedYear) : null,
+      })
       setSaved(true)
     } catch (_) { /* offline/denied */ }
     setSaving(false)
@@ -70,9 +77,21 @@ export default function DealerProfileEdit() {
       <div className="card card-pad" style={{ marginBottom: 16, maxWidth: 660 }}>
         {name && <div className="small strong" style={{ marginBottom: 14 }}>{name}</div>}
         <div className="field">
-          <label><MessageCircle size={13} style={{ verticalAlign: -2 }} /> WhatsApp</label>
-          <input className="input" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="18091234567" />
-          <span className="help">Con código de país, solo números. Ej: 18091234567</span>
+          <label><FileText size={13} style={{ verticalAlign: -2 }} /> Descripción</label>
+          <textarea className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
+            placeholder="Cuenta a los compradores quién eres: tipo de vehículos, garantías, años de experiencia…" style={{ resize: 'vertical', minHeight: 72 }} />
+          <span className="help">Aparece en tu perfil público, debajo de tu nombre.</span>
+        </div>
+        <div className="grid grid-2" style={{ gap: 12, marginTop: 12 }}>
+          <div className="field">
+            <label><MessageCircle size={13} style={{ verticalAlign: -2 }} /> WhatsApp</label>
+            <input className="input" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="18091234567" />
+            <span className="help">Con código de país, solo números.</span>
+          </div>
+          <div className="field">
+            <label><CalendarDays size={13} style={{ verticalAlign: -2 }} /> Año de fundación</label>
+            <input className="input" value={foundedYear} onChange={(e) => setFoundedYear(e.target.value.replace(/[^\d]/g, '').slice(0, 4))} placeholder="2015" inputMode="numeric" />
+          </div>
         </div>
         <div className="field" style={{ marginTop: 12 }}>
           <label><Clock size={13} style={{ verticalAlign: -2 }} /> Horario</label>

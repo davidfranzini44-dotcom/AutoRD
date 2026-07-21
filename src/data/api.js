@@ -118,12 +118,14 @@ export async function getDealerBySlug(slug) {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, vehicles(*)')
+    .select('id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, vehicles(*)')
     .eq('slug', slug).single()
   if (error) return null
   return {
     id: data.id, name: data.name, slug: data.slug, city: data.city, verified: data.verified,
     phone: data.phone, whatsapp: data.whatsapp, hours: data.hours,
+    description: data.description || '', rating: data.rating != null ? Number(data.rating) : null,
+    ratingCount: data.rating_count || 0, foundedYear: data.founded_year || null,
     locations: Array.isArray(data.locations) ? data.locations : [],
     initials: data.initials || initialsOf(data.name),
     vehicles: (data.vehicles || [])
@@ -137,19 +139,22 @@ export async function getMyDealer(dealerDbId) {
   if (!LIVE || !dealerDbId) return null
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, phone, whatsapp, hours, locations')
+    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year')
     .eq('id', dealerDbId).single()
   if (error) return null
   return { ...data, locations: Array.isArray(data.locations) ? data.locations : [] }
 }
 
-export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations }) {
+export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations, description, foundedYear }) {
   if (!LIVE || !dealerDbId) return { ok: false, demo: true }
-  const { error } = await supabase.from('dealers').update({
+  const patch = {
     whatsapp: whatsapp || null,
     hours: hours || null,
     locations: Array.isArray(locations) ? locations : [],
-  }).eq('id', dealerDbId)
+  }
+  if (description !== undefined) patch.description = description || null
+  if (foundedYear !== undefined) patch.founded_year = foundedYear || null
+  const { error } = await supabase.from('dealers').update(patch).eq('id', dealerDbId)
   if (error) throw error
   return { ok: true }
 }

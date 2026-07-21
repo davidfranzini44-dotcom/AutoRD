@@ -1,11 +1,39 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, MapPin, BadgeCheck, Navigation, Phone, Car, Clock, MessageCircle } from 'lucide-react'
+import { ChevronLeft, MapPin, BadgeCheck, Navigation, Phone, Car, Clock, MessageCircle, Star, CalendarDays } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import { getDealerBySlug } from '../data/api'
 import { dealerCoords, directionsUrl } from '../data/geo'
 
 const locCoords = (loc, d) => (loc && loc.lat != null ? { lat: loc.lat, lng: loc.lng } : dealerCoords(d))
+
+function Stars({ rating, count }) {
+  const full = Math.floor(rating)
+  const half = rating - full >= 0.5
+  return (
+    <span className="row center gap-4" title={`${rating} de 5`}>
+      <span className="row center" style={{ gap: 1 }}>
+        {Array.from({ length: 5 }).map((_, i) => {
+          const on = i < full
+          const isHalf = i === full && half
+          return <Star key={i} size={15} strokeWidth={2}
+            fill={on || isHalf ? '#f5a623' : 'none'} color={on || isHalf ? '#f5a623' : 'var(--line-2, #cbd5e1)'}
+            style={isHalf ? { clipPath: 'inset(0 50% 0 0)' } : undefined} />
+        })}
+      </span>
+      <span className="small strong" style={{ color: '#b8860b' }}>{rating.toFixed(1)}</span>
+      {count > 0 && <span className="tiny muted">({count})</span>}
+    </span>
+  )
+}
+
+function Stat({ icon: Icon, label }) {
+  return (
+    <span className="chip" style={{ background: 'var(--surface-2)', color: 'var(--text-2, var(--muted))' }}>
+      <Icon size={13} /> {label}
+    </span>
+  )
+}
 
 export default function DealerProfile() {
   const { slug } = useParams()
@@ -37,25 +65,39 @@ export default function DealerProfile() {
       <div className="container">
         <Link to="/dealers" className="btn btn-ghost btn-sm" style={{ paddingLeft: 4, marginBottom: 10 }}><ChevronLeft size={17} /> Dealers</Link>
 
-        <div className="card card-pad" style={{ marginBottom: 16 }}>
-          <div className="row center wrap gap-16">
-            <div className="dealer-mark" style={{ width: 64, height: 64, fontSize: 20 }}>{d.initials}</div>
-            <div className="grow" style={{ minWidth: 0 }}>
-              <div className="row center gap-8"><h1 style={{ fontSize: 24 }}>{d.name}</h1>{d.verified && <BadgeCheck size={20} color="var(--teal-700)" />}</div>
-              <div className="muted small row center gap-4" style={{ marginTop: 4 }}>
-                <MapPin size={14} /> {d.city || 'República Dominicana'} · {d.vehicles.length} vehículo{d.vehicles.length === 1 ? '' : 's'}
+        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+          {/* Banner */}
+          <div style={{ height: 96, background: 'linear-gradient(120deg, var(--teal-800), var(--teal-600, #0f766e))' }} />
+          <div className="card-pad" style={{ paddingTop: 0 }}>
+            <div className="row wrap gap-16" style={{ alignItems: 'flex-end', marginTop: -32 }}>
+              <div className="dealer-mark" style={{ width: 76, height: 76, fontSize: 24, border: '3px solid var(--surface, #fff)', boxShadow: 'var(--shadow-sm, 0 2px 8px rgba(0,0,0,.12))' }}>{d.initials}</div>
+              <div className="grow" style={{ minWidth: 0, paddingBottom: 2 }}>
+                <div className="row center gap-8"><h1 style={{ fontSize: 24 }}>{d.name}</h1>{d.verified && <BadgeCheck size={20} color="var(--teal-700)" />}</div>
+                <div className="row center gap-10 wrap" style={{ marginTop: 4 }}>
+                  {d.rating != null && <Stars rating={d.rating} count={d.ratingCount} />}
+                  <span className="muted small row center gap-4"><MapPin size={14} /> {d.city || 'República Dominicana'}</span>
+                  {d.foundedYear && <span className="muted small row center gap-4"><CalendarDays size={13} /> Desde {d.foundedYear}</span>}
+                </div>
               </div>
-              {d.hours && <div className="tiny muted row center gap-4" style={{ marginTop: 4 }}><Clock size={12} /> {d.hours}</div>}
-              {d.phone && <div className="tiny muted row center gap-4" style={{ marginTop: 3 }}><Phone size={12} /> {d.phone}</div>}
-              {d.verified && <span className="chip chip-teal" style={{ marginTop: 10 }}><BadgeCheck size={13} /> Dealer verificado</span>}
+              <div className="col gap-8" style={{ alignItems: 'stretch', minWidth: 160, paddingBottom: 2 }}>
+                {waLink && (
+                  <a className="btn" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={waLink} target="_blank" rel="noreferrer">
+                    <MessageCircle size={16} /> WhatsApp
+                  </a>
+                )}
+                <a className="btn btn-outline" href={directionsUrl(primaryCoords)} target="_blank" rel="noreferrer"><Navigation size={16} /> Cómo llegar</a>
+              </div>
             </div>
-            <div className="col gap-8" style={{ alignItems: 'stretch', minWidth: 160 }}>
-              {waLink && (
-                <a className="btn" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={waLink} target="_blank" rel="noreferrer">
-                  <MessageCircle size={16} /> WhatsApp
-                </a>
-              )}
-              <a className="btn btn-outline" href={directionsUrl(primaryCoords)} target="_blank" rel="noreferrer"><Navigation size={16} /> Cómo llegar</a>
+
+            {d.description && <p className="small" style={{ marginTop: 14, color: 'var(--text-2, var(--muted))', lineHeight: 1.6, maxWidth: 720 }}>{d.description}</p>}
+
+            {/* Stat strip */}
+            <div className="row wrap gap-8" style={{ marginTop: 14 }}>
+              <Stat icon={Car} label={`${d.vehicles.length} en inventario`} />
+              {d.rating != null && <Stat icon={Star} label={`${d.rating.toFixed(1)} · ${d.ratingCount} reseñas`} />}
+              {d.verified && <span className="chip chip-teal"><BadgeCheck size={13} /> Dealer verificado</span>}
+              {d.hours && <Stat icon={Clock} label={d.hours} />}
+              {d.phone && <Stat icon={Phone} label={d.phone} />}
             </div>
           </div>
         </div>
