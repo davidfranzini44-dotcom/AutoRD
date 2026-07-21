@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Heart, FileText, ShieldCheck, ShieldAlert, MessageCircle,
-  ChevronRight, LogOut, User, Landmark, Clock,
+  ChevronRight, LogOut, User, Landmark, Clock, Bell,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMyFinancing } from '../data/api'
 import { favoriteCount } from '../data/favorites'
+import { savedSearchCount } from '../data/savedSearches'
 import { kycValidity, fmtKycDate } from '../data/kyc'
 
 // Buyer account hub: one place for saved cars, financing status, verified
@@ -15,6 +16,7 @@ import { kycValidity, fmtKycDate } from '../data/kyc'
 export default function Account() {
   const { user, profile, signOut } = useAuth() || {}
   const [favs, setFavs] = useState(favoriteCount())
+  const [alerts, setAlerts] = useState(savedSearchCount())
   const [fin, setFin] = useState(undefined)
 
   useEffect(() => {
@@ -22,6 +24,13 @@ export default function Account() {
     sync()
     window.addEventListener('autord-favs', sync)
     return () => window.removeEventListener('autord-favs', sync)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setAlerts(savedSearchCount())
+    sync()
+    window.addEventListener('autord-search-alerts', sync)
+    return () => window.removeEventListener('autord-search-alerts', sync)
   }, [])
 
   useEffect(() => {
@@ -79,6 +88,15 @@ export default function Account() {
             title="Carros guardados"
             sub={favs === 0 ? 'Aún no has guardado carros' : `${favs} vehículo${favs === 1 ? '' : 's'} guardado${favs === 1 ? '' : 's'}`}
             badge={favs > 0 ? String(favs) : null}
+          />
+
+          <HubRow
+            to="/alertas"
+            icon={<Bell size={20} />}
+            tone="teal"
+            title="Alertas de busqueda"
+            sub={alerts === 0 ? 'Guarda filtros para volver rapido' : `${alerts} alerta${alerts === 1 ? '' : 's'} guardada${alerts === 1 ? '' : 's'}`}
+            badge={alerts > 0 ? String(alerts) : null}
           />
 
           {/* Financing */}

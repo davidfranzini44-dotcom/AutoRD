@@ -12,6 +12,7 @@ import MyFinancing from './pages/MyFinancing'
 import Account from './pages/Account'
 import Favorites from './pages/Favorites'
 import Compare from './pages/Compare'
+import SearchAlerts from './pages/SearchAlerts'
 import ComoFunciona from './pages/ComoFunciona'
 import Login from './pages/Login'
 import DealerPanel from './pages/DealerPanel'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/ingresar" element={<Login />} />
         <Route path="/favoritos" element={<Favorites />} />
         <Route path="/comparar" element={<Compare />} />
+        <Route path="/alertas" element={<SearchAlerts />} />
         <Route path="/mi-cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/mi-financiamiento" element={<ProtectedRoute><MyFinancing /></ProtectedRoute>} />
       </Route>

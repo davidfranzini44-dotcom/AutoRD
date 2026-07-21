@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   Search, SlidersHorizontal, X, ChevronLeft,
-  Calculator, BadgeCheck, ShieldCheck, Landmark, Gauge,
+  Calculator, BadgeCheck, ShieldCheck, Landmark, Gauge, Bell, CheckCircle2,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import BrandLogo from '../components/BrandLogo'
@@ -10,6 +10,7 @@ import { listVehicles } from '../data/api'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
+import { isSearchSaved, saveSearchAlert } from '../data/savedSearches'
 
 const PRICE_OPTIONS = [500000, 900000, 1300000, 1800000, 2450000, 3500000, 5000000]
 const PAYMENT_OPTIONS = [20000, 35000, 50000, 75000, 100000, 150000]
@@ -73,6 +74,7 @@ export default function Buscar() {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [alertMsg, setAlertMsg] = useState('')
 
   const marca = params.get('marca') || ''
   const modelo = params.get('modelo') || ''
@@ -215,6 +217,19 @@ export default function Buscar() {
   const clearAll = () => setParams({}, { replace: true })
   const bestMonthly = list.length ? Math.min(...list.map(monthlyFor)) : 0
   const avgPrice = list.length ? Math.round(list.reduce((sum, v) => sum + Number(v.price || 0), 0) / list.length) : 0
+  const currentQuery = params.toString()
+  const alertSaved = activeCount > 0 && isSearchSaved(currentQuery)
+  const saveCurrentSearch = () => {
+    if (!activeCount) return
+    const res = saveSearchAlert({
+      title,
+      query: currentQuery,
+      count: list.length,
+      filters: activeFilters.map((item) => item.label),
+    })
+    setAlertMsg(res.existing ? 'Alerta actualizada' : 'Alerta guardada')
+    window.setTimeout(() => setAlertMsg(''), 2200)
+  }
 
   const filterPanel = (
     <div className="buscar-filter-panel">
@@ -417,6 +432,16 @@ export default function Buscar() {
           <div className="buscar-head-actions">
             <button
               type="button"
+              className={`btn ${alertSaved ? 'btn-navy' : 'btn-outline'} buscar-save-alert`}
+              disabled={!activeCount}
+              onClick={saveCurrentSearch}
+              title={!activeCount ? 'Aplica filtros antes de guardar una alerta' : undefined}
+            >
+              {alertSaved ? <CheckCircle2 size={16} /> : <Bell size={16} />}
+              {alertSaved ? 'Alerta guardada' : 'Guardar alerta'}
+            </button>
+            <button
+              type="button"
               className="btn btn-outline buscar-filter-toggle"
               onClick={() => setFiltersOpen(true)}
               aria-expanded={filtersOpen}
@@ -433,6 +458,14 @@ export default function Buscar() {
             </label>
           </div>
         </div>
+
+        {alertMsg && (
+          <div className="saved-alert-toast">
+            <CheckCircle2 size={16} />
+            <span>{alertMsg}</span>
+            <Link to="/alertas">Ver alertas</Link>
+          </div>
+        )}
 
         {filtersOpen && <button type="button" className="buscar-filter-scrim" aria-label="Cerrar filtros" onClick={() => setFiltersOpen(false)} />}
 

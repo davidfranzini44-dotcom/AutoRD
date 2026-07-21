@@ -9,6 +9,7 @@ import { FichaProvider } from '../context/FichaContext'
 import VehicleFicha from './VehicleFicha'
 import autordLogo from '../assets/autord-logo-reference.png'
 import { compareCount } from '../data/compare'
+import { savedSearchCount } from '../data/savedSearches'
 
 function Logo() {
   return (
@@ -22,6 +23,7 @@ function Logo() {
 export default function Layout() {
   const [menu, setMenu] = useState(false)
   const [cmp, setCmp] = useState(compareCount())
+  const [alerts, setAlerts] = useState(savedSearchCount())
   const { user, profile, signOut } = useAuth() || {}
   const loc = useLocation()
   useEffect(() => { setMenu(false); window.scrollTo(0, 0) }, [loc.pathname])
@@ -29,6 +31,11 @@ export default function Layout() {
     const sync = () => setCmp(compareCount())
     window.addEventListener('autord-compare', sync)
     return () => window.removeEventListener('autord-compare', sync)
+  }, [])
+  useEffect(() => {
+    const sync = () => setAlerts(savedSearchCount())
+    window.addEventListener('autord-search-alerts', sync)
+    return () => window.removeEventListener('autord-search-alerts', sync)
   }, [])
 
   const links = [
@@ -59,7 +66,7 @@ export default function Layout() {
             <button className="loc-pill"><MapPin size={15} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
             <Link to="/comparar" className="icon-label"><Scale size={18} /><span className="hide-mobile">Comparar</span>{cmp > 0 && <span className="dot-badge">{cmp}</span>}</Link>
             <Link to="/favoritos" className="icon-label"><Heart size={18} /><span className="hide-mobile">Favoritos</span></Link>
-            <button className="icon-label" aria-label="Notificaciones"><Bell size={18} /><span className="dot-badge">3</span></button>
+            <Link to="/alertas" className="icon-label" aria-label="Alertas"><Bell size={18} /><span className="hide-mobile">Alertas</span>{alerts > 0 && <span className="dot-badge">{alerts}</span>}</Link>
             {consoleLink && (
               <Link to={consoleLink} className="btn btn-outline btn-sm hide-mobile" style={{ height: 40 }}>
                 <LayoutDashboard size={15} /> Mi panel
