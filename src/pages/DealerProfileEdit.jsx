@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays } from 'lucide-react'
+import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays } from 'lucide-react'
 import { getMyDealer, updateDealerProfile } from '../data/api'
 import { useAuth } from '../context/AuthContext'
+import LocationPicker from '../components/LocationPicker'
 
 const emptyLoc = () => ({ name: '', address: '', city: '', lat: '', lng: '' })
 
@@ -34,7 +35,6 @@ export default function DealerProfileEdit() {
     return () => { alive = false }
   }, [profile?.dealer_id])
 
-  const setLoc = (i, k, v) => setLocs((arr) => arr.map((l, idx) => (idx === i ? { ...l, [k]: v } : l)))
   const addLoc = () => setLocs((arr) => [...arr, emptyLoc()])
   const removeLoc = (i) => setLocs((arr) => arr.filter((_, idx) => idx !== i))
 
@@ -107,26 +107,16 @@ export default function DealerProfileEdit() {
         {locs.length === 0 && <div className="tiny muted">Aún no has agregado ubicaciones. Agrega al menos una para que aparezca en tu perfil y el mapa.</div>}
         <div className="col gap-14">
           {locs.map((l, i) => (
-            <div key={i} className="card" style={{ padding: 12, background: 'var(--surface-2)', boxShadow: 'none' }}>
-              <div className="row between center" style={{ marginBottom: 8 }}>
-                <span className="tiny strong">Ubicación {i + 1}</span>
-                <button className="btn btn-outline btn-sm" onClick={() => removeLoc(i)} title="Eliminar"><Trash2 size={14} /></button>
-              </div>
-              <div className="grid grid-2" style={{ gap: 8 }}>
-                <F label="Nombre / sucursal"><input className="input" value={l.name} onChange={(e) => setLoc(i, 'name', e.target.value)} placeholder="Casa matriz" /></F>
-                <F label="Ciudad"><input className="input" value={l.city} onChange={(e) => setLoc(i, 'city', e.target.value)} placeholder="Santo Domingo" /></F>
-                <F label="Dirección" full><input className="input" value={l.address} onChange={(e) => setLoc(i, 'address', e.target.value)} placeholder="Av. 27 de Febrero #250" /></F>
-                <F label="Latitud (opcional)"><input className="input" value={l.lat} onChange={(e) => setLoc(i, 'lat', e.target.value)} placeholder="18.4719" /></F>
-                <F label="Longitud (opcional)"><input className="input" value={l.lng} onChange={(e) => setLoc(i, 'lng', e.target.value)} placeholder="-69.9391" /></F>
-              </div>
-            </div>
+            <LocationPicker
+              key={i}
+              index={i}
+              loc={l}
+              onChange={(nl) => setLocs((arr) => arr.map((x, idx) => (idx === i ? nl : x)))}
+              onRemove={() => removeLoc(i)}
+            />
           ))}
         </div>
       </div>
     </div>
   )
-}
-
-function F({ label, full, children }) {
-  return <div className="field" style={full ? { gridColumn: '1 / -1' } : undefined}><label>{label}</label>{children}</div>
 }
