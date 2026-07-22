@@ -4,12 +4,12 @@ import {
   Plus, MessageCircle, Users, Landmark, Boxes, Bell, ImageOff, TrendingUp,
   BadgeCheck, ChevronRight, Eye, AlertTriangle, Clock, ArrowUpRight, CheckCircle2,
 } from 'lucide-react'
-import { getDealerData, getMyDealer } from '../data/api'
+import { getDealerData, getMyDealer, getDealerLeads } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import DealerLogo from '../components/DealerLogo'
 import CarImage from '../components/CarImage'
-import { buildLeads, buildFinancing, buildActivity, dashboardStats } from '../data/dealerDemo'
+import { buildFinancing, buildActivity, dashboardStats } from '../data/dealerDemo'
 
 const KPI_IC = { leads: Users, financing: Landmark, inventory: Boxes, messages: MessageCircle, incomplete: ImageOff, sales: TrendingUp }
 const ACT_IC = { lead: Users, financing: Landmark, offer: BadgeCheck, message: MessageCircle, view: Eye, sale: CheckCircle2 }
@@ -19,6 +19,7 @@ export default function DealerDashboard() {
   const { profile } = useAuth() || {}
   const [dealer, setDealer] = useState(null)
   const [inventory, setInventory] = useState([])
+  const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -26,22 +27,23 @@ export default function DealerDashboard() {
     Promise.all([
       getDealerData(profile?.dealer_id),
       getMyDealer(profile?.dealer_id).catch(() => null),
-    ]).then(([d, dl]) => {
+      getDealerLeads().catch(() => []),
+    ]).then(([d, dl, ld]) => {
       if (!alive) return
       setInventory(d.inventory || [])
       setDealer(dl)
+      setLeads(ld)
       setLoading(false)
     }).catch(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [profile?.dealer_id])
 
-  const leads = buildLeads(inventory)
   const financing = buildFinancing(inventory)
   const activity = buildActivity(inventory)
   const { kpis, tareas } = dashboardStats(inventory, leads, financing)
 
   const topVehicles = [...inventory]
-    .map((v, i) => ({ ...v, views: [128, 94, 76, 52, 41][i] || 30, favs: [12, 8, 6, 4, 3][i] || 2, leadCount: [5, 3, 2, 1, 1][i] || 0, fin: [3, 2, 1, 1, 0][i] || 0 }))
+    .map((v, i) => ({ ...v, views: [128, 94, 76, 52, 41][i] || 30, favs: [12, 8, 6, 4, 3][i] || 2, leadCount: leads.filter((l) => l.vehicle?.id === v.id).length, fin: [3, 2, 1, 1, 0][i] || 0 }))
     .sort((a, b) => b.views - a.views)
     .slice(0, 5)
 

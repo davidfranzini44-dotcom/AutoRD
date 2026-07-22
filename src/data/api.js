@@ -1034,6 +1034,75 @@ export async function ibSend(convId, body) {
   return { ok: true }
 }
 
+// ---------------- Dealer CRM (leads pipeline, backed by wa_ib conversations) ----------------
+const relTime = (ts) => {
+  if (!ts) return '—'
+  const min = Math.round((Date.now() - new Date(ts).getTime()) / 60000)
+  if (min < 1) return 'Ahora'
+  if (min < 60) return `Hace ${min} min`
+  const h = Math.round(min / 60)
+  if (h < 24) return `Hace ${h} h`
+  const d = Math.round(h / 24)
+  if (d === 1) return 'Ayer'
+  if (d < 30) return `Hace ${d} días`
+  return new Date(ts).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' })
+}
+
+function mapLead(r) {
+  const kycAt = r.kyc_verified_at ? new Date(r.kyc_verified_at) : null
+  const kycValid = kycAt ? (Date.now() - kycAt.getTime()) < 365 * 86_400_000 : false
+  const created = r.created_at ? new Date(r.created_at) : null
+  const today = created ? created.toDateString() === new Date().toDateString() : false
+  return {
+    id: r.id,
+    customer: r.wa_name || 'Cliente de WhatsApp',
+    phone: r.wa_phone,
+    stage: r.stage || 'nuevo',
+    salesperson: r.salesperson || null,
+    notes: r.notes || '',
+    followUpAt: r.follow_up_at || null,
+    unread: r.unread || 0,
+    last: relTime(r.last_message_at),
+    lastAt: r.last_message_at || null,
+    lastText: r.last_text || '',
+    createdAt: r.created_at || null,
+    today,
+    hot: ['financiamiento', 'negociando', 'reservado'].includes(r.stage),
+    kycVerified: kycValid,
+    kycAt: r.kyc_verified_at || null,
+    vehicle: r.vehicle_id ? {
+      id: r.vehicle_slug,
+      name: `${r.vehicle_make || ''} ${r.vehicle_model || ''} ${r.vehicle_year || ''}`.replace(/\s+/g, ' ').trim(),
+      make: r.vehicle_make, model: r.vehicle_model, year: r.vehicle_year,
+      price: r.vehicle_price != null ? Number(r.vehicle_price) : null,
+      currency: r.vehicle_currency || 'DOP',
+    } : null,
+  }
+}
+
+// Real leads for the dealer CRM (WhatsApp conversations + vehicle + KYC status).
+export async function getDealerLeads() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('wa_ib_leads')
+  if (error) return []
+  return (data || []).map(mapLead)
+}
+
+// Patch a lead's pipeline fields (owner-scoped via RPC).
+export async function updateLead(conversationId, { stage, salesperson, notes, followUp, clearFollow } = {}) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { error } = await supabase.rpc('wa_ib_update_lead', {
+    p_conversation: conversationId,
+    p_stage: stage ?? null,
+    p_salesperson: salesperson ?? null,
+    p_notes: notes ?? null,
+    p_follow_up: followUp ?? null,
+    p_clear_follow: !!clearFollow,
+  })
+  if (error) throw error
+  return { ok: true }
+}
+
 // ---------------- helpers ----------------
 function mapBankStatus(s) {
   return ({ oferta: 'offer', preaprobada: 'offer', en_evaluacion: 'evaluating',
