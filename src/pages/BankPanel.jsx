@@ -478,7 +478,8 @@ function DecisionForm({ a, bank }) {
   const [expires, setExpires] = useState(''); const [conditions, setConditions] = useState('')
   const [custMsg, setCustMsg] = useState(''); const [internal, setInternal] = useState('')
   const [reason, setReason] = useState('')
-  const [toDealer, setToDealer] = useState(true); const [toCustomer, setToCustomer] = useState(true)
+  // A pre-approval has no vehicle/dealer, so there is no dealer to notify.
+  const [toDealer, setToDealer] = useState(!a.isPreapproval); const [toCustomer, setToCustomer] = useState(true)
   const [docSel, setDocSel] = useState(['Comprobante de ingresos'])
   const [preview, setPreview] = useState(false)
   const [sent, setSent] = useState(false)
@@ -551,9 +552,10 @@ function DecisionForm({ a, bank }) {
           <F label={decision === 'rejected' ? 'Mensaje al cliente (opcional)' : 'Mensaje al cliente'} style={{ marginTop: 10 }}><textarea className="input" rows={2} value={custMsg} onChange={(e) => setCustMsg(e.target.value)} placeholder="Texto que verá el cliente" /></F>
           <F label={`Nota interna${decision === 'rejected' ? ' (requerida)' : ''}`}><textarea className="input" rows={2} value={internal} onChange={(e) => setInternal(e.target.value)} placeholder="Solo para el banco" /></F>
           <div className="row wrap gap-14" style={{ marginTop: 8 }}>
-            <label className="row center gap-6 small"><input type="checkbox" checked={toDealer} onChange={(e) => setToDealer(e.target.checked)} /> Enviar al dealer</label>
+            {!a.isPreapproval && <label className="row center gap-6 small"><input type="checkbox" checked={toDealer} onChange={(e) => setToDealer(e.target.checked)} /> Enviar al dealer</label>}
             <label className="row center gap-6 small"><input type="checkbox" checked={toCustomer} onChange={(e) => setToCustomer(e.target.checked)} /> Enviar al cliente</label>
           </div>
+          {a.isPreapproval && <div className="tiny muted" style={{ marginTop: 4 }}><Info size={12} style={{ verticalAlign: -2 }} /> Pre-aprobación sin vehículo — no hay dealer, solo se notifica al cliente.</div>}
         </>
       )}
 
