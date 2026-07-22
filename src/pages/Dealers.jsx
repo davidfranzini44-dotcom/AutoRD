@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight, MessageCircle } from 'lucide-react'
 import CarImage from '../components/CarImage'
+import DealerLogo from '../components/DealerLogo'
 import DealersMap from '../components/DealersMap'
 import { listDealers } from '../data/api'
 import { BODY_TYPES, TYPE_LABELS } from '../data/bodyTypes'
@@ -158,7 +159,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
   return (
     <article className={`dealer-row ${active ? 'active' : ''}`} onClick={onSelect}>
       <div className="row center gap-12">
-        <div className="dealer-mark">{d.initials}</div>
+        <DealerLogo dealer={d} />
         <div className="grow" style={{ minWidth: 0 }}>
           <div className="row center gap-6"><strong>{d.name}</strong>{d.verified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
           <div className="tiny muted row center gap-4" style={{ marginTop: 2 }}>

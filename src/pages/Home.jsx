@@ -9,6 +9,7 @@ import {
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
 import BrandLogo from '../components/BrandLogo'
+import DealerLogo from '../components/DealerLogo'
 import PriceSignal from '../components/PriceSignal'
 import heroVehiclePhoto from '../assets/cars/suv-1.jpg'
 import { BODY_TYPES } from '../data/bodyTypes'
@@ -115,7 +116,7 @@ export default function Home() {
   }, [])
   const homeDealers = dealers.length
     ? [...dealers].sort((a, b) => (b.verified ? 1 : 0) - (a.verified ? 1 : 0)).slice(0, 3)
-        .map((d) => ({ name: d.name, slug: d.slug, initials: d.initials, location: d.city || 'RD', inventory: d.vehicles.length, verified: d.verified }))
+        .map((d) => ({ name: d.name, slug: d.slug, initials: d.initials, logoUrl: d.logoUrl, location: d.city || 'RD', inventory: d.vehicles.length, verified: d.verified }))
     : VERIFIED_DEALERS
 
   // "Explorar por tipo" shows 6 at a time; the arrow pages to the other types.
@@ -559,7 +560,7 @@ function RecentCard({ v }) {
 function DealerCard({ dealer }) {
   const inner = (
     <>
-      <div className="dealer-mark">{dealer.initials}</div>
+      <DealerLogo dealer={dealer} />
       <div className="dealer-main">
         <div className="dealer-name">
           <strong>{dealer.name}</strong>

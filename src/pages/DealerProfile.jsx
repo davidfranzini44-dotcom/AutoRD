@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft, MapPin, BadgeCheck, Navigation, Phone, Car, Clock, MessageCircle, Star, CalendarDays } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
+import DealerLogo from '../components/DealerLogo'
 import { getDealerBySlug } from '../data/api'
 import { dealerCoords, directionsUrl } from '../data/geo'
 
@@ -70,7 +71,7 @@ export default function DealerProfile() {
           <div style={{ height: 96, background: 'linear-gradient(120deg, var(--teal-800), var(--teal-600, #0f766e))' }} />
           <div className="card-pad" style={{ paddingTop: 0 }}>
             <div className="row wrap gap-16" style={{ alignItems: 'flex-end', marginTop: -32 }}>
-              <div className="dealer-mark" style={{ width: 76, height: 76, fontSize: 24, border: '3px solid var(--surface, #fff)', boxShadow: 'var(--shadow-sm, 0 2px 8px rgba(0,0,0,.12))' }}>{d.initials}</div>
+              <DealerLogo dealer={d} style={{ width: 76, height: 76, fontSize: 24, border: '3px solid var(--surface, #fff)', boxShadow: 'var(--shadow-sm, 0 2px 8px rgba(0,0,0,.12))' }} />
               <div className="grow" style={{ minWidth: 0, paddingBottom: 2 }}>
                 <div className="row center gap-8"><h1 style={{ fontSize: 24 }}>{d.name}</h1>{d.verified && <BadgeCheck size={20} color="var(--teal-700)" />}</div>
                 <div className="row center gap-10 wrap" style={{ marginTop: 4 }}>

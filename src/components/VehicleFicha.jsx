@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
+import DealerLogo from './DealerLogo'
 import PriceSignal from './PriceSignal'
 import { fmtRD } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
@@ -128,7 +129,7 @@ function FichaShell({ v, close }) {
           )}
 
           <div className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12 }}>
-            <div className="avatar" style={{ width: 36, height: 36, fontSize: 12, background: 'var(--navy-800)' }}>{initials}</div>
+            <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
             <div className="grow">
               <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
               <div className="tiny muted">{v.dealerVerified ? 'Dealer verificado' : 'Vendedor particular'}</div>

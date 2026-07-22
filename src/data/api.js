@@ -72,6 +72,7 @@ const JOSELITO_FALLBACK_DEALER = {
   id: JOSELITO_SLUG,
   name: 'Joselito Auto Import',
   slug: JOSELITO_SLUG,
+  logoUrl: '/dealer-logos/joselito-auto-import.jpg',
   city: 'Santiago',
   verified: true,
   initials: 'JA',
@@ -103,6 +104,7 @@ function joselitoFallbackVehicles({ tab = 'todos', dealer = JOSELITO_FALLBACK_DE
       dealerSlug: dealer.slug || v.dealerSlug,
       dealerWhatsapp: dealer.whatsapp || v.dealerWhatsapp,
       dealerPhone: dealer.phone || v.dealerPhone,
+      dealerLogoUrl: dealer.logoUrl || v.dealerLogoUrl || JOSELITO_FALLBACK_DEALER.logoUrl,
       dealerDbId: dealer.id && dealer.id !== JOSELITO_SLUG ? dealer.id : v.dealerDbId || null,
     }))
 }
@@ -118,6 +120,7 @@ function mergeVehiclesById(primary, fallback) {
       photoUrls: v.photoUrls?.length ? v.photoUrls : (f.photoUrls || []),
       photoRows: v.photoRows?.length ? v.photoRows : (f.photoRows || []),
       photos: v.photos || f.photos,
+      dealerLogoUrl: v.dealerLogoUrl || f.dealerLogoUrl,
     }
   })
   const seen = new Set(primary.map((v) => v.id))
@@ -137,7 +140,7 @@ function withJoselitoDealerFallback(dealer) {
     dealer.vehicles || [],
     joselitoFallbackVehicles({ dealer }),
   )
-  return { ...dealer, vehicles: withPriceInsights(vehicles) }
+  return { ...dealer, logoUrl: dealer.logoUrl || JOSELITO_FALLBACK_DEALER.logoUrl, vehicles: withPriceInsights(vehicles) }
 }
 
 // ---------------- Vehicles ----------------

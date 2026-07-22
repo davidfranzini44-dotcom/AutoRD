@@ -2553,6 +2553,24 @@ select.preap-input { padding-right: 16px; }
 .dealer-row:hover { border-color: var(--teal-700); }
 .dealer-row.active { border-color: var(--teal-700); box-shadow: inset 0 0 0 1px var(--teal-700); }
 .dealer-mark { width: 46px; height: 46px; flex: none; border-radius: 12px; background: var(--navy-800); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; }
+.dealer-logo-mark.has-logo {
+  background: #fff;
+  color: transparent;
+  border: 1px solid var(--line);
+  padding: 4px;
+  overflow: hidden;
+}
+.dealer-logo-mark.has-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+}
+.dealer-card .dealer-logo-mark {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+}
 .dealer-cars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
 .dealer-car { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; cursor: pointer; text-align: left; padding: 0; }
 .dealer-car:hover { border-color: var(--teal-700); }

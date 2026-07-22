@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import CarImage from '../components/CarImage'
 import ContactDealer from '../components/ContactDealer'
+import DealerLogo from '../components/DealerLogo'
 import MiniMap from '../components/MiniMap'
 import PriceSignal from '../components/PriceSignal'
 import { directionsUrl } from '../data/geo'
@@ -294,9 +295,7 @@ export default function VehicleDetail() {
             <div className="card card-pad">
               <div className="small strong" style={{ marginBottom: 10 }}>Concesionario</div>
               <div className="row center gap-12">
-                <div className="avatar" style={{ width: 44, height: 44, background: 'var(--navy-800)' }}>
-                  {v.dealer.split(' ').map((w) => w[0]).slice(0, 2).join('')}
-                </div>
+                <DealerLogo dealer={{ name: v.dealer, initials: v.dealer.split(' ').map((w) => w[0]).slice(0, 2).join(''), logoUrl: v.dealerLogoUrl }} style={{ width: 44, height: 44, borderRadius: 10 }} />
                 <div className="grow">
                   <div className="row center gap-6">
                     <span className="strong">{v.dealer}</span>
