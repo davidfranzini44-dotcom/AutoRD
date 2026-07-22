@@ -12,6 +12,7 @@ import {
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
+import CarImage from '../components/CarImage'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { BRANDS, YEARS, TRANSMISSIONS, FUELS, COLORS, CONDITIONS, ACCESSORIES } from '../data/vehicleOptions'
 import { listingScore } from '../data/dealerDemo'
@@ -348,6 +349,16 @@ export default function DealerPanel({ view = 'resumen' }) {
     if (ql && !`${v.make} ${v.model} ${v.trim || ''} ${v.year}`.toLowerCase().includes(ql)) return false
     return true
   })
+  const inventoryScores = inventory.map((v) => listingScore(v))
+  const avgListingScore = inventoryScores.length
+    ? Math.round(inventoryScores.reduce((s, r) => s + r.score, 0) / inventoryScores.length)
+    : 0
+  const publishedCount = inventory.filter((v) => (v.status || 'publicado') === 'publicado').length
+  const reservedCount = inventory.filter((v) => v.status === 'reservado').length
+  const soldCount = inventory.filter((v) => v.status === 'vendido').length
+  const draftCount = inventory.filter((v) => v.status === 'borrador').length
+  const totalViews = inventory.reduce((s, v) => s + Number(v.views || 0), 0)
+  const totalRequests = inventory.reduce((s, v) => s + Number(v.requests || 0), 0)
 
   return (
     <div>
@@ -425,7 +436,24 @@ export default function DealerPanel({ view = 'resumen' }) {
       )}
 
       {view === 'inventario' && (
-        <div className="card">
+        <>
+        <div className="dealer-inventory-summary">
+          <div className="dealer-inventory-health">
+            <span>Calidad promedio</span>
+            <strong>{avgListingScore}%</strong>
+            <div className="dealer-health-track"><i style={{ width: `${Math.max(4, avgListingScore)}%` }} /></div>
+          </div>
+          <div className="dealer-inventory-summary-grid">
+            <div><strong>{publishedCount}</strong><span>Publicados</span></div>
+            <div><strong>{reservedCount}</strong><span>Reservados</span></div>
+            <div><strong>{soldCount}</strong><span>Vendidos</span></div>
+            <div><strong>{draftCount}</strong><span>Borradores</span></div>
+            <div><strong>{totalViews.toLocaleString('es-DO')}</strong><span>Vistas</span></div>
+            <div><strong>{totalRequests}</strong><span>Solic. fin.</span></div>
+          </div>
+        </div>
+
+        <div className="card dealer-inventory-shell">
           {/* Lookup toolbar — text + brand + status for faster management */}
           <div className="row wrap between center gap-8" style={{ padding: '12px 16px', borderBottom: '1px solid var(--line-2, #e2e8f0)' }}>
             <div className="row wrap center gap-8">
@@ -448,7 +476,7 @@ export default function DealerPanel({ view = 'resumen' }) {
             </div>
             <span className="tiny muted row center gap-4"><Filter size={13} /> {filteredInventory.length} de {inventory.length}</span>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap dealer-inventory-table">
             <table className="table">
               <thead>
                 <tr>
@@ -504,7 +532,51 @@ export default function DealerPanel({ view = 'resumen' }) {
               </tbody>
             </table>
           </div>
+
+          <div className="dealer-inventory-mobile">
+            {filteredInventory.map((r) => {
+              const name = r.vehicle || `${r.make} ${r.model} ${r.year}`
+              const isSold = r.status === 'vendido'
+              const busy = busyId === r.dbId
+              const quality = listingScore(r)
+              return (
+                <article className="dealer-inventory-card" key={r.id}>
+                  <button type="button" className="dealer-inventory-card-head" onClick={() => { setMenuFor(null); setEditing(r) }}>
+                    <div className="dealer-inventory-photo">
+                      <CarImage make={r.make} model={r.model} bodyType={r.bodyType} seed={r.id} tone={r.tone} photo={r.coverPhoto} />
+                    </div>
+                    <span className="grow">
+                      <span className="row wrap center gap-6">{estadoChip(r.status)}{scoreChip(r)}</span>
+                      <strong>{name}</strong>
+                      <small>{r.trim ? `${r.trim} · ` : ''}{r.photos || 0} foto{Number(r.photos || 0) === 1 ? '' : 's'}</small>
+                      <b>{fmtMoney(r.price, r.currency)}</b>
+                    </span>
+                    <ChevronRight size={17} className="muted" />
+                  </button>
+                  <div className="dealer-inventory-stats">
+                    <span><Eye size={13} /> {(r.views || 0).toLocaleString('es-DO')} vistas</span>
+                    <span><Users size={13} /> {r.leads ?? 0} leads</span>
+                    <span><FileText size={13} /> {r.requests ?? 0} fin.</span>
+                  </div>
+                  {quality.missing.length > 0 && (
+                    <div className="dealer-inventory-warning">Falta: {quality.missing.slice(0, 3).join(', ')}</div>
+                  )}
+                  <div className="dealer-inventory-actions">
+                    <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => { setMenuFor(null); setEditing(r) }}><Pencil size={14} /> Editar</button>
+                    <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => toggleSold(r)}>
+                      {isSold ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
+                      {isSold ? 'Reactivar' : 'Vendido'}
+                    </button>
+                    <a href={`/vehiculo/${r.id}`} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm"><ExternalLink size={14} /> Ver</a>
+                  </div>
+                </article>
+              )
+            })}
+            {inventory.length === 0 && <div className="muted" style={{ textAlign: 'center', padding: 24 }}>Aún no tienes vehículos publicados.</div>}
+            {inventory.length > 0 && filteredInventory.length === 0 && <div className="muted" style={{ textAlign: 'center', padding: 24 }}>Ningún vehículo coincide con tu búsqueda.</div>}
+          </div>
         </div>
+        </>
       )}
 
       {editing && (
