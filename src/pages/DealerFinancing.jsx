@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet,
+  MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck,
 } from 'lucide-react'
 import { getDealerData } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
-import { buildFinancing, FIN_STAGES, finStage } from '../data/dealerDemo'
+import { buildFinancing, FIN_STAGES, finStage, kycLink } from '../data/dealerDemo'
+
+const ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
+const kycAppMsg = (a) => `Hola ${a.customer}, para continuar con tu financiamiento del ${a.vehicle.name} primero verifica tu identidad (cédula + prueba de vida, sin crear cuenta, ~2 min): ${kycLink(ORIGIN, { vehiculo: a.vehicle.id, nombre: a.customer })}`
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waLink = (phone, text) => `https://wa.me/${digits(phone)}?text=${encodeURIComponent(text)}`
@@ -93,7 +96,8 @@ export default function DealerFinancing() {
 
             <div className="row wrap gap-8">
               <button className="btn btn-outline btn-sm" onClick={() => setActive(a)}><Eye size={14} /> Ver solicitud</button>
-              {a.missing.length > 0 && <a className="btn btn-outline btn-sm" href={waLink(a.phone, docMsg(a))} target="_blank" rel="noreferrer"><FileText size={14} /> Solicitar documentos</a>}
+              {a.status === 'kyc_pendiente' && <a className="btn btn-navy btn-sm" href={waLink(a.phone, kycAppMsg(a))} target="_blank" rel="noreferrer"><ShieldCheck size={14} /> Solicitar KYC</a>}
+              {a.missing.length > 0 && a.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-sm" href={waLink(a.phone, docMsg(a))} target="_blank" rel="noreferrer"><FileText size={14} /> Solicitar documentos</a>}
               <a className="btn btn-outline btn-sm" href={waLink(a.phone, offerMsg(a))} target="_blank" rel="noreferrer"><Send size={14} /> Enviar oferta</a>
               <a className="btn btn-sm" href={waLink(a.phone, `Hola ${a.customer}, le contactamos por su financiamiento del ${a.vehicle.name}.`)} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', border: 'none' }}><MessageCircle size={14} /> WhatsApp</a>
             </div>
@@ -170,7 +174,8 @@ function AppDrawer({ app, onClose }) {
           )}
 
           <div className="row wrap gap-8">
-            {app.missing.length > 0 && <a className="btn btn-outline btn-block" href={waLink(app.phone, docMsg(app))} target="_blank" rel="noreferrer"><FileText size={15} /> Solicitar documentos</a>}
+            {app.status === 'kyc_pendiente' && <a className="btn btn-navy btn-block" href={waLink(app.phone, kycAppMsg(app))} target="_blank" rel="noreferrer"><ShieldCheck size={15} /> Solicitar verificación (KYC)</a>}
+            {app.missing.length > 0 && app.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-block" href={waLink(app.phone, docMsg(app))} target="_blank" rel="noreferrer"><FileText size={15} /> Solicitar documentos</a>}
             <a className="btn btn-primary btn-block" href={waLink(app.phone, offerMsg(app))} target="_blank" rel="noreferrer"><Send size={15} /> Enviar oferta al cliente</a>
           </div>
         </div>

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Search, MessageCircle, Phone, X, CalendarClock, Car, FileText, Landmark, User, Clock,
+  Search, MessageCircle, Phone, X, CalendarClock, Car, FileText, Landmark, User, Clock, ShieldCheck,
 } from 'lucide-react'
 import { getDealerData } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
-import { buildLeads, LEAD_STAGES, SALESPEOPLE, finStage } from '../data/dealerDemo'
+import { buildLeads, LEAD_STAGES, SALESPEOPLE, finStage, kycLink } from '../data/dealerDemo'
+
+// A lead has verified identity once financing moved past the "KYC pendiente" gate.
+const kycDone = (l) => !!l.fin && l.fin !== 'kyc_pendiente'
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waLink = (phone, text) => `https://wa.me/${digits(phone)}?text=${encodeURIComponent(text)}`
@@ -106,6 +109,9 @@ export default function DealerLeads() {
 
 function LeadDrawer({ lead, onClose }) {
   const st = LEAD_STAGES.find((s) => s.key === lead.stage)
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const verifyLink = kycLink(origin, { vehiculo: lead.vehicle?.id, nombre: lead.customer })
+  const kycMsg = `Hola ${lead.customer}, para avanzar con el ${lead.vehicle?.name || 'vehículo'} necesitamos verificar tu identidad (cédula + prueba de vida, sin crear cuenta, ~2 min). Hazlo aquí: ${verifyLink}`
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', zIndex: 70, display: 'flex', justifyContent: 'flex-end' }} onClick={onClose}>
       <aside style={{ width: 'min(440px, 100%)', height: '100%', background: 'var(--surface, #fff)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -140,6 +146,19 @@ function LeadDrawer({ lead, onClose }) {
                 {lead.amount ? <Row k="Monto solicitado" v={fmtMoney(lead.amount, 'DOP')} /> : null}
                 {lead.down ? <Row k="Inicial" v={fmtMoney(lead.down, 'DOP')} /> : null}
                 {lead.income ? <Row k="Ingreso mensual" v={fmtMoney(lead.income, 'DOP')} /> : null}
+              </div>
+            )}
+          </Section>
+
+          <Section title="Verificación de identidad">
+            {kycDone(lead) ? (
+              <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><ShieldCheck size={12} /> Identidad verificada</span>
+            ) : (
+              <div className="col gap-8">
+                <div className="tiny muted">Este cliente aún no ha verificado su identidad. Envíale el enlace para que lo haga en 2 minutos (sin crear cuenta).</div>
+                <a className="btn btn-navy btn-block" href={waLink(lead.phone, kycMsg)} target="_blank" rel="noreferrer" style={{ justifyContent: 'center' }}>
+                  <ShieldCheck size={15} /> Solicitar verificación (KYC)
+                </a>
               </div>
             )}
           </Section>

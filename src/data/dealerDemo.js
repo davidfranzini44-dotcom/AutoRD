@@ -33,6 +33,16 @@ export const FIN_STAGES = [
 ]
 export const finStage = (key) => FIN_STAGES.find((s) => s.key === key) || FIN_STAGES[0]
 
+// Standalone identity-verification link a dealer sends a customer who hasn't
+// done KYC (points at the /verificar page).
+export function kycLink(origin, { vehiculo, nombre } = {}) {
+  const p = new URLSearchParams()
+  if (vehiculo) p.set('vehiculo', vehiculo)
+  if (nombre) p.set('nombre', nombre)
+  const qs = p.toString()
+  return `${origin || ''}/verificar${qs ? `?${qs}` : ''}`
+}
+
 // Fallback vehicles when the dealer has little/no inventory loaded.
 const FALLBACK_VEH = [
   { name: 'Toyota RAV4 2021', make: 'Toyota', model: 'RAV4', bodyType: 'SUV', price: 1850000, currency: 'DOP', tone: '#e2e8f0' },
