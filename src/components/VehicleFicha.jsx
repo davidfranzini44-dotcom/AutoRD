@@ -95,10 +95,10 @@ function FichaShell({ v, close }) {
 
           <div className="vloc small"><MapPin size={14} /> {v.location}</div>
           <div className="ficha-price">{fmtMoney(v.price, v.currency)}</div>
-          <PriceSignal insight={v.priceInsight} />
+          <div className="ficha-price-signal"><PriceSignal insight={v.priceInsight} /></div>
 
           {v.price ? (
-            <div className="est-card">
+            <div className="est-card ficha-payment-card">
               <div className="row between center">
                 <div>
                   <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Desde</div>
@@ -133,13 +133,13 @@ function FichaShell({ v, close }) {
           </div>
 
           {v.description && (
-            <p className="small" style={{ color: 'var(--ink-2)', lineHeight: 1.6 }}>
+            <p className="small ficha-description" style={{ color: 'var(--ink-2)', lineHeight: 1.6 }}>
               {v.description.length > 170 ? v.description.slice(0, 170) + '…' : v.description}
             </p>
           )}
 
           {v.dealerSlug ? (
-            <Link to={`/dealers/${v.dealerSlug}`} onClick={close} className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12, color: 'inherit' }}>
+            <Link to={`/dealers/${v.dealerSlug}`} onClick={close} className="row center gap-10 ficha-dealer-row" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12, color: 'inherit' }}>
               <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
               <div className="grow">
                 <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
@@ -148,7 +148,7 @@ function FichaShell({ v, close }) {
               <ChevronRight size={18} className="muted" />
             </Link>
           ) : (
-            <div className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12 }}>
+            <div className="row center gap-10 ficha-dealer-row" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12 }}>
               <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
               <div className="grow">
                 <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
@@ -167,7 +167,7 @@ function FichaShell({ v, close }) {
             <Share2 size={16} /> {shareMsg || 'Compartir link'}
           </button>
           <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block ficha-action-contact" triggerLabel={`Contactar a ${v.dealer}`} />
-          <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm ficha-action-full" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
+          <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm ficha-action-full" onClick={close}>Ver todos los detalles <ChevronRight size={16} /></Link>
         </div>
       </aside>
     </div>

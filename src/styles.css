@@ -2558,27 +2558,35 @@ select.preap-input { padding-right: 16px; }
     transform: translateX(-50%);
   }
   .ficha-photo {
-    height: clamp(172px, 31dvh, 236px);
+    height: clamp(150px, 28dvh, 214px);
   }
   .ficha-photo .gallery-nav {
     width: 34px;
     height: 34px;
   }
   .ficha-body {
-    padding: 14px 14px 108px;
-    gap: 10px;
-    overflow-y: auto;
+    flex: 0 0 auto;
+    padding: 12px 14px 78px;
+    gap: 8px;
+    overflow: hidden;
     overscroll-behavior: contain;
   }
   .ficha-body h2 {
-    font-size: 18px !important;
+    font-size: 17px !important;
   }
   .ficha-price {
-    font-size: 24px;
+    font-size: 23px;
   }
   .ficha-body .est-card {
     margin-top: 0;
-    padding: 12px;
+    padding: 10px;
+  }
+  .ficha-payment-card .tiny {
+    line-height: 1.2;
+  }
+  .ficha-description,
+  .ficha-dealer-row {
+    display: none !important;
   }
   .ficha-mobile-quick-actions {
     display: grid;
@@ -2588,9 +2596,9 @@ select.preap-input { padding-right: 16px; }
   .ficha-mobile-quick-actions .btn {
     width: 100%;
     min-width: 0;
-    height: 40px;
+    height: 38px;
     padding: 0 8px;
-    font-size: 12px;
+    font-size: 11.5px;
     overflow: hidden;
   }
   .ficha-mobile-quick-actions .btn svg {
@@ -2601,8 +2609,8 @@ select.preap-input { padding-right: 16px; }
     gap: 8px;
   }
   .ficha-specs .spec-item {
-    padding: 10px;
-    min-height: 62px;
+    padding: 8px;
+    min-height: 56px;
   }
   .ficha-specs .si-l {
     font-size: 10px;
@@ -2619,7 +2627,7 @@ select.preap-input { padding-right: 16px; }
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
     gap: 8px;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
     border-top: 1px solid rgba(216,228,231,.9);
     background: rgba(255,255,255,.96);
     box-shadow: 0 -10px 28px rgba(16,41,63,.12);
@@ -2631,7 +2639,7 @@ select.preap-input { padding-right: 16px; }
   }
   .ficha-actions .btn {
     min-width: 0;
-    height: 44px;
+    height: 42px;
     padding: 0 10px;
     font-size: 12.5px;
     white-space: normal;
@@ -2647,6 +2655,14 @@ select.preap-input { padding-right: 16px; }
     font-size: 12px;
   }
   @keyframes fichaSlideY { from { transform: translateY(100%); } to { transform: none; } }
+}
+@media (max-width: 560px) and (max-height: 720px) {
+  .ficha-photo { height: 138px; }
+  .ficha-price-signal { display: none; }
+  .ficha-body { gap: 7px; padding-top: 10px; }
+  .ficha-mobile-quick-actions .btn { height: 36px; font-size: 11px; }
+  .ficha-specs .spec-item { min-height: 52px; padding: 7px; }
+  .ficha-actions .btn { height: 40px; }
 }
 .vcard-click, .recent-card { cursor: pointer; }
 .vcard-click:focus-visible, .recent-card:focus-visible { outline: 2px solid var(--teal-700); outline-offset: 2px; }
