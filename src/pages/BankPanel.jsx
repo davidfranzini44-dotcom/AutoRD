@@ -1,50 +1,48 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
-  Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search,
-  ShieldCheck, FileCheck2, Car, Building2, Upload, Info, Landmark, Send,
-  FileText, ExternalLink, Plus,
+  Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search, ShieldCheck, FileCheck2,
+  Car, Upload, Info, Landmark, Send, FileText, ExternalLink, Plus, Clock, Users,
+  AlertTriangle, ChevronLeft, UserCheck, Phone, Mail, MapPin, Briefcase, Eye, X,
+  MessageSquare, ClipboardList, CalendarClock, Filter,
 } from 'lucide-react'
 import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
-  getApplicationDocuments,
-  getBankApplications,
-  getDocumentDownloadUrl,
-  requestApplicationDocuments,
-  submitBankResponse,
+  getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
+  requestApplicationDocuments, submitBankResponse,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
+import CarImage from '../components/CarImage'
 import useBankIdentity from '../hooks/useBankIdentity'
+import {
+  REVIEWERS, DOC_TYPES, DOC_STATUS, TONE, enrichApp, bankStats,
+} from '../data/bankDemo'
 
 const FILTERS = [
-  { id: 'todas', label: 'Todas' },
-  { id: 'nueva', label: 'Nueva' },
-  { id: 'evaluando', label: 'En evaluación' },
-  { id: 'docs', label: 'Pendiente documentos' },
-  { id: 'preaprobada', label: 'Pre-aprobada' },
-  { id: 'rechazada', label: 'Rechazada' },
+  { id: 'todas', label: 'Todas' }, { id: 'nueva', label: 'Nueva' },
+  { id: 'evaluando', label: 'En evaluación' }, { id: 'docs', label: 'Pendiente docs' },
+  { id: 'preaprobada', label: 'Pre-aprobada' }, { id: 'rechazada', label: 'Rechazada' },
 ]
-
-const METRIC = [
-  { icon: Inbox, value: 12, label: 'Nuevas hoy' },
-  { icon: Loader2, value: 18, label: 'En evaluación' },
-  { icon: FileWarning, value: 5, label: 'Pendiente docs' },
-  { icon: CheckCircle2, value: 22, label: 'Pre-aprobadas' },
-]
-
-const DOC_TYPES = [
-  'Comprobante de ingresos',
-  'Carta de trabajo',
-  'Estados de cuenta',
-  'Certificacion laboral',
-  'Formulario del banco',
-]
+const Chip = ({ tone, children, style }) => {
+  const t = TONE[tone] || TONE.slate
+  return <span className="chip" style={{ background: t.bg, color: t.fg, ...style }}>{children}</span>
+}
 
 export default function BankPanel() {
   const [filter, setFilter] = useState('todas')
-  const [apps, setApps] = useState([])
+  const [raw, setRaw] = useState([])
   const [selId, setSelId] = useState(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [q, setQ] = useState('')
+  const [dealerF, setDealerF] = useState('')
+  const [reviewerF, setReviewerF] = useState('')
+  const [kycOnly, setKycOnly] = useState(false)
+  const [consentOnly, setConsentOnly] = useState(false)
+  const [docsOnly, setDocsOnly] = useState(false)
+  // Session overlays (no backend): reviewer assignment + internal notes per app.
+  const [overrides, setOverrides] = useState({}) // { [id]: { reviewer, notes:[] } }
   const { profile } = useAuth() || {}
   const bank = useBankIdentity(profile)
 
@@ -52,358 +50,560 @@ export default function BankPanel() {
     let alive = true
     getBankApplications(profile?.bank_id, 'todas').then((data) => {
       if (!alive) return
-      setApps(data)
-      setSelId((cur) => cur || data[0]?.id || null)
-    })
+      const enriched = (data || []).map(enrichApp)
+      setRaw(enriched)
+      setSelId((cur) => cur || enriched[0]?.id || null)
+    }).catch(() => {})
     return () => { alive = false }
   }, [profile?.bank_id])
 
-  const list = apps.filter((a) => filter === 'todas' || a.status === filter)
-  const sel = apps.find((a) => a.id === selId) || list[0]
+  const apps = useMemo(() => raw.map((a) => {
+    const o = overrides[a.id]
+    return o ? { ...a, reviewer: o.reviewer !== undefined ? o.reviewer : a.reviewer, notes: o.notes || [] } : a
+  }), [raw, overrides])
+
+  const dealers = [...new Set(apps.map((a) => a.dealer).filter(Boolean))].sort()
+  const stats = bankStats(apps)
+
+  const list = apps.filter((a) => {
+    if (filter !== 'todas' && a.status !== filter) return false
+    if (dealerF && a.dealer !== dealerF) return false
+    if (reviewerF && a.reviewer?.id !== reviewerF) return false
+    if (kycOnly && a.kyc !== 'aprobado') return false
+    if (consentOnly && !a.consent) return false
+    if (docsOnly && a.status !== 'docs') return false
+    if (q) {
+      const hay = `${a.customer} ${a.cedula} ${a.vehicle} ${a.dealer} ${a.id}`.toLowerCase()
+      if (!hay.includes(q.toLowerCase())) return false
+    }
+    return true
+  })
+  const sel = apps.find((a) => a.id === selId) || null
+
+  const openApp = (id) => { setSelId(id); setSheetOpen(true) }
+  const assignReviewer = (id, reviewer) => setOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), reviewer } }))
+  const addNote = (id, note) => setOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), notes: [{ ...note }, ...((o[id]?.notes) || [])] } }))
+
+  const queue = [
+    { key: 'lista', icon: CheckCircle2, tone: 'green', label: 'KYC + consentimiento — listas', n: apps.filter((a) => a.kyc === 'aprobado' && a.consent && a.status === 'evaluando').length, f: () => { setFilter('evaluando'); setKycOnly(true); setConsentOnly(true) } },
+    { key: 'ready', icon: FileCheck2, tone: 'teal', label: 'Documentos completos', n: apps.filter((a) => a.kyc === 'aprobado' && a.consent && a.status !== 'docs' && a.status !== 'nueva').length, f: () => { setKycOnly(true); setConsentOnly(true) } },
+    { key: 'wait', icon: AlertTriangle, tone: 'red', label: 'Esperando +24 h', n: stats.waiting.length, f: () => setFilter('todas') },
+    { key: 'docs', icon: FileWarning, tone: 'amber', label: 'Faltan documentos', n: stats.docs, f: () => { setFilter('docs'); setDocsOnly(true) } },
+  ]
+
+  const kpis = [
+    { icon: Inbox, v: stats.nuevas, l: 'Nuevas hoy' },
+    { icon: Loader2, v: stats.evaluando, l: 'En evaluación' },
+    { icon: FileWarning, v: stats.docs, l: 'Pendiente documentos' },
+    { icon: ClipboardList, v: stats.ready, l: 'Listas para decisión' },
+    { icon: CheckCircle2, v: stats.preaprobadas, l: 'Pre-aprobadas' },
+    { icon: Clock, v: stats.avgResponse, l: 'Tiempo prom. respuesta' },
+  ]
+
+  const activity = apps.slice(0, 6).map((a) => {
+    const ev = a.timeline[a.timeline.length - 1]
+    return { text: `${ev?.name || 'Actualización'} · ${a.customer}`, when: ev?.when || a.receivedAt }
+  })
 
   return (
     <main className="page">
       <div className="container">
         <div className="admin-head">
           <div className="row center gap-8">
-            <div className="bank-console-logo">
-              <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={32} />
-            </div>
+            <div className="bank-console-logo"><BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={32} /></div>
             <div>
-              <h1 style={{ fontSize: 22 }}>Panel del banco - {bank.name}</h1>
+              <h1 style={{ fontSize: 22 }}>Panel del banco · {bank.name}</h1>
               <p className="tiny muted">Revisa solicitudes y registra tus respuestas de crédito</p>
             </div>
           </div>
           <span className="chip chip-navy" style={{ height: 30 }}><ShieldCheck size={14} /> La evaluación de crédito la realiza el banco de forma externa</span>
         </div>
 
-        {/* Metrics */}
-        <div className="grid grid-4" style={{ marginBottom: 18 }}>
-          {METRIC.map((m) => {
-            const Icon = m.icon
-            return (
-              <div className="metric-card" key={m.label}>
-                <div className="mc-ic"><Icon size={19} /></div>
-                <div className="mc-v">{m.value}</div>
-                <div className="mc-l">{m.label}</div>
-              </div>
-            )
-          })}
+        {/* KPI cards */}
+        <div className="bank-kpis">
+          {kpis.map((k) => { const Icon = k.icon; return (
+            <div className="metric-card" key={k.l}><div className="mc-ic"><Icon size={18} /></div><div className="mc-v">{k.v}</div><div className="mc-l">{k.l}</div></div>
+          ) })}
+        </div>
+
+        {/* Priority queue + recent activity */}
+        <div className="bank-cmd">
+          <div className="card card-pad">
+            <div className="small strong row center gap-8" style={{ marginBottom: 10 }}><AlertTriangle size={15} color="#f59e0b" /> Cola de prioridad</div>
+            <div className="bank-queue">
+              {queue.map((p) => { const Icon = p.icon; const t = TONE[p.tone]; return (
+                <button key={p.key} className="bank-queue-item" onClick={p.f}>
+                  <div className="verify-ic" style={{ width: 34, height: 34, borderRadius: 9, background: t.bg, color: t.fg, flex: 'none' }}><Icon size={16} /></div>
+                  <div className="grow" style={{ minWidth: 0 }}><div className="strong" style={{ fontSize: 18 }}>{p.n}</div><div className="tiny muted">{p.label}</div></div>
+                </button>
+              ) })}
+            </div>
+          </div>
+          <div className="card card-pad">
+            <div className="small strong row center gap-8" style={{ marginBottom: 10 }}><Clock size={15} color="var(--teal-700)" /> Actividad reciente</div>
+            <div className="col">
+              {activity.map((e, i) => (
+                <div key={i} className="row gap-10 dash-activity"><div className="dash-act-ic"><FileText size={13} /></div><div className="grow"><div className="small">{e.text}</div><div className="tiny muted">{e.when}</div></div></div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
-        <div className="row between center wrap gap-12" style={{ marginBottom: 14 }}>
-          <div className="tabbar">
-            {FILTERS.map((f) => (
-              <button key={f.id} className={filter === f.id ? 'active' : ''} onClick={() => setFilter(f.id)}>{f.label}</button>
-            ))}
+        <div className="row between center wrap gap-10" style={{ marginBottom: 12 }}>
+          <div className="tabbar bank-tabbar">
+            {FILTERS.map((f) => <button key={f.id} className={filter === f.id ? 'active' : ''} onClick={() => setFilter(f.id)}>{f.label}</button>)}
           </div>
-          <div className="row center" style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: 10, color: 'var(--muted)' }} />
-            <input className="input" placeholder="Buscar por cliente o cédula…" style={{ height: 38, paddingLeft: 32, width: 240 }} />
+          <div className="row center gap-8">
+            <div className="row center" style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 10, color: 'var(--muted)' }} />
+              <input className="input" placeholder="Cliente, cédula, vehículo, ID…" value={q} onChange={(e) => setQ(e.target.value)} style={{ height: 38, paddingLeft: 32, width: 240 }} />
+            </div>
+            <button className={`btn btn-sm ${showFilters ? 'btn-navy' : 'btn-outline'}`} onClick={() => setShowFilters((s) => !s)}><Filter size={14} /> Filtros</button>
           </div>
         </div>
 
-        <div className="split">
-          {/* Queue */}
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr><th>ID</th><th>Solicitante</th><th>Vehículo</th><th className="num">Monto</th><th>KYC</th><th>Estado</th></tr>
-                </thead>
-                <tbody>
-                  {list.map((a) => (
-                    <tr key={a.id} onClick={() => setSelId(a.id)}
-                      style={{ cursor: 'pointer', background: a.id === selId ? 'var(--teal-50)' : undefined }}>
-                      <td className="mono-num tiny muted">{a.id}</td>
-                      <td className="strong">{a.customer}</td>
-                      <td className="muted">{a.vehicle || (a.isPreapproval ? <span className="chip chip-teal" style={{ height: 24 }}><Landmark size={12} /> Pre-aprobación</span> : '—')}</td>
-                      <td className="num">{a.amount ? fmtRD(a.amount) : '—'}</td>
-                      <td><StatusChip status={a.kyc} /></td>
-                      <td><span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span></td>
-                    </tr>
-                  ))}
-                  {list.length === 0 && <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 28 }}>Sin solicitudes en este estado.</td></tr>}
-                </tbody>
-              </table>
+        {showFilters && (
+          <div className="card card-pad bank-filters" style={{ marginBottom: 12 }}>
+            <div className="row wrap gap-10">
+              <label className="col gap-4"><span className="tiny strong">Dealer</span>
+                <select className="input" value={dealerF} onChange={(e) => setDealerF(e.target.value)} style={{ height: 38, minWidth: 160 }}>
+                  <option value="">Todos</option>{dealers.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </label>
+              <label className="col gap-4"><span className="tiny strong">Revisor</span>
+                <select className="input" value={reviewerF} onChange={(e) => setReviewerF(e.target.value)} style={{ height: 38, minWidth: 160 }}>
+                  <option value="">Todos</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="row wrap gap-8" style={{ marginTop: 12 }}>
+              <FilterToggle on={kycOnly} onClick={() => setKycOnly((v) => !v)}>KYC aprobado</FilterToggle>
+              <FilterToggle on={consentOnly} onClick={() => setConsentOnly((v) => !v)}>Consentimiento firmado</FilterToggle>
+              <FilterToggle on={docsOnly} onClick={() => setDocsOnly((v) => !v)}>Faltan documentos</FilterToggle>
+              {(dealerF || reviewerF || kycOnly || consentOnly || docsOnly) && (
+                <button className="btn btn-ghost btn-sm" onClick={() => { setDealerF(''); setReviewerF(''); setKycOnly(false); setConsentOnly(false); setDocsOnly(false) }}><X size={14} /> Limpiar</button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="bank-layout">
+          {/* List — table on desktop, cards on mobile */}
+          <div>
+            <div className="card bank-table-card">
+              <div className="table-wrap">
+                <table className="table bank-table">
+                  <thead><tr>
+                    <th>ID</th><th>Cliente</th><th>Vehículo</th><th>Dealer</th><th className="num">Monto</th>
+                    <th className="num">Ingreso</th><th>KYC</th><th>Consent.</th><th>Estado</th><th>Prioridad</th><th>Revisor</th>
+                  </tr></thead>
+                  <tbody>
+                    {list.map((a) => (
+                      <tr key={a.id} onClick={() => openApp(a.id)} style={{ cursor: 'pointer', background: a.id === selId ? 'var(--teal-50)' : undefined }}>
+                        <td className="mono-num tiny muted">{a.id}</td>
+                        <td><div className="strong small">{a.customer}</div><div className="tiny muted mono-num">{a.maskedCedula}</div></td>
+                        <td className="muted small">{a.vehicle || (a.isPreapproval ? <Chip tone="teal"><Landmark size={11} /> Pre-aprobación</Chip> : '—')}</td>
+                        <td className="muted small">{a.dealer || '—'}</td>
+                        <td className="num small">{a.amount ? fmtRD(a.amount) : '—'}</td>
+                        <td className="num tiny muted">{a.income ? fmtRD(a.income) : '—'}</td>
+                        <td><StatusChip status={a.kyc} /></td>
+                        <td>{a.consent ? <Chip tone="green"><FileCheck2 size={11} /> Sí</Chip> : <Chip tone="slate">No</Chip>}</td>
+                        <td><span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span></td>
+                        <td><Chip tone={a.priority.tone}>{a.priority.label}</Chip></td>
+                        <td className="tiny muted">{a.reviewer ? a.reviewer.name.split(' ')[0] : '—'}</td>
+                      </tr>
+                    ))}
+                    {list.length === 0 && <tr><td colSpan={11} className="muted" style={{ textAlign: 'center', padding: 28 }}>Sin solicitudes con estos filtros.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bank-cards">
+              {list.map((a) => (
+                <button key={a.id} className="card card-pad bank-app-card" onClick={() => openApp(a.id)}>
+                  <div className="row between center gap-8">
+                    <div className="strong small">{a.customer}</div>
+                    <span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span>
+                  </div>
+                  <div className="tiny muted mono-num" style={{ marginBottom: 6 }}>{a.id} · {a.maskedCedula}</div>
+                  <div className="tiny muted row center gap-4"><Car size={12} /> {a.vehicle || 'Pre-aprobación'} · {a.dealer || '—'}</div>
+                  <div className="row between center" style={{ marginTop: 8 }}>
+                    <span className="strong small">{a.amount ? fmtRD(a.amount) : 'Sin monto'}</span>
+                    <div className="row gap-4"><StatusChip status={a.kyc} /><Chip tone={a.priority.tone} style={{ fontSize: 10 }}>{a.priority.label}</Chip></div>
+                  </div>
+                </button>
+              ))}
+              {list.length === 0 && <div className="card card-pad muted small" style={{ textAlign: 'center' }}>Sin solicitudes con estos filtros.</div>}
             </div>
           </div>
 
-          {/* Detail + response */}
-          {sel && <ApplicationDetail key={sel.id} a={sel} />}
+          {/* Detail — side panel (desktop) / full-screen sheet (mobile) */}
+          <div className={`bank-detail ${sheetOpen ? 'sheet-open' : ''}`}>
+            {sel ? (
+              <ApplicationDetail key={sel.id} a={sel} onBack={() => setSheetOpen(false)}
+                onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
+            ) : <div className="card card-pad muted small">Selecciona una solicitud para revisarla.</div>}
+          </div>
         </div>
       </div>
     </main>
   )
 }
 
-function ApplicationDetail({ a }) {
-  const [decision, setDecision] = useState('')
-  const [rate, setRate] = useState('')
-  const [term, setTerm] = useState('7')
-  const [monthly, setMonthly] = useState('')
-  const [down, setDown] = useState('')
-  const [approvedAmount, setApprovedAmount] = useState('')
-  const [notes, setNotes] = useState('')
-  const [sent, setSent] = useState(false)
-  const [docSelection, setDocSelection] = useState(['Comprobante de ingresos'])
-  const [docNote, setDocNote] = useState('')
-  const [docBusy, setDocBusy] = useState(false)
-  const [docSent, setDocSent] = useState(false)
-  const [docError, setDocError] = useState('')
+function FilterToggle({ on, onClick, children }) {
+  return <button type="button" className="chip" onClick={onClick} style={{ cursor: 'pointer', background: on ? 'var(--teal-50)' : 'transparent', color: on ? 'var(--teal-700)' : 'var(--muted)', border: on ? '1px solid var(--teal-100)' : '1px solid var(--line)' }}>{on ? <CheckCircle2 size={13} /> : <Plus size={13} />} {children}</button>
+}
+
+function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
   const [docs, setDocs] = useState([])
+  const [docStatus, setDocStatus] = useState({}) // local overlay: { [docId]: status }
+  const [noteInput, setNoteInput] = useState('')
+  const [tab, setTab] = useState('revision') // revision | decision
 
   useEffect(() => {
     let alive = true
     const appId = a.applicationId || (a.status === 'docs' ? a.id : null)
     if (!appId) { setDocs([]); return () => { alive = false } }
-    getApplicationDocuments(appId)
-      .then((rows) => { if (alive) setDocs(rows) })
-      .catch(() => { if (alive) setDocs([]) })
+    getApplicationDocuments(appId).then((rows) => { if (alive) setDocs(rows) }).catch(() => { if (alive) setDocs([]) })
     return () => { alive = false }
   }, [a.applicationId, a.id, a.status])
 
-  const decisions = [
-    { id: 'approved', label: 'Pre-aprobar', icon: CheckCircle2, cls: 'btn-primary' },
-    { id: 'conditional', label: 'Condicional', icon: FileCheck2, cls: 'btn-navy' },
-    { id: 'docs', label: 'Pedir docs', icon: FileWarning, cls: 'btn-outline' },
-    { id: 'rejected', label: 'Rechazar', icon: XCircle, cls: 'btn-outline' },
-  ]
-  const needTerms = decision === 'approved' || decision === 'conditional'
-
-  const toggleDoc = (name) => {
-    setDocSelection((cur) => (
-      cur.includes(name) ? cur.filter((d) => d !== name) : [...cur, name]
-    ))
-  }
-
-  async function sendDocRequest() {
-    setDocError('')
-    setDocBusy(true)
-    try {
-      const res = await requestApplicationDocuments(a.responseId, docSelection, docNote)
-      const nextDocs = res?.documents || []
-      setDocs((cur) => {
-        const seen = new Set(cur.map((d) => d.id))
-        return [...nextDocs.filter((d) => !seen.has(d.id)), ...cur]
-      })
-      setDocSent(true)
-      setDecision('docs')
-    } catch (e) {
-      setDocError(e?.message || 'No se pudo enviar la solicitud de documentos.')
-    } finally {
-      setDocBusy(false)
-    }
-  }
-
-  async function openDocument(doc) {
-    setDocError('')
-    try {
-      const url = await getDocumentDownloadUrl(doc)
-      if (url) window.open(url, '_blank', 'noopener,noreferrer')
-    } catch (e) {
-      setDocError(e?.message || 'No se pudo abrir el documento.')
-    }
-  }
+  const [make, model, yr] = (a.vehicle || '').split(' ')
 
   return (
-    <aside className="side-panel col gap-16">
+    <aside className="col gap-14">
+      <button className="btn btn-ghost btn-sm bank-back" style={{ alignSelf: 'flex-start' }} onClick={onBack}><ChevronLeft size={16} /> Volver a la lista</button>
+
+      {/* Header + reviewer */}
       <div className="card card-pad">
-        <div className="row between center" style={{ marginBottom: 12 }}>
+        <div className="row between center" style={{ marginBottom: 10 }}>
           <div>
-            <div className="row center gap-8">
-              <div className="strong">{a.customer}</div>
-              {a.isPreapproval && <span className="chip chip-teal" style={{ height: 22 }}><Landmark size={12} /> Pre-aprobación</span>}
-            </div>
-            <div className="tiny muted mono-num">{a.id} · Cédula {a.cedula}</div>
+            <div className="row center gap-8"><div className="strong">{a.customer}</div>{a.isPreapproval && <Chip tone="teal"><Landmark size={11} /> Pre-aprobación</Chip>}</div>
+            <div className="tiny muted mono-num">{a.id} · Cédula {a.maskedCedula}</div>
           </div>
           <span className={`chip ${bankStatusMeta[a.status].chip}`}>{bankStatusMeta[a.status].label}</span>
         </div>
-
-        {/* Applicant summary */}
-        <SectionLabel icon={ShieldCheck} text="Solicitante y KYC" />
-        <div className="kv"><span className="k">Ingreso declarado</span><span className="v">{a.income ? `${fmtRD(a.income)}/mes` : '—'}</span></div>
-        <div className="kv"><span className="k">Tipo de empleo</span><span className="v">{a.employment || 'No indicado — puedes solicitar comprobantes'}</span></div>
-        <div className="kv"><span className="k">Estado KYC</span><span className="v"><StatusChip status={a.kyc} /></span></div>
-        <div className="kv"><span className="k">Consentimiento de crédito</span><span className="v"><span className="chip chip-green"><FileCheck2 size={13} /> Firmado</span></span></div>
-
-        {/* Vehicle + dealer / pre-approval */}
-        {a.isPreapproval ? (
-          <>
-            <SectionLabel icon={Landmark} text="Pre-aprobación (sin vehículo)" style={{ marginTop: 14 }} />
-            <div className="kv"><span className="k">Tipo de solicitud</span><span className="v">Pre-aprobación — el cliente aún no eligió vehículo</span></div>
-            <div className="kv"><span className="k">Monto deseado</span><span className="v">{a.amount ? fmtRD(a.amount) : 'Sin monto fijo'}</span></div>
-            {a.down ? <div className="kv"><span className="k">Inicial disponible</span><span className="v">{fmtRD(a.down)}</span></div> : null}
-            <div className="kv"><span className="k">Plazo solicitado</span><span className="v">{a.term ? `${a.term} años` : '—'}</span></div>
-            <div className="notice" style={{ marginTop: 12 }}>
-              <Info size={16} /><span>Indica el <strong>monto máximo</strong> que pre-apruebas. El cliente comprará un vehículo dentro de ese presupuesto y luego se vinculará a esta solicitud.</span>
-            </div>
-          </>
-        ) : (
-          <>
-            <SectionLabel icon={Car} text="Vehículo y dealer" style={{ marginTop: 14 }} />
-            <div className="kv"><span className="k">Vehículo</span><span className="v">{a.vehicle}</span></div>
-            <div className="kv"><span className="k">Dealer</span><span className="v">{a.dealer}</span></div>
-            <div className="kv"><span className="k">Monto solicitado</span><span className="v">{fmtRD(a.amount)}</span></div>
-            <div className="kv"><span className="k">Inicial</span><span className="v">{fmtRD(a.down)}{a.amount ? ` (${Math.round(a.down / a.amount * 100)}%)` : ''}</span></div>
-            <div className="kv"><span className="k">Plazo solicitado</span><span className="v">{a.term} años</span></div>
-            <div className="notice" style={{ marginTop: 12 }}>
-              <Info size={16} /><span>La consulta al buró y la decisión de crédito se realizan en los sistemas del banco. AutoRD solo transmite la solicitud y el consentimiento.</span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Document request */}
-      <div className="card card-pad">
-        <SectionLabel icon={Upload} text="Solicitar documentos" />
-        <p className="tiny muted" style={{ margin: '-2px 0 10px' }}>El cliente recibe la solicitud en AutoRD y una notificacion por WhatsApp.</p>
-        <div className="row wrap gap-8" style={{ marginTop: 4 }}>
-          {DOC_TYPES.map((d) => {
-            const selected = docSelection.includes(d)
-            return (
-              <button
-                key={d}
-                type="button"
-                className={`chip ${selected ? 'chip-teal' : ''}`}
-                onClick={() => toggleDoc(d)}
-                style={{ cursor: 'pointer', height: 30, border: selected ? '1px solid var(--teal-100)' : '1px solid var(--line)', background: selected ? 'var(--teal-50)' : '#fff' }}
-              >
-                {selected ? <CheckCircle2 size={13} /> : <Plus size={13} />} {d}
-              </button>
-            )
-          })}
+        <div className="row wrap between center gap-8" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 10 }}>
+          <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
+            <select className="input" style={{ height: 32, fontSize: 12, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
+              <option value="">Sin asignar</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </label>
+          <span className="tiny muted"><Chip tone={a.priority.tone}>{a.priority.label}</Chip></span>
         </div>
-        <textarea
-          className="input"
-          rows={2}
-          value={docNote}
-          onChange={(e) => setDocNote(e.target.value)}
-          placeholder="Mensaje opcional para el cliente"
-          style={{ marginTop: 12 }}
-        />
-        <button
-          className="btn btn-outline btn-block btn-sm"
-          style={{ marginTop: 12 }}
-          disabled={docBusy || docSelection.length === 0}
-          onClick={sendDocRequest}
-        >
-          {docBusy ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} Enviar solicitud de documentos
-        </button>
-
-        {docSent && (
-          <div className="notice" style={{ marginTop: 12, background: 'var(--teal-50)', borderColor: 'var(--teal-100)' }}>
-            <CheckCircle2 size={16} /><span>Solicitud enviada. El cliente puede subir los archivos desde Mi financiamiento.</span>
-          </div>
-        )}
-        {docError && (
-          <div className="notice" style={{ marginTop: 12, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
-            <FileWarning size={16} /><span>{docError}</span>
-          </div>
-        )}
-
-        {docs.length > 0 && (
-          <div className="doc-list doc-list-compact" style={{ marginTop: 14 }}>
-            <div className="tiny strong muted" style={{ marginBottom: 6 }}>Documentos de esta solicitud</div>
-            {docs.map((doc) => {
-              const uploaded = doc.status === 'subido'
-              return (
-                <div className="doc-row" key={doc.id}>
-                  <div className={`doc-icon ${uploaded ? 'ok' : ''}`}>{uploaded ? <FileCheck2 size={17} /> : <FileText size={17} />}</div>
-                  <div className="grow">
-                    <div className="strong tiny">{doc.type}</div>
-                    <div className="tiny muted">{uploaded ? doc.fileName || 'Archivo recibido' : 'Pendiente del cliente'}</div>
-                  </div>
-                  {uploaded ? (
-                    <button className="btn btn-outline btn-sm" onClick={() => openDocument(doc)}><ExternalLink size={14} /> Ver</button>
-                  ) : (
-                    <span className="chip chip-amber">Pendiente</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
+        <div className="tiny muted" style={{ marginTop: 8 }}>{a.reviewerState} · recibida {a.receivedAt} · último cambio {a.lastTouched}</div>
       </div>
 
-      {/* Manual response form */}
-      <div className="card card-pad">
-        <SectionLabel icon={Send} text="Registrar respuesta" />
-        {sent ? (
-          <div className="verify-row ok" style={{ marginTop: 6 }}>
-            <div className="verify-ic"><CheckCircle2 size={20} /></div>
-            <div className="grow"><div className="strong">Respuesta enviada</div><div className="tiny muted">El cliente y el dealer fueron notificados.</div></div>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-2" style={{ gap: 8, marginTop: 6 }}>
-              {decisions.map((d) => {
-                const Icon = d.icon
-                const on = decision === d.id
-                return (
-                  <button key={d.id}
-                    className={`btn btn-sm ${on ? d.cls : 'btn-outline'}`}
-                    onClick={() => setDecision(d.id)}>
-                    <Icon size={15} /> {d.label}
-                  </button>
-                )
-              })}
-            </div>
+      {/* Tabs */}
+      <div className="tabbar" style={{ alignSelf: 'stretch' }}>
+        <button className={tab === 'revision' ? 'active' : ''} onClick={() => setTab('revision')}>Expediente</button>
+        <button className={tab === 'decision' ? 'active' : ''} onClick={() => setTab('decision')}>Decisión</button>
+      </div>
 
-            {needTerms && (
+      {tab === 'revision' ? (
+        <>
+          {/* Customer */}
+          <Block icon={Users} title="Solicitante">
+            <KV k="Nombre completo" v={a.customer} />
+            <KV k="Cédula" v={a.maskedCedula} mono />
+            <KV k="Teléfono" v={<span className="row center gap-4"><Phone size={12} /> {a.phone}</span>} />
+            <KV k="Correo" v={<span className="row center gap-4"><Mail size={12} /> {a.email}</span>} />
+            <KV k="Ciudad" v={<span className="row center gap-4"><MapPin size={12} /> {a.city}</span>} />
+            <KV k="Tipo de empleo" v={<span className="row center gap-4"><Briefcase size={12} /> {a.employment}</span>} />
+            <KV k="Ingreso declarado" v={a.income ? `${fmtRD(a.income)}/mes` : '—'} />
+            <KV k="Fuente / fecha" v={`${a.incomeSource} · ${a.kycAt}`} />
+          </Block>
+
+          {/* KYC */}
+          <Block icon={ShieldCheck} title="Verificación de identidad (KYC)">
+            <KV k="Estado DIDIT" v={<StatusChip status={a.kyc} />} />
+            <KV k="Cédula verificada" v={a.cedulaVerified ? <Chip tone="green"><CheckCircle2 size={11} /> Sí</Chip> : <Chip tone="slate">No</Chip>} />
+            <KV k="Prueba de vida" v={a.livenessPassed ? <Chip tone="green"><CheckCircle2 size={11} /> Aprobada</Chip> : <Chip tone="slate">Pendiente</Chip>} />
+            <KV k="Completado" v={a.kyc === 'aprobado' ? a.kycAt : '—'} />
+            {a.kyc !== 'aprobado' && <div className="notice" style={{ marginTop: 8, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}><AlertTriangle size={15} color="#b45309" /><span className="tiny">KYC no completado — no se puede consultar el buró hasta verificar identidad.</span></div>}
+          </Block>
+
+          {/* Consent */}
+          <Block icon={FileCheck2} title="Consentimiento de crédito">
+            <KV k="Firmado" v={a.consent ? <Chip tone="green"><FileCheck2 size={11} /> Sí</Chip> : <Chip tone="red">No</Chip>} />
+            {a.consent && <><KV k="Fecha" v={a.consentAt} /><KV k="Versión" v={a.consentVersion} /><KV k="Bancos autorizados" v={a.banksAuthorized} /></>}
+            {a.consent && <div className="notice" style={{ marginTop: 8, background: 'var(--teal-50)', borderColor: 'var(--teal-100)' }}><ShieldCheck size={15} color="var(--teal-700)" /><span className="tiny">El cliente autorizó a este banco a consultar su historial crediticio.</span></div>}
+          </Block>
+
+          {/* Vehicle / dealer */}
+          <Block icon={Car} title={a.isPreapproval ? 'Pre-aprobación (sin vehículo)' : 'Vehículo y dealer'}>
+            {a.isPreapproval ? (
               <>
-                <div className="field" style={{ marginTop: 12 }}>
-                  <label>{a.isPreapproval ? 'Monto pre-aprobado (RD$) — máximo a financiar' : 'Monto aprobado (RD$)'}</label>
-                  <input className="input" value={approvedAmount} onChange={(e) => setApprovedAmount(e.target.value)} placeholder="RD$ 1,800,000" />
+                <KV k="Tipo de solicitud" v="Pre-aprobación — sin vehículo aún" />
+                <KV k="Monto deseado" v={a.amount ? fmtRD(a.amount) : 'Sin monto fijo'} />
+                {a.down ? <KV k="Inicial disponible" v={fmtRD(a.down)} /> : null}
+                <KV k="Plazo solicitado" v={a.term ? `${a.term} años` : '—'} />
+              </>
+            ) : (
+              <>
+                <div className="row center gap-10" style={{ marginBottom: 8 }}>
+                  <div className="dash-top-photo" style={{ width: 66, height: 48 }}><CarImage make={make} model={model} seed={a.id} /></div>
+                  <div><div className="strong small">{a.vehicle}</div><div className="tiny muted">{a.dealer}</div></div>
                 </div>
-                <div className="grid grid-2" style={{ gap: 10, marginTop: 10 }}>
-                  <F label="Tasa (%)"><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></F>
-                  <F label="Plazo (años)">
-                    <select className="select" value={term} onChange={(e) => setTerm(e.target.value)}>
-                      <option>4</option><option>5</option><option>6</option><option>7</option>
-                    </select>
-                  </F>
-                  <F label="Cuota mensual"><input className="input" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="RD$ 27,950" /></F>
-                  <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(e.target.value)} placeholder="RD$ 250,000" /></F>
-                </div>
+                <KV k="Monto solicitado" v={fmtRD(a.amount)} />
+                <KV k="Inicial" v={`${fmtRD(a.down)}${a.amount ? ` (${Math.round(a.down / a.amount * 100)}%)` : ''}`} />
+                <KV k="Plazo solicitado" v={`${a.term} años`} />
+                <KV k="Dealer" v={a.dealer} />
               </>
             )}
+          </Block>
 
-            <div className="field" style={{ marginTop: 12 }}>
-              <label>Notas para el cliente / dealer</label>
-              <textarea className="input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Comentarios sobre la decisión, condiciones, requisitos…" />
+          {/* Documents */}
+          <DocWorkflow app={a} docs={docs} setDocs={setDocs} docStatus={docStatus} setDocStatus={setDocStatus} />
+
+          {/* Timeline */}
+          <Block icon={Clock} title="Historial de revisión">
+            <div className="col">
+              {a.timeline.map((e, i) => (
+                <div key={i} className="row gap-10 dash-activity">
+                  <div className="dash-act-ic"><CheckCircle2 size={13} /></div>
+                  <div className="grow"><div className="small strong">{e.name}</div><div className="tiny muted">{e.actor} · {e.when}{e.note ? ` · ${e.note}` : ''}</div></div>
+                </div>
+              ))}
             </div>
+          </Block>
 
-            <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} disabled={!decision} onClick={async () => {
-              const statusMap = { approved: 'preaprobada', conditional: 'condicional', docs: 'pendiente_docs', rejected: 'rechazada' }
-              // Numeric-safe: strip "RD$"/commas so numeric columns accept the values.
-              const num = (s) => { const n = Number(String(s).replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null }
-              try {
-                await submitBankResponse(a.responseId, {
-                  status: statusMap[decision], apr: num(rate), term: Number(term) || null,
-                  monthly: num(monthly), down: num(down), approvedAmount: num(approvedAmount), notes,
-                })
-              } catch (_) { /* demo mode / offline: still confirm visually */ }
-              setSent(true)
-            }}>
-              <Send size={16} /> Enviar respuesta al cliente
-            </button>
-          </>
-        )}
-      </div>
+          {/* Internal notes */}
+          <Block icon={MessageSquare} title="Notas internas">
+            <div className="tiny muted" style={{ marginBottom: 8 }}>Solo visibles para el banco. No se comparten con el cliente ni el dealer.</div>
+            <div className="row gap-6">
+              <input className="input" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Agregar nota interna…" style={{ height: 36 }} />
+              <button className="btn btn-outline btn-sm" disabled={!noteInput.trim()} onClick={() => { onAddNote({ text: noteInput.trim(), by: a.reviewer?.name || 'Analista', when: 'Ahora' }); setNoteInput('') }}><Plus size={14} /></button>
+            </div>
+            <div className="col gap-6" style={{ marginTop: 10 }}>
+              {(a.notes || []).length === 0 && <div className="tiny muted">Sin notas todavía.</div>}
+              {(a.notes || []).map((n, i) => (
+                <div key={i} style={{ borderLeft: '3px solid var(--teal-600, #0d9488)', paddingLeft: 10 }}>
+                  <div className="small">{n.text}</div><div className="tiny muted">{n.by} · {n.when}</div>
+                </div>
+              ))}
+            </div>
+          </Block>
+        </>
+      ) : (
+        <DecisionForm a={a} bank={bank} />
+      )}
     </aside>
   )
 }
 
-function SectionLabel({ icon: Icon, text, style }) {
+function DocWorkflow({ app, docs, setDocs, docStatus, setDocStatus }) {
+  const [sel, setSel] = useState(['Comprobante de ingresos'])
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [rejecting, setRejecting] = useState(null) // doc id awaiting reason
+  const [reason, setReason] = useState('')
+
+  const toggle = (d) => setSel((c) => (c.includes(d) ? c.filter((x) => x !== d) : [...c, d]))
+  const statusOf = (doc) => docStatus[doc.id] || (doc.status === 'subido' ? 'recibido' : 'solicitado')
+  const setStatus = (id, s) => setDocStatus((m) => ({ ...m, [id]: s }))
+
+  async function send() {
+    setErr(''); setBusy(true)
+    try {
+      const res = await requestApplicationDocuments(app.responseId, sel, note)
+      const next = res?.documents || []
+      setDocs((cur) => { const seen = new Set(cur.map((d) => d.id)); return [...next.filter((d) => !seen.has(d.id)), ...cur] })
+      setNote('')
+    } catch (e) { setErr(e?.message || 'No se pudo enviar la solicitud.') } finally { setBusy(false) }
+  }
+  async function open(doc) {
+    try { const url = await getDocumentDownloadUrl(doc); if (url) window.open(url, '_blank', 'noopener,noreferrer') }
+    catch (e) { setErr(e?.message || 'No se pudo abrir el documento.') }
+  }
+
   return (
-    <div className="row center gap-8" style={{ margin: '2px 0 8px', ...style }}>
-      <Icon size={16} color="var(--teal-700)" />
-      <span className="small strong">{text}</span>
+    <Block icon={Upload} title="Documentos">
+      <p className="tiny muted" style={{ margin: '-2px 0 8px' }}>El cliente recibe la solicitud en AutoRD y una notificación por WhatsApp.</p>
+      <div className="row wrap gap-6">
+        {DOC_TYPES.map((d) => { const on = sel.includes(d); return (
+          <button key={d} type="button" className="chip" onClick={() => toggle(d)} style={{ cursor: 'pointer', border: on ? '1px solid var(--teal-100)' : '1px solid var(--line)', background: on ? 'var(--teal-50)' : '#fff', color: on ? 'var(--teal-700)' : undefined }}>{on ? <CheckCircle2 size={12} /> : <Plus size={12} />} {d}</button>
+        ) })}
+      </div>
+      <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Mensaje opcional para el cliente" style={{ marginTop: 10 }} />
+      <button className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }} disabled={busy || sel.length === 0} onClick={send}>{busy ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} Solicitar documentos</button>
+      {err && <div className="notice" style={{ marginTop: 10, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}><FileWarning size={16} /><span className="tiny">{err}</span></div>}
+
+      {docs.length > 0 && (
+        <div className="col gap-8" style={{ marginTop: 14 }}>
+          <div className="tiny strong muted">Documentos de esta solicitud</div>
+          {docs.map((doc) => {
+            const st = statusOf(doc); const meta = DOC_STATUS[st] || DOC_STATUS.solicitado; const t = TONE[meta.tone]
+            const received = st !== 'solicitado'
+            return (
+              <div key={doc.id} className="doc-row" style={{ flexWrap: 'wrap' }}>
+                <div className={`doc-icon ${received ? 'ok' : ''}`}>{received ? <FileCheck2 size={17} /> : <FileText size={17} />}</div>
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="strong tiny">{doc.type}</div>
+                  <div className="tiny muted">{received ? doc.fileName || 'Archivo recibido' : 'Pendiente del cliente'}</div>
+                </div>
+                <span className="chip" style={{ background: t.bg, color: t.fg, fontSize: 10 }}>{meta.label}</span>
+                {received && (
+                  <div className="row gap-4" style={{ width: '100%', marginTop: 6, justifyContent: 'flex-end' }}>
+                    <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px' }} onClick={() => open(doc)}><Eye size={13} /> Ver</button>
+                    {st !== 'aceptado' && <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px', color: '#166534' }} onClick={() => setStatus(doc.id, 'aceptado')}><CheckCircle2 size={13} /> Aceptar</button>}
+                    {st !== 'rechazado' && <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px', color: '#b91c1c' }} onClick={() => setRejecting(doc.id)}><XCircle size={13} /> Rechazar</button>}
+                  </div>
+                )}
+                {rejecting === doc.id && (
+                  <div className="row gap-4" style={{ width: '100%', marginTop: 6 }}>
+                    <input className="input" style={{ height: 34 }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motivo del rechazo (requerido)" />
+                    <button className="btn btn-navy btn-sm" disabled={!reason.trim()} onClick={() => { setStatus(doc.id, 'rechazado'); setRejecting(null); setReason('') }}>Rechazar</button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Block>
+  )
+}
+
+const num = (s) => { const n = Number(String(s).replace(/[^\d.]/g, '')); return Number.isFinite(n) && n > 0 ? n : null }
+
+function DecisionForm({ a, bank }) {
+  const [decision, setDecision] = useState('')
+  const [rate, setRate] = useState(''); const [term, setTerm] = useState('7')
+  const [monthly, setMonthly] = useState(''); const [down, setDown] = useState('')
+  const [amount, setAmount] = useState(a.approvedAmount ? String(a.approvedAmount) : '')
+  const [expires, setExpires] = useState(''); const [conditions, setConditions] = useState('')
+  const [custMsg, setCustMsg] = useState(''); const [internal, setInternal] = useState('')
+  const [reason, setReason] = useState('')
+  const [toDealer, setToDealer] = useState(true); const [toCustomer, setToCustomer] = useState(true)
+  const [docSel, setDocSel] = useState(['Comprobante de ingresos'])
+  const [preview, setPreview] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const decisions = [
+    { id: 'evaluando', label: 'En evaluación', icon: Loader2 },
+    { id: 'docs', label: 'Solicitar documentos', icon: FileWarning },
+    { id: 'approved', label: 'Pre-aprobar', icon: CheckCircle2 },
+    { id: 'rejected', label: 'Rechazar', icon: XCircle },
+  ]
+  const isApprove = decision === 'approved'
+  const canSubmit = decision && (!isApprove || (amount && rate)) && (decision !== 'rejected' || (reason && internal))
+
+  async function submit() {
+    const statusMap = { approved: 'preaprobada', evaluando: 'en_evaluacion', docs: 'pendiente_docs', rejected: 'rechazada' }
+    const notes = [custMsg, decision === 'rejected' ? `Motivo: ${reason}` : '', conditions ? `Condiciones: ${conditions}` : '', internal ? `(interno) ${internal}` : ''].filter(Boolean).join(' · ')
+    try {
+      await submitBankResponse(a.responseId, {
+        status: statusMap[decision], apr: num(rate), term: Number(term) || null,
+        monthly: num(monthly), down: num(down), approvedAmount: num(amount), notes,
+      })
+    } catch (_) { /* demo/offline: still confirm */ }
+    setSent(true)
+  }
+
+  if (sent) return (
+    <div className="card card-pad"><div className="verify-row ok"><div className="verify-ic"><CheckCircle2 size={20} /></div><div className="grow"><div className="strong">Respuesta enviada</div><div className="tiny muted">{[toCustomer && 'cliente', toDealer && 'dealer'].filter(Boolean).join(' y ') || 'Nadie'} notificado{toCustomer && toDealer ? 's' : ''}.</div></div></div></div>
+  )
+
+  return (
+    <div className="card card-pad">
+      <div className="small strong row center gap-8" style={{ marginBottom: 10 }}><Send size={15} color="var(--teal-700)" /> Registrar respuesta</div>
+      <div className="grid grid-2" style={{ gap: 8 }}>
+        {decisions.map((d) => { const Icon = d.icon; const on = decision === d.id; return (
+          <button key={d.id} className={`btn btn-sm ${on ? 'btn-navy' : 'btn-outline'}`} onClick={() => { setDecision(d.id); setPreview(false) }}><Icon size={15} /> {d.label}</button>
+        ) })}
+      </div>
+
+      {isApprove && (
+        <div style={{ marginTop: 12 }}>
+          <F label={a.isPreapproval ? 'Monto pre-aprobado (RD$) — máximo a financiar' : 'Monto aprobado (RD$)'}><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1,800,000" /></F>
+          <div className="grid grid-2" style={{ gap: 10, marginTop: 10 }}>
+            <F label="Tasa (%)"><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></F>
+            <F label="Plazo (años)"><select className="select" value={term} onChange={(e) => setTerm(e.target.value)}><option>4</option><option>5</option><option>6</option><option>7</option></select></F>
+            <F label="Cuota mensual"><input className="input" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="27,950" /></F>
+            <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(e.target.value)} placeholder="250,000" /></F>
+            <F label="Vence"><input className="input" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></F>
+          </div>
+          <F label="Condiciones"><textarea className="input" rows={2} value={conditions} onChange={(e) => setConditions(e.target.value)} placeholder="Ej: sujeto a seguro de vida, comprobación de ingresos…" /></F>
+        </div>
+      )}
+
+      {decision === 'docs' && (
+        <div style={{ marginTop: 12 }}>
+          <div className="tiny strong" style={{ marginBottom: 6 }}>Documentos a solicitar</div>
+          <div className="row wrap gap-6">
+            {DOC_TYPES.map((d) => { const on = docSel.includes(d); return (
+              <button key={d} type="button" className="chip" onClick={() => setDocSel((c) => (c.includes(d) ? c.filter((x) => x !== d) : [...c, d]))} style={{ cursor: 'pointer', border: on ? '1px solid var(--teal-100)' : '1px solid var(--line)', background: on ? 'var(--teal-50)' : '#fff', color: on ? 'var(--teal-700)' : undefined }}>{on ? <CheckCircle2 size={12} /> : <Plus size={12} />} {d}</button>
+            ) })}
+          </div>
+        </div>
+      )}
+
+      {decision === 'rejected' && (
+        <F label="Motivo del rechazo (requerido)" style={{ marginTop: 12 }}><input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ej: relación cuota/ingreso alta" /></F>
+      )}
+
+      {decision && (
+        <>
+          <F label={decision === 'rejected' ? 'Mensaje al cliente (opcional)' : 'Mensaje al cliente'} style={{ marginTop: 10 }}><textarea className="input" rows={2} value={custMsg} onChange={(e) => setCustMsg(e.target.value)} placeholder="Texto que verá el cliente" /></F>
+          <F label={`Nota interna${decision === 'rejected' ? ' (requerida)' : ''}`}><textarea className="input" rows={2} value={internal} onChange={(e) => setInternal(e.target.value)} placeholder="Solo para el banco" /></F>
+          <div className="row wrap gap-14" style={{ marginTop: 8 }}>
+            <label className="row center gap-6 small"><input type="checkbox" checked={toDealer} onChange={(e) => setToDealer(e.target.checked)} /> Enviar al dealer</label>
+            <label className="row center gap-6 small"><input type="checkbox" checked={toCustomer} onChange={(e) => setToCustomer(e.target.checked)} /> Enviar al cliente</label>
+          </div>
+        </>
+      )}
+
+      {decision && !preview && (
+        <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} disabled={!canSubmit} onClick={() => setPreview(true)}>Revisar respuesta <ExternalLink size={15} /></button>
+      )}
+
+      {preview && (
+        <div className="card" style={{ marginTop: 14, border: '1.5px solid var(--teal-600, #0d9488)' }}>
+          <div className="card-pad">
+            <div className="row center gap-8" style={{ marginBottom: 10 }}>
+              <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={26} />
+              <div><div className="small strong">{bank.name}</div><div className="tiny muted">Vista previa de la respuesta</div></div>
+            </div>
+            <KV k="Cliente" v={a.customer} />
+            <KV k="Solicitud" v={a.isPreapproval ? 'Pre-aprobación' : a.vehicle} />
+            <KV k="Decisión" v={decisions.find((d) => d.id === decision)?.label} />
+            {isApprove && <>
+              <KV k="Monto" v={num(amount) ? fmtRD(num(amount)) : '—'} />
+              <KV k="Tasa" v={rate ? `${rate}%` : '—'} />
+              <KV k="Plazo" v={`${term} años`} />
+              <KV k="Cuota" v={num(monthly) ? `${fmtRD(num(monthly))}/mes` : '—'} />
+              <KV k="Inicial requerido" v={num(down) ? fmtRD(num(down)) : '—'} />
+              {expires && <KV k="Vence" v={expires} />}
+              {conditions && <KV k="Condiciones" v={conditions} />}
+            </>}
+            {decision === 'rejected' && <KV k="Motivo" v={reason} />}
+            <KV k="Recibe" v={[toCustomer && 'Cliente', toDealer && 'Dealer'].filter(Boolean).join(', ') || 'Nadie'} />
+            <div className="row gap-8" style={{ marginTop: 12 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setPreview(false)}><ChevronLeft size={14} /> Editar</button>
+              <button className="btn btn-primary grow" onClick={submit}><Send size={16} /> Confirmar y enviar respuesta</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-function F({ label, children }) {
-  return <div className="field"><label>{label}</label>{children}</div>
+
+function Block({ icon: Icon, title, children }) {
+  return (
+    <div className="card card-pad">
+      <div className="row center gap-8" style={{ margin: '0 0 10px' }}><Icon size={16} color="var(--teal-700)" /><span className="small strong">{title}</span></div>
+      {children}
+    </div>
+  )
+}
+function KV({ k, v, mono }) {
+  return <div className="kv"><span className="k">{k}</span><span className={`v ${mono ? 'mono-num' : ''}`}>{v}</span></div>
+}
+function F({ label, children, style }) {
+  return <div className="field" style={style}><label>{label}</label>{children}</div>
 }
