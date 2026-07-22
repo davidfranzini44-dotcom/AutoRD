@@ -17,6 +17,12 @@ const TONE = {
   green: { bg: '#dcfce7', fg: '#166534' }, red: { bg: '#fee2e2', fg: '#b91c1c' },
   amber: { bg: '#fef3c7', fg: '#b45309' }, blue: { bg: '#dbeafe', fg: '#1d4ed8' },
 }
+const BANK_STATUS = {
+  en_evaluacion: { label: 'En evaluación', tone: 'blue' },
+  preaprobado: { label: 'Pre-aprobado', tone: 'green' },
+  rechazado: { label: 'Rechazado', tone: 'red' },
+  documentos: { label: 'Solicita documentos', tone: 'amber' },
+}
 const StatusBadge = ({ st }) => {
   const s = finStage(st); const t = TONE[s.tone] || TONE.blue
   return <span className="chip" style={{ background: t.bg, color: t.fg }}>{s.label}</span>
@@ -148,12 +154,18 @@ function AppDrawer({ app, onClose }) {
             <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', marginBottom: 6 }}>Bancos</div>
             {app.banks.length ? (
               <div className="col gap-6">
-                {app.banks.map((b) => (
-                  <div key={b} className="row between center" style={{ border: '1px solid var(--line-2, #e2e8f0)', borderRadius: 8, padding: '8px 12px' }}>
-                    <span className="small row center gap-6"><Landmark size={14} className="muted" /> {b}</span>
-                    {app.best?.bank === b ? <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><CheckCircle2 size={12} /> {app.best.apr}%</span> : <span className="tiny muted">En evaluación</span>}
-                  </div>
-                ))}
+                {app.banks.map((b) => {
+                  const info = BANK_STATUS[b.status] || BANK_STATUS.en_evaluacion
+                  const t = TONE[info.tone] || TONE.blue
+                  return (
+                    <div key={b.name} className="row between center" style={{ border: '1px solid var(--line-2, #e2e8f0)', borderRadius: 8, padding: '8px 12px' }}>
+                      <span className="small row center gap-6"><Landmark size={14} className="muted" /> {b.name}</span>
+                      {b.status === 'preaprobado'
+                        ? <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><CheckCircle2 size={12} /> {info.label} · {b.apr}%</span>
+                        : <span className="chip" style={{ background: t.bg, color: t.fg }}>{info.label}</span>}
+                    </div>
+                  )
+                })}
               </div>
             ) : <span className="tiny muted">Aún no enviado a bancos</span>}
           </div>

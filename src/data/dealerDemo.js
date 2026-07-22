@@ -88,13 +88,21 @@ export function buildLeads(inventory) {
 }
 
 // Financing applications for this dealer's vehicles.
+// Each bank carries its own response; the application status stays consistent
+// with them (e.g. rechazada only when every bank rejected).
 const FIN_SEEDS = [
-  { customer: 'Wendy Fernández', phone: '18095551204', status: 'enviado', amount: 1450000, down: 300000, income: 95000, banks: ['Banco Popular', 'BHD', 'Banreservas'], best: null, missing: [] },
-  { customer: 'José Almonte', phone: '18095551205', status: 'documentos', amount: 1250000, down: 250000, income: 72000, banks: ['BHD', 'Scotiabank'], best: null, missing: ['Carta de trabajo', 'Últimos 3 estados de cuenta'] },
-  { customer: 'Carla Mejía', phone: '18095551206', status: 'preaprobado', amount: 1680000, down: 400000, income: 120000, banks: ['Banco Popular', 'BHD'], best: { bank: 'BHD', apr: 9.25, monthly: 27950 }, missing: [] },
-  { customer: 'Diana Castillo', phone: '18095551208', status: 'preaprobado', amount: 1990000, down: 450000, income: 140000, banks: ['Banreservas', 'Banco Popular'], best: { bank: 'Banreservas', apr: 8.95, monthly: 31200 }, missing: [] },
-  { customer: 'Yleana Santos', phone: '18095551202', status: 'kyc_pendiente', amount: 1180000, down: 200000, income: 68000, banks: [], best: null, missing: ['Verificación de identidad (KYC)'] },
-  { customer: 'Héctor Beltré', phone: '18095551211', status: 'rechazado', amount: 1350000, down: 150000, income: 55000, banks: ['BHD', 'Scotiabank'], best: null, missing: [] },
+  { customer: 'Wendy Fernández', phone: '18095551204', status: 'enviado', amount: 1450000, down: 300000, income: 95000,
+    banks: [{ name: 'Banco Popular', status: 'en_evaluacion' }, { name: 'BHD', status: 'en_evaluacion' }, { name: 'Banreservas', status: 'en_evaluacion' }], best: null, missing: [] },
+  { customer: 'José Almonte', phone: '18095551205', status: 'documentos', amount: 1250000, down: 250000, income: 72000,
+    banks: [{ name: 'BHD', status: 'documentos' }, { name: 'Scotiabank', status: 'en_evaluacion' }], best: null, missing: ['Carta de trabajo', 'Últimos 3 estados de cuenta'] },
+  { customer: 'Carla Mejía', phone: '18095551206', status: 'preaprobado', amount: 1680000, down: 400000, income: 120000,
+    banks: [{ name: 'Banco Popular', status: 'en_evaluacion' }, { name: 'BHD', status: 'preaprobado', apr: 9.25, monthly: 27950 }], best: { bank: 'BHD', apr: 9.25, monthly: 27950 }, missing: [] },
+  { customer: 'Diana Castillo', phone: '18095551208', status: 'preaprobado', amount: 1990000, down: 450000, income: 140000,
+    banks: [{ name: 'Banreservas', status: 'preaprobado', apr: 8.95, monthly: 31200 }, { name: 'Banco Popular', status: 'rechazado' }], best: { bank: 'Banreservas', apr: 8.95, monthly: 31200 }, missing: [] },
+  { customer: 'Yleana Santos', phone: '18095551202', status: 'kyc_pendiente', amount: 1180000, down: 200000, income: 68000,
+    banks: [], best: null, missing: ['Verificación de identidad (KYC)'] },
+  { customer: 'Héctor Beltré', phone: '18095551211', status: 'rechazado', amount: 1350000, down: 150000, income: 55000,
+    banks: [{ name: 'BHD', status: 'rechazado' }, { name: 'Scotiabank', status: 'rechazado' }], best: null, missing: [] },
 ]
 export function buildFinancing(inventory) {
   return FIN_SEEDS.map((s, i) => ({ id: `AP-${2040 + i}`, ...s, vehicle: vehFor(inventory, i) }))
