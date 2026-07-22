@@ -92,6 +92,7 @@ export default function MyFinancing() {
           <div className="row gap-8">
             <StatusChip status="aprobado">KYC aprobado</StatusChip>
             <span className="chip chip-teal"><Landmark size={13} /> {c.responses.length} bancos</span>
+            {c.contractToken && <a className="chip" href={`/contrato/${c.contractToken}`} target="_blank" rel="noreferrer" style={{ cursor: 'pointer' }}><FileSignature size={13} /> Ver contrato</a>}
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import DealerProfile from './pages/DealerProfile'
 import VehicleDetail from './pages/VehicleDetail'
 import Financing from './pages/Financing'
 import Verificar from './pages/Verificar'
+import Contrato from './pages/Contrato'
 import MyFinancing from './pages/MyFinancing'
 import Account from './pages/Account'
 import Favorites from './pages/Favorites'
@@ -78,6 +79,9 @@ export default function App() {
 
       {/* ---------- Super admin ---------- */}
       <Route path="/admin" element={<ProtectedRoute role="admin"><AdminPanel /></ProtectedRoute>} />
+
+      {/* ---------- Public sealed contract (no app chrome) ---------- */}
+      <Route path="/contrato/:token" element={<Contrato />} />
     </Routes>
   )
 }

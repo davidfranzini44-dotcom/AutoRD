@@ -465,7 +465,21 @@ export async function createApplication(payload) {
       bankIds.map((bank_id) => ({ application_id: app.id, bank_id })),
     )
   }
-  return app
+  // Seal the DIDIT-verified consent contract (KYC/data + credit-consultation authorization).
+  let contractHash = null
+  try {
+    const { data: c } = await supabase.rpc('seal_financing_contract', { p_application: app.id })
+    contractHash = (Array.isArray(c) ? c[0] : c)?.hash || null
+  } catch (_) { /* non-fatal — the token already exists via column default */ }
+  return { ...app, contract_hash: contractHash }
+}
+
+// Public read of a sealed financing contract by its token (no auth needed).
+export async function getPublicContract(token) {
+  if (!LIVE) return null
+  const { data, error } = await supabase.rpc('get_public_financing_contract', { p_token: token })
+  if (error) return null
+  return data
 }
 
 // Customer financing status (latest application for the logged-in buyer)
@@ -501,6 +515,8 @@ export async function getMyFinancing() {
     id: app.id,
     code: app.code,
     createdAt: app.created_at,
+    contractToken: app.contract_token,
+    consentAt: app.consent_signed_at,
     isPreapproval: isPre,
     vehicle: app.vehicle ? mapVehicle(app.vehicle) : null,
     requestedAmount: app.requested_amount != null ? Number(app.requested_amount) : null,
@@ -912,6 +928,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       income: fin?.income, employment: fin?.employment_type,
       approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
+      contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
     }
   })
