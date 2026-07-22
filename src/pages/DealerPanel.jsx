@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
-  Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight,
-  MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter,
+  Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight, ChevronLeft,
+  MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter, Star, UploadCloud,
 } from 'lucide-react'
 import { fmtRD } from '../data/demo'
 import {
   getDealerData, getDealerLeadCounts, setVehicleStatus, updateVehicleFields, deleteVehicle,
+  getVehiclePhotos, addVehiclePhotos, deleteVehiclePhoto, setVehicleCover, reorderVehiclePhotos,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -46,6 +47,7 @@ function estadoChip(status) {
 
 const SEC = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', margin: '4px 0 2px' }
 const withCurrent = (list, cur) => (!cur || list.includes(cur) ? list : [cur, ...list])
+const PHOTO_BTN = { padding: '4px 6px', minWidth: 0 }
 
 // Field label wrapper.
 function F({ label, children, min = 150 }) {
@@ -58,7 +60,7 @@ function F({ label, children, min = 150 }) {
 }
 
 // Full editable ficha for a vehicle — opened from the inventory row.
-function EditVehicleModal({ vehicle, onClose, onSaved }) {
+function EditVehicleModal({ vehicle, onClose, onSaved, onChanged }) {
   const [f, setF] = useState({
     make: vehicle.make || '', model: vehicle.model || '', year: String(vehicle.year || ''),
     trim: vehicle.trim || '', transmission: vehicle.transmission || 'Automática',
@@ -73,7 +75,38 @@ function EditVehicleModal({ vehicle, onClose, onSaved }) {
   const [err, setErr] = useState('')
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target.value }))
   const toggleFeature = (a) => setFeatures((p) => (p.includes(a) ? p.filter((x) => x !== a) : [...p, a]))
-  const photos = vehicle.photoUrls || []
+
+  // Photos are managed live — upload/delete/cover/reorder persist immediately, independent of "Guardar".
+  const [photoRows, setPhotoRows] = useState(vehicle.photoRows || [])
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const cover = photoRows.find((p) => p.isCover) || photoRows[0]
+  const refreshPhotos = async () => {
+    const rows = await getVehiclePhotos(vehicle.dbId)
+    setPhotoRows(rows)
+    onChanged?.()
+  }
+  const runPhoto = async (fn) => {
+    setPhotoBusy(true)
+    setErr('')
+    try { await fn(); await refreshPhotos() } catch (e) { setErr(e?.message || 'Error al procesar las fotos') } finally { setPhotoBusy(false) }
+  }
+  const onAddFiles = (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (files.length) runPhoto(() => addVehiclePhotos(vehicle.dbId, files))
+  }
+  const onDeletePhoto = (p) => {
+    if (window.confirm('¿Eliminar esta foto?')) runPhoto(() => deleteVehiclePhoto(vehicle.dbId, p))
+  }
+  const onSetCover = (p) => runPhoto(() => setVehicleCover(vehicle.dbId, p.id))
+  const onMovePhoto = (i, dir) => {
+    const j = i + dir
+    if (j < 0 || j >= photoRows.length) return
+    const arr = [...photoRows]
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    setPhotoRows(arr)
+    runPhoto(() => reorderVehiclePhotos(vehicle.dbId, arr.map((p) => p.id)))
+  }
 
   async function save() {
     setSaving(true)
@@ -93,7 +126,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }) {
         {/* Header: cover + identity + quick stats */}
         <div className="row center gap-12" style={{ padding: '14px 18px', borderBottom: '1px solid var(--line-2, #e2e8f0)' }}>
           <div style={{ width: 88, height: 60, borderRadius: 8, overflow: 'hidden', flex: 'none', background: 'var(--surface-2, #f1f5f9)' }}>
-            {photos[0] && <img src={photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+            {cover?.url && <img src={cover.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
           <div className="grow" style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: 16 }}>{f.make} {f.model} {f.year}</h3>
@@ -106,7 +139,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }) {
         </div>
 
         <div className="row wrap gap-14" style={{ padding: '10px 18px 0' }}>
-          {[['Vistas', vehicle.views || 0, Eye], ['Leads', vehicle.leads ?? 0, Users], ['Solic. fin.', vehicle.requests ?? 0, FileText], ['Fotos', photos.length, ImgCount]].map(([l, v, Ic]) => (
+          {[['Vistas', vehicle.views || 0, Eye], ['Leads', vehicle.leads ?? 0, Users], ['Solic. fin.', vehicle.requests ?? 0, FileText], ['Fotos', photoRows.length, ImgCount]].map(([l, v, Ic]) => (
             <div key={l} className="row center gap-6"><Ic size={14} className="muted" /><span className="strong">{Number(v).toLocaleString('es-DO')}</span><span className="tiny muted">{l}</span></div>
           ))}
         </div>
@@ -173,16 +206,31 @@ function EditVehicleModal({ vehicle, onClose, onSaved }) {
             })}
           </div>
 
-          {photos.length > 0 && (
-            <>
-              <div style={SEC}>Fotos · {photos.length}</div>
-              <div className="row wrap gap-6">
-                {photos.slice(0, 12).map((u, i) => (
-                  <img key={i} src={u} alt="" style={{ width: 84, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--line-2, #e2e8f0)' }} />
-                ))}
+          <div className="row between center">
+            <div style={{ ...SEC, margin: 0 }}>Fotos · {photoRows.length}</div>
+            {photoBusy && <span className="tiny muted">Procesando…</span>}
+          </div>
+          <div className="row wrap gap-8">
+            {photoRows.map((p, i) => (
+              <div key={p.id} style={{ width: 108 }}>
+                <div style={{ position: 'relative' }}>
+                  <img src={p.url} alt="" style={{ width: 108, height: 76, objectFit: 'cover', borderRadius: 8, display: 'block', border: p.isCover ? '2px solid var(--teal-600, #0d9488)' : '1px solid var(--line-2, #e2e8f0)' }} />
+                  {p.isCover && <span className="chip chip-teal" style={{ position: 'absolute', top: 4, left: 4, padding: '1px 6px', fontSize: 10 }}><Star size={10} /> Portada</span>}
+                </div>
+                <div className="row gap-4" style={{ marginTop: 4, justifyContent: 'center' }}>
+                  <button className="btn btn-outline btn-sm" title="Mover a la izquierda" style={PHOTO_BTN} disabled={photoBusy || i === 0} onClick={() => onMovePhoto(i, -1)}><ChevronLeft size={13} /></button>
+                  <button className="btn btn-outline btn-sm" title="Usar como portada" style={PHOTO_BTN} disabled={photoBusy || p.isCover} onClick={() => onSetCover(p)}><Star size={13} /></button>
+                  <button className="btn btn-outline btn-sm" title="Mover a la derecha" style={PHOTO_BTN} disabled={photoBusy || i === photoRows.length - 1} onClick={() => onMovePhoto(i, 1)}><ChevronRight size={13} /></button>
+                  <button className="btn btn-outline btn-sm" title="Eliminar foto" style={{ ...PHOTO_BTN, color: '#dc2626' }} disabled={photoBusy} onClick={() => onDeletePhoto(p)}><Trash2 size={13} /></button>
+                </div>
               </div>
-            </>
-          )}
+            ))}
+            <label className="col center gap-4" title="Agregar fotos" style={{ width: 108, height: 76, border: '1.5px dashed var(--line-2, #cbd5e1)', borderRadius: 8, cursor: photoBusy ? 'not-allowed' : 'pointer', color: 'var(--muted)', justifyContent: 'center', opacity: photoBusy ? 0.6 : 1 }}>
+              <UploadCloud size={18} />
+              <span className="tiny">Agregar</span>
+              <input type="file" accept="image/*" multiple hidden disabled={photoBusy} onChange={onAddFiles} />
+            </label>
+          </div>
 
           {err && <div className="tiny" style={{ color: '#dc2626' }}>{err}</div>}
         </div>
@@ -443,6 +491,7 @@ export default function DealerPanel({ view = 'resumen' }) {
           vehicle={editing}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); refetch() }}
+          onChanged={refetch}
         />
       )}
     </div>

@@ -745,6 +745,76 @@ export async function deleteVehicle(vehicleDbId) {
   return { ok: true }
 }
 
+// ---------------- Vehicle photo management (dealer console) ----------------
+export async function getVehiclePhotos(vehicleDbId) {
+  if (!LIVE) return []
+  const { data } = await supabase
+    .from('vehicle_photos')
+    .select('id, url, storage_path, position, is_cover')
+    .eq('vehicle_id', vehicleDbId)
+    .order('position', { ascending: true })
+  return (data || []).map((p) => ({
+    id: p.id, url: p.url, storagePath: p.storage_path, position: p.position || 0, isCover: !!p.is_cover,
+  }))
+}
+
+async function syncPhotoCount(vehicleDbId) {
+  const { count } = await supabase
+    .from('vehicle_photos')
+    .select('id', { count: 'exact', head: true })
+    .eq('vehicle_id', vehicleDbId)
+  await supabase.from('vehicles').update({ photos_count: count || 0 }).eq('id', vehicleDbId)
+  return count || 0
+}
+
+// Upload + append new photos to an existing vehicle. The first-ever photo becomes cover (position 0).
+export async function addVehiclePhotos(vehicleDbId, files) {
+  if (!LIVE) return { ok: true, demo: true }
+  const list = Array.from(files || []).slice(0, 20)
+  const { data: existing } = await supabase
+    .from('vehicle_photos').select('position').eq('vehicle_id', vehicleDbId)
+  let pos = (existing || []).reduce((m, p) => Math.max(m, (p.position ?? 0) + 1), 0)
+  for (let i = 0; i < list.length; i += 1) {
+    await uploadVehiclePhoto(vehicleDbId, list[i], pos)
+    pos += 1
+  }
+  return { ok: true, count: await syncPhotoCount(vehicleDbId) }
+}
+
+// Remove a photo (storage object + row); promote a new cover if the deleted one was it.
+export async function deleteVehiclePhoto(vehicleDbId, photo) {
+  if (!LIVE) return { ok: true, demo: true }
+  if (photo.storagePath) {
+    await supabase.storage.from(PHOTO_BUCKET).remove([photo.storagePath]).catch(() => {})
+  }
+  const { error } = await supabase.from('vehicle_photos').delete().eq('id', photo.id)
+  if (error) throw error
+  const { data: rest } = await supabase
+    .from('vehicle_photos').select('id, is_cover').eq('vehicle_id', vehicleDbId).order('position')
+  if (rest && rest.length && !rest.some((p) => p.is_cover)) {
+    await supabase.from('vehicle_photos').update({ is_cover: true }).eq('id', rest[0].id)
+  }
+  return { ok: true, count: await syncPhotoCount(vehicleDbId) }
+}
+
+// Make one photo the cover (exactly one is_cover per vehicle).
+export async function setVehicleCover(vehicleDbId, photoId) {
+  if (!LIVE) return { ok: true, demo: true }
+  await supabase.from('vehicle_photos').update({ is_cover: false }).eq('vehicle_id', vehicleDbId)
+  const { error } = await supabase.from('vehicle_photos').update({ is_cover: true }).eq('id', photoId)
+  if (error) throw error
+  return { ok: true }
+}
+
+// Persist a new photo order (position follows the given id order).
+export async function reorderVehiclePhotos(vehicleDbId, orderedIds) {
+  if (!LIVE) return { ok: true, demo: true }
+  for (let i = 0; i < orderedIds.length; i += 1) {
+    await supabase.from('vehicle_photos').update({ position: i }).eq('id', orderedIds[i])
+  }
+  return { ok: true }
+}
+
 // ---------------- Bank panel ----------------
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {
