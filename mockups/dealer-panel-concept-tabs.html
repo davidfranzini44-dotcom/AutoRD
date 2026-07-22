@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD Dealer Panel Concept</title>
+  <style>
+    :root {
+      --page: #eef3f4;
+      --ink: #102033;
+      --muted: #667789;
+      --line: #d8e4e7;
+      --teal: #087a72;
+      --teal-2: #11b8ad;
+      --navy: #10233d;
+      --green: #138a58;
+      --amber: #b7791f;
+      --red: #b42318;
+      --blue: #2764d8;
+      --soft: #f7fafb;
+      --card: #ffffff;
+      --shadow: 0 18px 48px rgba(16, 32, 51, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 22% 0%, rgba(17,184,173,.12), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(39,100,216,.10), transparent 24%),
+        var(--page);
+    }
+    .board {
+      width: 1880px;
+      margin: 0 auto;
+      padding: 36px 38px 44px;
+    }
+    .board-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo {
+      font-size: 34px;
+      font-weight: 900;
+      font-style: italic;
+      color: #06685f;
+      letter-spacing: -.02em;
+    }
+    .board-head h1 {
+      margin: 4px 0 0;
+      font-size: 34px;
+      letter-spacing: 0;
+    }
+    .board-head p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid rgba(8,122,114,.22);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: 258px 1fr;
+      min-height: 905px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .sidebar {
+      background: #0f2438;
+      color: #dfeff1;
+      padding: 24px 18px;
+    }
+    .dealer-card {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.09);
+      margin-bottom: 22px;
+    }
+    .dealer-logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, #fff, #dfe7eb);
+      color: var(--teal);
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .dealer-card strong, .dealer-card span { display: block; }
+    .dealer-card strong { font-size: 14px; color: #fff; }
+    .dealer-card span { margin-top: 2px; font-size: 11px; color: #9fb4c2; }
+    .side-nav {
+      display: grid;
+      gap: 7px;
+    }
+    .side-nav a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      height: 42px;
+      padding: 0 11px;
+      border-radius: 10px;
+      color: #bed0d9;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .side-nav a.active {
+      background: #effdfb;
+      color: #075e58;
+    }
+    .nav-dot {
+      width: 23px;
+      height: 23px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.09);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .side-nav a.active .nav-dot { background: #d5fbf6; }
+    .side-footer {
+      margin-top: 28px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(17,184,173,.10);
+      border: 1px solid rgba(17,184,173,.20);
+    }
+    .side-footer strong { display: block; font-size: 12px; color: #fff; }
+    .side-footer span { display: block; margin-top: 4px; font-size: 11px; color: #b9cbd4; line-height: 1.35; }
+    .main {
+      background: #f6fafb;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .search {
+      height: 44px;
+      width: 450px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      box-shadow: 0 8px 20px rgba(16,32,51,.04);
+    }
+    .actions {
+      display: flex;
+      gap: 9px;
+      align-items: center;
+    }
+    .btn {
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .btn.primary {
+      border-color: var(--teal);
+      background: linear-gradient(180deg, #11b8ad, #07837a);
+      color: #fff;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.46fr .72fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .hero {
+      min-height: 224px;
+      border-radius: 16px;
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(9,94,88,.95), rgba(13,40,61,.92)),
+        #0b625b;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero:after {
+      content: "";
+      position: absolute;
+      right: -78px;
+      bottom: -118px;
+      width: 270px;
+      height: 270px;
+      border-radius: 999px;
+      border: 46px solid rgba(255,255,255,.08);
+    }
+    .eyebrow {
+      display: inline-flex;
+      height: 29px;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.12);
+      color: #c8fff9;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .hero h2 {
+      margin: 12px 0 8px;
+      max-width: 720px;
+      font-size: 34px;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 720px;
+      color: rgba(255,255,255,.82);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .hero-actions { display: flex; gap: 9px; margin-top: 22px; }
+    .hero-actions .btn { border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.10); color: #fff; }
+    .hero-actions .btn.primary { background: #fff; color: #075e58; border-color: #fff; }
+    .health {
+      border-radius: 16px;
+      padding: 18px;
+      background: linear-gradient(180deg, #f5fffd, #fff);
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--teal-2);
+    }
+    .health-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .health small, .mini small, .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .health strong { display: block; margin-top: 2px; font-size: 17px; }
+    .score {
+      width: 72px;
+      height: 50px;
+      border-radius: 11px;
+      background: var(--teal);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .track {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #d9edf0;
+      margin: 16px 0;
+    }
+    .track i { display: block; width: 84%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #12b8ad, #2d68d8); }
+    .health-mini {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .mini {
+      padding: 11px;
+      border: 1px solid rgba(8,122,114,.14);
+      border-radius: 10px;
+      background: rgba(255,255,255,.82);
+    }
+    .mini b { display: block; font-size: 20px; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(16,32,51,.04);
+    }
+    .ic {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #e7fbf8;
+      color: var(--teal);
+      font-weight: 950;
+      margin-bottom: 10px;
+    }
+    .stat b { display: block; font-size: 27px; line-height: 1; }
+    .stat span { margin-top: 5px; }
+    .work-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(16,32,51,.04);
+      overflow: hidden;
+    }
+    .card-pad { padding: 16px; }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 16px 10px;
+      gap: 12px;
+    }
+    .card-head h3 { margin: 0; font-size: 16px; }
+    .link { color: var(--teal); font-size: 12px; font-weight: 850; }
+    .task-list { display: grid; gap: 8px; padding: 0 12px 14px; }
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 9px 11px;
+      border-radius: 10px;
+      background: #f8fafb;
+      border-left: 4px solid var(--teal);
+      font-size: 13px;
+      font-weight: 760;
+    }
+    .task small { margin-left: auto; color: var(--muted); font-size: 11px; }
+    .vehicle-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 0 14px 16px;
+    }
+    .vehicle {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .vehicle img {
+      display: block;
+      width: 100%;
+      height: 90px;
+      object-fit: cover;
+    }
+    .vehicle div { padding: 10px; }
+    .vehicle b { display: block; font-size: 13px; }
+    .vehicle small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .activity { display: grid; gap: 11px; }
+    .act {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 9px;
+      align-items: center;
+    }
+    .act-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #e7fbf8;
+      color: var(--teal);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .act b { display: block; font-size: 12px; }
+    .act small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .tabs-board {
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .tab-panel {
+      min-height: 278px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .tab-head {
+      height: 54px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfe;
+    }
+    .tab-head h3 { margin: 0; font-size: 16px; }
+    .tab-pill {
+      height: 27px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #e7fbf8;
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .tab-body { padding: 14px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 9px 8px;
+      border-bottom: 1px solid #e8eff1;
+      text-align: left;
+      white-space: nowrap;
+    }
+    th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    td b { font-size: 12px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 23px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 850;
+    }
+    .green { background: #dcfce7; color: var(--green); }
+    .teal { background: #ccfbf1; color: var(--teal); }
+    .amber { background: #fff2c7; color: var(--amber); }
+    .blue { background: #dbeafe; color: var(--blue); }
+    .red { background: #fee2e2; color: var(--red); }
+    .slate { background: #e8eef2; color: #4f6475; }
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px;
+    }
+    .col {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f8fafb;
+      overflow: hidden;
+    }
+    .col h4 {
+      margin: 0;
+      padding: 9px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--line);
+    }
+    .lead {
+      margin: 8px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+    .lead b, .lead small { display: block; }
+    .lead b { font-size: 11px; }
+    .lead small { margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.25; }
+    .finance-row, .wa-row, .team-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .finance-row b, .wa-row b, .team-row b { display: block; font-size: 12px; }
+    .finance-row small, .wa-row small, .team-row small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .phone {
+      position: absolute;
+      right: 64px;
+      top: 154px;
+      width: 286px;
+      height: 608px;
+      border: 10px solid #102033;
+      border-radius: 34px;
+      background: #f6fafb;
+      box-shadow: 0 24px 70px rgba(16,32,51,.30);
+      overflow: hidden;
+    }
+    .phone-top {
+      height: 62px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+    }
+    .phone-top b { font-size: 13px; }
+    .phone-content { padding: 12px; }
+    .phone-card {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .phone-card h4 { margin: 0 0 7px; font-size: 13px; }
+    .phone-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 34px;
+      border-top: 1px solid #edf3f5;
+      font-size: 11px;
+      font-weight: 760;
+    }
+    .bottom-note {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .note {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(16,32,51,.04);
+    }
+    .note b { display: block; font-size: 14px; }
+    .note span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.38; }
+  </style>
+</head>
+<body>
+  <div class="board">
+    <div class="board-head">
+      <div>
+        <div class="brand"><div class="logo">AutoRD</div><span class="tag">Concepto dealer portal</span></div>
+        <h1>Panel de Dealer — mockup avanzado con tabs</h1>
+        <p>Dirección visual propuesta: operativo, elegante, rápido para vender, responder leads y manejar financiamiento.</p>
+      </div>
+      <span class="tag">Desktop + tabs + mobile</span>
+    </div>
+
+    <div style="position: relative;">
+      <section class="shell">
+        <aside class="sidebar">
+          <div class="dealer-card">
+            <div class="dealer-logo">JA</div>
+            <div><strong>Joselito Auto Import</strong><span>Dealer verificado · Santo Domingo</span></div>
+          </div>
+          <nav class="side-nav">
+            <a class="active"><span class="nav-dot">R</span> Resumen</a>
+            <a><span class="nav-dot">I</span> Inventario</a>
+            <a><span class="nav-dot">L</span> Leads CRM</a>
+            <a><span class="nav-dot">F</span> Financiamiento</a>
+            <a><span class="nav-dot">W</span> WhatsApp</a>
+            <a><span class="nav-dot">E</span> Equipo</a>
+            <a><span class="nav-dot">P</span> Perfil del dealer</a>
+          </nav>
+          <div class="side-footer">
+            <strong>Próxima mejor acción</strong>
+            <span>3 leads calientes, 2 expedientes con documentos pendientes y 1 publicación por mejorar.</span>
+          </div>
+        </aside>
+
+        <main class="main">
+          <div class="topbar">
+            <div class="search">Buscar cliente, vehículo, lead o solicitud...</div>
+            <div class="actions">
+              <button class="btn">WhatsApp</button>
+              <button class="btn">Importar fotos</button>
+              <button class="btn primary">Publicar vehículo</button>
+            </div>
+          </div>
+
+          <div class="hero-grid">
+            <section class="hero">
+              <span class="eyebrow">Resumen inteligente</span>
+              <h2>Tu dealer operando como una mesa comercial moderna.</h2>
+              <p>Un panel que prioriza qué cliente llamar, qué expediente mover, qué publicación mejorar y qué vehículo está generando más intención de compra.</p>
+              <div class="hero-actions"><button class="btn primary">Responder leads</button><button class="btn">Revisar financiamiento</button><button class="btn">Ver inventario</button></div>
+            </section>
+
+            <aside class="health">
+              <div class="health-row">
+                <div><small>Salud del inventario</small><strong>Excelente, pero mejorable</strong></div>
+                <div class="score">84%</div>
+              </div>
+              <div class="track"><i></i></div>
+              <div class="health-mini">
+                <div class="mini"><b>31</b><small>Publicados</small></div>
+                <div class="mini"><b>6</b><small>Listos para financiar</small></div>
+                <div class="mini"><b>4</b><small>Reservados</small></div>
+                <div class="mini"><b>RD$ 58M</b><small>Valor en inventario</small></div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="kpis">
+            <div class="stat"><div class="ic">L</div><b>14</b><span>Leads nuevos hoy</span></div>
+            <div class="stat"><div class="ic">F</div><b>9</b><span>Solicitudes financiamiento</span></div>
+            <div class="stat"><div class="ic">M</div><b>5</b><span>Mensajes sin responder</span></div>
+            <div class="stat"><div class="ic">K</div><b>7</b><span>KYC iniciados</span></div>
+            <div class="stat"><div class="ic">V</div><b>2.8k</b><span>Vistas esta semana</span></div>
+            <div class="stat"><div class="ic">P</div><b>4</b><span>Pre-aprobados activos</span></div>
+          </div>
+
+          <div class="work-grid">
+            <section class="card">
+              <div class="card-head"><h3>Tareas urgentes</h3><span class="link">Ver todas</span></div>
+              <div class="task-list">
+                <div class="task" style="border-left-color: var(--amber);">Enviar comprobante de ingresos a Banco Popular <small>Wendy F.</small></div>
+                <div class="task" style="border-left-color: var(--red);">Responder lead con más de 30 min sin atención <small>Ramón P.</small></div>
+                <div class="task" style="border-left-color: var(--blue);">Mejorar fotos del Lexus RX 350 <small>62% calidad</small></div>
+              </div>
+              <div class="card-head"><h3>Vehículos que más están convirtiendo</h3><span class="link">Ver inventario</span></div>
+              <div class="vehicle-list">
+                <div class="vehicle"><img src="../public/vehicle-photos/joselito/lexus-rx-350-f-sport-2022/rx-01.jpg" /><div><b>Lexus RX 350 F Sport</b><small>128 vistas · 6 leads · 3 fin.</small></div></div>
+                <div class="vehicle"><img src="../public/vehicle-photos/joselito/toyota-grand-highlander-2024/grand-highlander-01.jpg" /><div><b>Toyota Grand Highlander</b><small>94 vistas · 5 leads · 2 fin.</small></div></div>
+                <div class="vehicle"><img src="../public/vehicle-photos/joselito/lexus-lx-600-luxury-2024/lx-01.jpg" /><div><b>Lexus LX 600 Luxury</b><small>76 vistas · 4 leads · 2 fin.</small></div></div>
+              </div>
+            </section>
+
+            <aside class="card card-pad">
+              <div class="pipeline">
+                <div class="mini"><b>8</b><small>Clientes calientes</small></div>
+                <div class="mini"><b>6</b><small>Seguimientos hoy</small></div>
+                <div class="mini"><b>4</b><small>Ofertas bancarias</small></div>
+                <div class="mini"><b>2</b><small>Reservas abiertas</small></div>
+              </div>
+              <h3 style="margin: 0 0 12px; font-size: 16px;">Actividad reciente</h3>
+              <div class="activity">
+                <div class="act"><div class="act-dot">L</div><div><b>Nuevo lead por Lexus RX 350</b><small>Hace 18 min · WhatsApp</small></div></div>
+                <div class="act"><div class="act-dot">F</div><div><b>BHD solicitó carta de trabajo</b><small>Hace 42 min · Financiamiento</small></div></div>
+                <div class="act"><div class="act-dot">K</div><div><b>KYC aprobado para Carla Mejía</b><small>Hace 1 h · DIDIT</small></div></div>
+                <div class="act"><div class="act-dot">P</div><div><b>Popular envió pre-aprobación</b><small>Hace 2 h · RD$ 2.1M</small></div></div>
+              </div>
+            </aside>
+          </div>
+        </main>
+      </section>
+
+      <aside class="phone">
+        <div class="phone-top"><b>AutoRD Dealer</b><span class="badge teal">Live</span></div>
+        <div class="phone-content">
+          <div class="phone-card"><h4>Hoy</h4><div class="phone-row"><span>Leads nuevos</span><b>14</b></div><div class="phone-row"><span>Sin responder</span><b>5</b></div><div class="phone-row"><span>Pre-aprobados</span><b>4</b></div></div>
+          <div class="phone-card"><h4>Próxima acción</h4><div style="font-size: 12px; line-height: 1.35; color: var(--muted);">Responder a Ramón por el Lexus RX y enviar link de KYC.</div><button class="btn primary" style="width:100%; margin-top:10px;">Abrir WhatsApp</button></div>
+          <div class="phone-card"><h4>Inventario</h4><div class="track" style="margin:8px 0;"><i style="width:84%"></i></div><div style="font-size:11px;color:var(--muted);">84% calidad promedio</div></div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="tabs-board">
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: Inventario</h3><span class="tab-pill">manager visual</span></div>
+        <div class="tab-body">
+          <table>
+            <thead><tr><th>Vehículo</th><th>Estado</th><th>Calidad</th><th>Leads</th><th>Fin.</th></tr></thead>
+            <tbody>
+              <tr><td><b>Lexus RX 350</b></td><td><span class="badge green">Publicado</span></td><td><span class="badge teal">92%</span></td><td>6</td><td>3</td></tr>
+              <tr><td><b>Grand Highlander</b></td><td><span class="badge amber">Reservado</span></td><td><span class="badge teal">88%</span></td><td>5</td><td>2</td></tr>
+              <tr><td><b>Lexus LX 600</b></td><td><span class="badge green">Publicado</span></td><td><span class="badge amber">74%</span></td><td>4</td><td>2</td></tr>
+              <tr><td><b>Toyota RAV4</b></td><td><span class="badge slate">Borrador</span></td><td><span class="badge red">48%</span></td><td>0</td><td>0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: Leads CRM</h3><span class="tab-pill">kanban comercial</span></div>
+        <div class="tab-body">
+          <div class="kanban">
+            <div class="col"><h4>Nuevo · 5</h4><div class="lead"><b>Ramón Peralta</b><small>Lexus RX · quiere cuota</small></div><div class="lead"><b>Yleana Santos</b><small>Enviar KYC</small></div></div>
+            <div class="col"><h4>Contactado · 7</h4><div class="lead"><b>Pedro Guzmán</b><small>Pide fotos interior</small></div></div>
+            <div class="col"><h4>Financiamiento · 4</h4><div class="lead"><b>Wendy Fernández</b><small>Banco pide docs</small></div></div>
+            <div class="col"><h4>Reservado · 2</h4><div class="lead"><b>Diana Castillo</b><small>Firma jueves</small></div></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: Financiamiento</h3><span class="tab-pill">bancos en vivo</span></div>
+        <div class="tab-body">
+          <div class="finance-row"><div class="avatar">WF</div><div><b>Wendy Fernández</b><small>BHD solicita carta de trabajo · RX 350</small></div><span class="badge amber">Docs</span></div>
+          <div class="finance-row"><div class="avatar">CM</div><div><b>Carla Mejía</b><small>Popular pre-aprobó RD$ 1.8M al 9.25%</small></div><span class="badge green">Oferta</span></div>
+          <div class="finance-row"><div class="avatar">JA</div><div><b>José Almonte</b><small>Enviado a 3 bancos · esperando respuesta</small></div><span class="badge blue">Enviado</span></div>
+        </div>
+      </article>
+
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: WhatsApp</h3><span class="tab-pill">inbox conectado</span></div>
+        <div class="tab-body">
+          <div class="wa-row"><div class="avatar">RP</div><div><b>Ramón Peralta</b><small>¿Aceptan vehículo como inicial?</small></div><span class="badge red">3 min</span></div>
+          <div class="wa-row"><div class="avatar">YS</div><div><b>Yleana Santos</b><small>Plantilla: enviar link KYC + consentimiento</small></div><span class="badge teal">KYC</span></div>
+          <div class="wa-row"><div class="avatar">CM</div><div><b>Carla Mejía</b><small>Enviar oferta del banco con tasa y cuota</small></div><span class="badge green">Oferta</span></div>
+        </div>
+      </article>
+
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: Equipo</h3><span class="tab-pill">roles y permisos</span></div>
+        <div class="tab-body">
+          <div class="team-row"><div class="avatar">CJ</div><div><b>Carlos Jiménez</b><small>Ventas · leads e inventario</small></div><span class="badge green">Activo</span></div>
+          <div class="team-row"><div class="avatar">MR</div><div><b>María Rodríguez</b><small>Financiamiento · WhatsApp</small></div><span class="badge green">Activo</span></div>
+          <div class="team-row"><div class="avatar">LF</div><div><b>Luis Fernández</b><small>Admin · perfil del dealer</small></div><span class="badge blue">Owner</span></div>
+        </div>
+      </article>
+
+      <article class="tab-panel">
+        <div class="tab-head"><h3>Tab: Perfil del dealer</h3><span class="tab-pill">confianza pública</span></div>
+        <div class="tab-body">
+          <div class="mini" style="margin-bottom:10px;"><b>96%</b><small>Perfil completo: logo, ubicación, horarios, WhatsApp, redes y galería.</small></div>
+          <div class="task" style="border-left-color: var(--teal);">Logo y datos verificados <small>Listo</small></div>
+          <div class="task" style="border-left-color: var(--blue);">Fotos del showroom <small>8 publicadas</small></div>
+          <div class="task" style="border-left-color: var(--amber);">Políticas de reserva <small>Revisar</small></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="bottom-note">
+      <div class="note"><b>Idea clave 1: prioridad diaria</b><span>El dealer abre el panel y sabe exactamente qué vender, responder o completar primero.</span></div>
+      <div class="note"><b>Idea clave 2: inventario con calidad</b><span>Cada vehículo tiene score de publicación, fotos, leads, solicitudes y acciones rápidas.</span></div>
+      <div class="note"><b>Idea clave 3: financiamiento visible</b><span>El dealer no ve buró ni datos sensibles, solo estado, documentos y respuestas bancarias.</span></div>
+      <div class="note"><b>Idea clave 4: mobile operativo</b><span>El móvil se enfoca en alertas, WhatsApp, KYC links y acciones rápidas de vendedor.</span></div>
+    </section>
+  </div>
+</body>
+</html>
