@@ -13,7 +13,8 @@ import { getMyDealer } from '../data/api'
 const DEALER_NAV = [
   { to: '/dealer', label: 'Resumen', icon: LayoutDashboard, end: true },
   { to: '/dealer/inventario', label: 'Inventario', icon: Boxes, perm: 'inventario' },
-  { to: '/dealer/leads', label: 'Leads de financiamiento', icon: Users, perm: 'financiamiento' },
+  { to: '/dealer/leads', label: 'Leads', icon: Users, perm: 'financiamiento' },
+  { to: '/dealer/financiamiento', label: 'Financiamiento', icon: Landmark, perm: 'financiamiento' },
   { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle, perm: 'inventario' },
   { to: '/dealer/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
   { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store, perm: 'perfil' },

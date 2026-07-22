@@ -3101,3 +3101,37 @@ select.preap-input { padding-right: 16px; }
     width: 100%;
   }
 }
+
+/* ===== Dealer command center (dashboard / leads CRM / financing) ===== */
+.dash-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }
+.dash-kpi { display: block; text-decoration: none; color: inherit; transition: box-shadow .15s ease, transform .15s ease; }
+.dash-kpi:hover { box-shadow: 0 6px 20px rgba(2,6,23,.09); transform: translateY(-1px); }
+.dash-kpi .mc-v { margin-top: 8px; }
+.dash-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; min-width: 0; }
+.dash-grid > * { min-width: 0; }
+.dash-tarea { padding: 10px 12px; margin: 4px 0; background: var(--surface-2, #f8fafc); border-radius: 8px; text-decoration: none; }
+.dash-tarea:hover { background: var(--surface-3, #f1f5f9); }
+.dash-top-photo { width: 46px; height: 34px; border-radius: 6px; overflow: hidden; flex: none; background: var(--surface-2, #f1f5f9); }
+.dash-top-photo .vphoto { aspect-ratio: auto; height: 100%; width: 100%; }
+.dash-activity { padding: 9px 0; border-bottom: 1px solid var(--line-2, #e2e8f0); }
+.dash-activity:last-child { border-bottom: none; }
+.dash-act-ic { width: 30px; height: 30px; border-radius: 8px; background: var(--teal-50); color: var(--teal-700); display: flex; align-items: center; justify-content: center; flex: none; }
+
+/* Leads CRM kanban */
+.crm-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(248px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.crm-col { background: var(--surface-2, #f8fafc); border: 1px solid var(--line, #e2e8f0); border-radius: 12px; min-width: 248px; display: flex; flex-direction: column; }
+.crm-col-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--line-2, #e2e8f0); position: sticky; top: 0; }
+.crm-col-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+.crm-card { background: #fff; border: 1px solid var(--line, #e2e8f0); border-radius: 10px; padding: 10px; cursor: pointer; transition: box-shadow .12s ease, border-color .12s ease; }
+.crm-card:hover { box-shadow: 0 4px 14px rgba(2,6,23,.08); border-color: var(--teal-600, #0d9488); }
+.crm-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.crm-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--teal-700); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+
+@media (max-width: 1100px) {
+  .dash-kpis { grid-template-columns: repeat(3, 1fr); }
+  .dash-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .dash-kpis { grid-template-columns: repeat(2, 1fr); }
+  .dash-kpi .mc-v { font-size: 22px; }
+}

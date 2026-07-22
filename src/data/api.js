@@ -278,7 +278,7 @@ export async function getMyDealer(dealerDbId) {
   if (!LIVE || !dealerDbId) return null
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year, logo_url')
+    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year, logo_url, verified')
     .eq('id', dealerDbId).single()
   if (error) return null
   return { ...data, logoUrl: data.logo_url || null, locations: Array.isArray(data.locations) ? data.locations : [] }

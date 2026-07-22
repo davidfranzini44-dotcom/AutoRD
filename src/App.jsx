@@ -21,6 +21,9 @@ import Login from './pages/Login'
 import DealerPanel from './pages/DealerPanel'
 import DealerProfileEdit from './pages/DealerProfileEdit'
 import DealerTeam from './pages/DealerTeam'
+import DealerDashboard from './pages/DealerDashboard'
+import DealerLeads from './pages/DealerLeads'
+import DealerFinancing from './pages/DealerFinancing'
 import PostVehicle from './pages/PostVehicle'
 import BankPanel from './pages/BankPanel'
 import BankReports from './pages/BankReports'
@@ -54,9 +57,10 @@ export default function App() {
 
       {/* ---------- Dealer console ---------- */}
       <Route element={<ProtectedRoute role="dealer"><ConsoleLayout /></ProtectedRoute>}>
-        <Route path="/dealer" element={<DealerPanel view="resumen" />} />
+        <Route path="/dealer" element={<DealerDashboard />} />
         <Route path="/dealer/inventario" element={<DealerPanel view="inventario" />} />
-        <Route path="/dealer/leads" element={<DealerPanel view="leads" />} />
+        <Route path="/dealer/leads" element={<DealerLeads />} />
+        <Route path="/dealer/financiamiento" element={<DealerFinancing />} />
         <Route path="/dealer/perfil" element={<DealerProfileEdit />} />
         <Route path="/dealer/equipo" element={<DealerTeam />} />
         <Route path="/dealer/publicar" element={<PostVehicle />} />
