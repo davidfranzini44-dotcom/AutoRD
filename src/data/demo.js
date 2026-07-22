@@ -12,6 +12,15 @@ export const banks = [
   { id: 'scotiabank', name: 'Scotiabank', color: '#c8352b', initials: 'SC' },
 ]
 
+const photoSet = (folder, prefix, count) =>
+  Array.from({ length: count }, (_, i) => `/vehicle-photos/joselito/${folder}/${prefix}-${String(i + 1).padStart(2, '0')}.jpg`)
+
+const JOSELITO_PHOTOS = {
+  rx: photoSet('lexus-rx-350-f-sport-2022', 'rx', 12),
+  grandHighlander: photoSet('toyota-grand-highlander-2024', 'grand-highlander', 12),
+  lx: photoSet('lexus-lx-600-luxury-2024', 'lx', 11),
+}
+
 export const vehicles = [
   {
     id: 'honda-crv-2021',
@@ -165,7 +174,8 @@ export const vehicles = [
     location: 'Santiago', dealer: 'Joselito Auto Import', dealerVerified: true,
     dealerSlug: 'joselito-auto-import', dealerWhatsapp: '18095015858', dealerPhone: '18097249999',
     lat: 19.4517, lng: -70.6970,
-    financing: true, tone: '#f8fafc', monthly: 74700, downPct: 20, apr: 9.75, termYears: 7, photos: 12,
+    financing: true, tone: '#f8fafc', monthly: 74700, downPct: 20, apr: 9.75, termYears: 7, photos: JOSELITO_PHOTOS.rx.length,
+    coverPhoto: JOSELITO_PHOTOS.rx[0], photoUrls: JOSELITO_PHOTOS.rx,
     description: 'Lexus RX 350 F Sport 2022 en blanco con interior rojo, tracción AWD y equipamiento premium. Precio convertido desde US$ 59,500.',
     features: ['AWD', 'Apple CarPlay', 'Asientos en piel', 'Cámara de reversa', 'Sensores de parqueo', 'Sistema de navegación'],
   },
@@ -177,7 +187,8 @@ export const vehicles = [
     location: 'Santiago', dealer: 'Joselito Auto Import', dealerVerified: true,
     dealerSlug: 'joselito-auto-import', dealerWhatsapp: '18095015858', dealerPhone: '18097249999',
     lat: 19.4517, lng: -70.6970,
-    financing: true, tone: '#e5e7eb', monthly: 107300, downPct: 20, apr: 9.75, termYears: 7, photos: 12,
+    financing: true, tone: '#e5e7eb', monthly: 107300, downPct: 20, apr: 9.75, termYears: 7, photos: JOSELITO_PHOTOS.grandHighlander.length,
+    coverPhoto: JOSELITO_PHOTOS.grandHighlander[0], photoUrls: JOSELITO_PHOTOS.grandHighlander,
     description: 'Toyota Grand Highlander Max Platinum Hybrid 2024, 4WD, tres filas y cabina premium en negro. Precio convertido desde US$ 85,500.',
     features: ['4WD', 'Híbrido', '3 filas', 'Asientos en piel', 'Techo panorámico', 'Sistema de navegación'],
   },
@@ -189,7 +200,8 @@ export const vehicles = [
     location: 'Santiago', dealer: 'Joselito Auto Import', dealerVerified: true,
     dealerSlug: 'joselito-auto-import', dealerWhatsapp: '18095015858', dealerPhone: '18097249999',
     lat: 19.4517, lng: -70.6970,
-    financing: true, tone: '#eef2f7', monthly: 200800, downPct: 20, apr: 9.75, termYears: 7, photos: 7,
+    financing: true, tone: '#eef2f7', monthly: 200800, downPct: 20, apr: 9.75, termYears: 7, photos: JOSELITO_PHOTOS.lx.length,
+    coverPhoto: JOSELITO_PHOTOS.lx[0], photoUrls: JOSELITO_PHOTOS.lx,
     description: 'Lexus LX 600 Luxury 2024, 4WD, tres filas, interior negro y paquete de lujo. Precio convertido desde US$ 160,000.',
     features: ['4WD', '3 filas', 'Apple CarPlay', 'Asientos en piel', 'Cámara de reversa', 'Sistema de navegación'],
   },

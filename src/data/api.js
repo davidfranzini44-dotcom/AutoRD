@@ -108,8 +108,20 @@ function joselitoFallbackVehicles({ tab = 'todos', dealer = JOSELITO_FALLBACK_DE
 }
 
 function mergeVehiclesById(primary, fallback) {
+  const fallbackById = new Map(fallback.map((v) => [v.id, v]))
+  const merged = primary.map((v) => {
+    const f = fallbackById.get(v.id)
+    if (!f) return v
+    return {
+      ...v,
+      coverPhoto: v.coverPhoto || f.coverPhoto,
+      photoUrls: v.photoUrls?.length ? v.photoUrls : (f.photoUrls || []),
+      photoRows: v.photoRows?.length ? v.photoRows : (f.photoRows || []),
+      photos: v.photos || f.photos,
+    }
+  })
   const seen = new Set(primary.map((v) => v.id))
-  return [...primary, ...fallback.filter((v) => !seen.has(v.id))]
+  return [...merged, ...fallback.filter((v) => !seen.has(v.id))]
 }
 
 function joselitoFallbackDealer() {
