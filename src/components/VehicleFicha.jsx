@@ -7,7 +7,7 @@ import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
 import DealerLogo from './DealerLogo'
 import PriceSignal from './PriceSignal'
-import { fmtRD } from '../data/demo'
+import { fmtMoney } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { isFavorite, toggleFavorite } from '../data/favorites'
@@ -94,7 +94,7 @@ function FichaShell({ v, close }) {
           </div>
 
           <div className="vloc small"><MapPin size={14} /> {v.location}</div>
-          <div className="ficha-price">{fmtRD(v.price)}</div>
+          <div className="ficha-price">{fmtMoney(v.price, v.currency)}</div>
           <PriceSignal insight={v.priceInsight} />
 
           {v.price ? (
@@ -102,7 +102,7 @@ function FichaShell({ v, close }) {
               <div className="row between center">
                 <div>
                   <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Desde</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(carDefaultMonthly(v))}<span style={{ fontSize: 13 }}>/mes</span></div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtMoney(carDefaultMonthly(v), v.currency)}<span style={{ fontSize: 13 }}>/mes</span></div>
                   <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · 20% inicial · Tasa {v.apr}%</div>
                 </div>
                 <div style={{ color: 'var(--teal-700)' }}><Calculator size={28} /></div>

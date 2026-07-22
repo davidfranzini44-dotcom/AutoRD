@@ -39,6 +39,7 @@ function mapVehicle(r) {
     transmission: r.transmission, fuel: r.fuel, engine: r.engine,
     mileage: r.mileage, color: r.color, bodyType: r.body_type,
     price: Number(r.price),
+    currency: r.currency === 'USD' ? 'USD' : 'DOP',
     condition: r.condition === 'nuevo' ? 'Nuevo' : 'Usado',
     certified: r.certified,
     location: r.location, dealer: dealer.name, dealerVerified: dealer.verified,
@@ -695,7 +696,7 @@ export async function createVehicle(v) {
     make: v.make, model: v.model, year: Number(v.year), trim: v.trim,
     transmission: v.transmission, fuel: v.fuel, engine: v.engine,
     mileage: Number(v.mileage) || 0, color: v.color, body_type: v.bodyType,
-    price: Number(v.price), condition: v.condition, certified: !!v.certified,
+    price: Number(v.price), currency: v.currency === 'USD' ? 'USD' : 'DOP', condition: v.condition, certified: !!v.certified,
     location: v.location, description: v.description,
     features: Array.isArray(v.features) ? v.features : [],
     lat: v.lat != null && v.lat !== '' ? Number(v.lat) : null,
@@ -742,6 +743,7 @@ export async function updateVehicleFields(vehicleDbId, f) {
   if (f.location != null) patch.location = f.location
   if (f.description != null) patch.description = f.description
   if (f.status != null) patch.status = f.status
+  if (f.currency != null) patch.currency = f.currency === 'USD' ? 'USD' : 'DOP'
   if (Array.isArray(f.features)) patch.features = f.features
   if (f.price != null && f.price !== '') {
     patch.price = Number(f.price)

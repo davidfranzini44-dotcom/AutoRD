@@ -11,6 +11,7 @@ import MiniMap from '../components/MiniMap'
 import PriceSignal from '../components/PriceSignal'
 import { directionsUrl } from '../data/geo'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication, trackEvent } from '../data/api'
+import { fmtMoney } from '../data/demo'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
 import { recordRecentlyViewed } from '../data/recentlyViewed'
@@ -116,6 +117,7 @@ export default function VehicleDetail() {
   const calcMonthly = estimateMonthly(calcPrincipal, calcApr, termMonths)
   // Headline "Desde /mes": same amortization as the calculator's defaults, so they match.
   const desdeMonthly = carDefaultMonthly(v)
+  const money = (n) => fmtMoney(n, v.currency) // this vehicle's listing currency (DOP/USD)
 
   return (
     <main className="page">
@@ -204,10 +206,10 @@ export default function VehicleDetail() {
           <aside className="side-panel col gap-16">
             <div className="card card-pad">
               <div className="tiny muted">Precio de venta</div>
-              <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.02em', margin: '2px 0 2px' }}>{fmtRD(v.price)}</div>
+              <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-.02em', margin: '2px 0 2px' }}>{money(v.price)}</div>
               <PriceSignal insight={v.priceInsight} />
               {v.priceInsight?.marketPrice && (
-                <div className="tiny muted" style={{ marginTop: 6 }}>Referencia AutoRD: {fmtRD(v.priceInsight.marketPrice)}</div>
+                <div className="tiny muted" style={{ marginTop: 6 }}>Referencia AutoRD: {money(v.priceInsight.marketPrice)}</div>
               )}
               <div className="row center gap-6 tiny muted"><MapPin size={13} /> {v.location}</div>
 
@@ -215,7 +217,7 @@ export default function VehicleDetail() {
                 <div className="row between center">
                   <div>
                     <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Desde</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(desdeMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{money(desdeMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
                     <div className="tiny" style={{ color: 'var(--teal-800)' }}>A {v.termYears} años · 20% inicial · Tasa {v.apr}%</div>
                   </div>
                   <div className="est-ic" style={{ color: 'var(--teal-700)' }}><Calculator size={30} /></div>
@@ -252,7 +254,7 @@ export default function VehicleDetail() {
                 <div className="card" style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', boxShadow: 'none' }}>
                   <div className="small strong" style={{ marginBottom: 12 }}>Calcula tu cuota</div>
                   <div className="field">
-                    <label>Inicial · {calcDownPct}% ({fmtRD(calcDown)})</label>
+                    <label>Inicial · {calcDownPct}% ({money(calcDown)})</label>
                     <input className="range" type="range" min="10" max="50" step="5" value={calcDownPct} onChange={(e) => setCalcDownPct(Number(e.target.value))} />
                     <div className="range-labels"><span>10%</span><span>30%</span><span>50%</span></div>
                   </div>
@@ -267,16 +269,16 @@ export default function VehicleDetail() {
                     </select>
                   </div>
                   <div style={{ borderTop: '1px solid var(--line)', marginTop: 12, paddingTop: 12 }}>
-                    <div className="kv"><span className="k">Precio</span><span className="v">{fmtRD(v.price)}</span></div>
-                    <div className="kv"><span className="k">Inicial</span><span className="v">− {fmtRD(calcDown)}</span></div>
-                    <div className="kv"><span className="k">Monto a financiar</span><span className="v">{fmtRD(calcPrincipal)}</span></div>
+                    <div className="kv"><span className="k">Precio</span><span className="v">{money(v.price)}</span></div>
+                    <div className="kv"><span className="k">Inicial</span><span className="v">− {money(calcDown)}</span></div>
+                    <div className="kv"><span className="k">Monto a financiar</span><span className="v">{money(calcPrincipal)}</span></div>
                     <div className="kv"><span className="k">Tasa estimada</span><span className="v">{calcApr}%</span></div>
                   </div>
                   <div className="est-card" style={{ marginTop: 12 }}>
                     <div className="row between center">
                       <div>
                         <div className="tiny" style={{ color: 'var(--teal-800)', fontWeight: 600 }}>Cuota estimada</div>
-                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{fmtRD(calcMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--teal-800)' }}>{money(calcMonthly)}<span style={{ fontSize: 14 }}>/mes</span></div>
                       </div>
                       <div className="est-ic" style={{ color: 'var(--teal-700)' }}><Calculator size={28} /></div>
                     </div>
@@ -334,7 +336,7 @@ export default function VehicleDetail() {
       <div className="sticky-cta">
         <div className="grow">
           <div className="tiny muted">Desde</div>
-          <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{fmtRD(v.monthly)}/mes</div>
+          <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{money(v.monthly)}/mes</div>
         </div>
         <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }} onClick={() => trackEvent(v.id, 'financing')}>Solicitar financiamiento</Link>
       </div>
@@ -350,7 +352,7 @@ function SimilarCard({ v }) {
       <div className="vcard-body">
         <div className="vtitle" style={{ fontSize: 14.5 }}>{v.make} {v.model}</div>
         <div className="vspecs">{v.year} · {km}</div>
-        <div className="vprice" style={{ fontSize: 17 }}>{fmtRD(v.price)}</div>
+        <div className="vprice" style={{ fontSize: 17 }}>{fmtMoney(v.price, v.currency)}</div>
       </div>
     </Link>
   )

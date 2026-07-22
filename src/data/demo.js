@@ -5,6 +5,10 @@
 export const fmtRD = (n) =>
   'RD$ ' + Number(n).toLocaleString('es-DO', { maximumFractionDigits: 0 })
 
+// Currency-aware price formatter — dealers list in DOP (RD$) or USD (US$).
+export const fmtMoney = (n, currency = 'DOP') =>
+  (currency === 'USD' ? 'US$ ' : 'RD$ ') + Number(n || 0).toLocaleString('es-DO', { maximumFractionDigits: 0 })
+
 export const banks = [
   { id: 'popular', name: 'Banco Popular', color: '#1a3a6b', initials: 'BP' },
   { id: 'banreservas', name: 'Banreservas', color: '#0f766e', initials: 'BR' },

@@ -51,7 +51,7 @@ export default function PostVehicle() {
   const [f, setF] = useState({
     make: '', model: '', year: '2022', trim: '', transmission: 'Automática',
     fuel: 'Gasolina', engine: '', mileage: '', color: '', bodyType: 'SUV',
-    price: '', condition: 'usado', certified: false, location: '', description: '',
+    price: '', currency: 'DOP', condition: 'usado', certified: false, location: '', description: '',
     lat: null, lng: null, features: [],
   })
   const toggleFeature = (name) => setF((prev) => ({
@@ -245,7 +245,15 @@ export default function PostVehicle() {
         {step === 3 && (
           <div className="col gap-16">
             <div className="grid grid-2" style={{ gap: 12 }}>
-              <Field label="Precio (RD$)"><input className="input" type="number" inputMode="numeric" value={f.price} onChange={set('price')} placeholder="1250000" /></Field>
+              <Field label="Precio">
+                <div className="row gap-8">
+                  <select className="select" value={f.currency} onChange={set('currency')} style={{ width: 92, flex: 'none' }}>
+                    <option value="DOP">RD$</option>
+                    <option value="USD">US$</option>
+                  </select>
+                  <input className="input" type="number" inputMode="numeric" value={f.price} onChange={set('price')} placeholder={f.currency === 'USD' ? '22000' : '1250000'} style={{ flex: 1, minWidth: 0 }} />
+                </div>
+              </Field>
               <Field label="Kilometraje (km)"><input className="input" type="number" inputMode="numeric" value={f.mileage} onChange={set('mileage')} placeholder="42000" /></Field>
             </div>
 
@@ -319,7 +327,7 @@ export default function PostVehicle() {
               <div className="verify-ic" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)', width: 42, height: 42, borderRadius: 10 }}><Car size={20} /></div>
               <div className="grow">
                 <div className="strong">{f.make} {f.model} {f.year}{f.trim ? ` · ${f.trim}` : ''}</div>
-                <div className="tiny muted">{f.bodyType} · {f.transmission} · {f.fuel}{f.color ? ` · ${f.color}` : ''} · {f.price ? `RD$ ${Number(f.price).toLocaleString('es-DO')}` : 'sin precio'}</div>
+                <div className="tiny muted">{f.bodyType} · {f.transmission} · {f.fuel}{f.color ? ` · ${f.color}` : ''} · {f.price ? `${f.currency === 'USD' ? 'US$' : 'RD$'} ${Number(f.price).toLocaleString('es-DO')}` : 'sin precio'}</div>
               </div>
             </div>
 

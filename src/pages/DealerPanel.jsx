@@ -5,7 +5,7 @@ import {
   Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight, ChevronLeft,
   MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter, Star, UploadCloud,
 } from 'lucide-react'
-import { fmtRD } from '../data/demo'
+import { fmtRD, fmtMoney } from '../data/demo'
 import {
   getDealerData, getDealerLeadCounts, setVehicleStatus, updateVehicleFields, deleteVehicle,
   getVehiclePhotos, addVehiclePhotos, deleteVehiclePhoto, setVehicleCover, reorderVehiclePhotos,
@@ -67,6 +67,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved, onChanged }) {
     fuel: vehicle.fuel || 'Gasolina', engine: vehicle.engine || '', color: vehicle.color || '',
     bodyType: vehicle.bodyType || 'SUV', condition: seedCondition(vehicle),
     mileage: String(vehicle.mileage ?? ''), price: String(vehicle.price ?? ''),
+    currency: vehicle.currency === 'USD' ? 'USD' : 'DOP',
     status: vehicle.status || 'publicado', location: vehicle.location || '',
     description: vehicle.description || '',
   })
@@ -182,7 +183,15 @@ function EditVehicleModal({ vehicle, onClose, onSaved, onChanged }) {
 
           <div style={SEC}>Precio y estado</div>
           <div className="row wrap gap-12">
-            <F label="Precio (RD$)"><input className="input" type="number" value={f.price} onChange={set('price')} /></F>
+            <F label="Precio">
+              <div className="row gap-6">
+                <select className="input" value={f.currency} onChange={set('currency')} style={{ width: 80, flex: 'none' }}>
+                  <option value="DOP">RD$</option>
+                  <option value="USD">US$</option>
+                </select>
+                <input className="input" type="number" value={f.price} onChange={set('price')} style={{ flex: 1, minWidth: 0 }} />
+              </div>
+            </F>
             <F label="Estado">
               <select className="input" value={f.status} onChange={set('status')}>{STATUS_LABELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
             </F>
@@ -451,7 +460,7 @@ export default function DealerPanel({ view = 'resumen' }) {
                           <div className="tiny muted">{r.trim ? `${r.trim} · ` : ''}{r.photos || 0} foto{Number(r.photos || 0) === 1 ? '' : 's'}</div>
                         </button>
                       </td>
-                      <td className="num">{fmtRD(r.price)}</td>
+                      <td className="num">{fmtMoney(r.price, r.currency)}</td>
                       <td>{estadoChip(r.status)}</td>
                       <td className="num"><span className="row center gap-4" style={{ justifyContent: 'flex-end' }}><Eye size={13} className="muted" /> {(r.views || 0).toLocaleString('es-DO')}</span></td>
                       <td className="num">{r.leads ?? '—'}</td>
