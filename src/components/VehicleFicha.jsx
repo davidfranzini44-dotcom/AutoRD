@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronLeft, ChevronRight, BadgeCheck, Scale, Share2,
+  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronLeft, ChevronRight, BadgeCheck, Scale, Share2, Store,
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
@@ -111,6 +111,11 @@ function FichaShell({ v, close }) {
           ) : null}
 
           <div className="ficha-mobile-quick-actions" aria-label="Acciones rápidas">
+            {v.dealerSlug && (
+              <Link to={`/dealers/${v.dealerSlug}`} className="btn btn-outline ficha-mobile-dealer-link" onClick={close} aria-label={`Ver perfil de ${v.dealer}`}>
+                <Store size={15} /> Dealer
+              </Link>
+            )}
             <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'}`} onClick={() => setCmp(toggleCompare(v.id).on)}>
               <Scale size={15} /> Comparar
             </button>
