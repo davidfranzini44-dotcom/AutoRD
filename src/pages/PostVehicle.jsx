@@ -7,13 +7,24 @@ import {
 import { createVehicle, getMyDealer, listVehicles } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import BrandLogo from '../components/BrandLogo'
+import { BODY_TYPES } from '../data/bodyTypes'
 
 const FALLBACK_CITIES = ['Santo Domingo', 'Santiago', 'La Romana', 'Punta Cana']
+// Equipment / accesorios (mirrors supercarros' list) — saved to vehicles.features.
+const ACCESSORIES = [
+  'Alarma', 'Bolsa de aire (chofer)', 'Bolsa de aire (laterales)', 'Bolsa de aire (pasajero)',
+  'Frenos ABS', 'Seguros eléctricos', 'Sensores de parqueo', '3 filas de asientos',
+  'Aire acondicionado digital', 'Aire acondicionado doble', 'Apple CarPlay', 'Asientos eléctricos',
+  'Baúl eléctrico', 'Bluetooth', 'Calefacción', 'Cámara de reversa', 'CD box', 'Cruise control',
+  'DVD', 'Guía hidráulico', 'Guía multifunción', 'Limpia vidrios traseros', 'Llave inteligente',
+  'Pintura de fábrica', 'Radio AM/FM', 'Radio Multimedia', 'Retrovisores eléctricos',
+  'Sistema de navegación', 'Sonido profesional', 'Sun roof', 'Vidrios eléctricos',
+  'Versión americana', 'Aros de fábrica', 'Aros de magnesio',
+]
 // Brand tiles shown on step 1 (BrandLogo falls back to initials for the rest).
 const BRANDS = ['Toyota', 'Honda', 'Hyundai', 'Kia', 'Nissan', 'Mazda', 'Mitsubishi', 'Ford', 'Lexus', 'Mercedes-Benz', 'BMW', 'Suzuki']
 const YEARS = Array.from({ length: 2027 - 2005 + 1 }, (_, i) => 2027 - i)
 const FUELS = ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico']
-const BODY_TYPES = ['SUV', 'Sedán', 'Pickup', 'Coupé', 'Hatchback', 'Minivan']
 const COLORS = ['Blanco', 'Negro', 'Gris', 'Plata', 'Rojo', 'Azul', 'Verde', 'Beige']
 const CONDITIONS = [{ v: 'usado', l: 'Usado' }, { v: 'nuevo', l: 'Nuevo' }, { v: 'certificado', l: 'Usado certificado' }]
 const STEP_TITLES = ['', 'Elige la marca', 'Modelo y año', 'Detalles del vehículo', 'Fotos y publicar']
@@ -41,8 +52,12 @@ export default function PostVehicle() {
     make: '', model: '', year: '2022', trim: '', transmission: 'Automática',
     fuel: 'Gasolina', engine: '', mileage: '', color: '', bodyType: 'SUV',
     price: '', condition: 'usado', certified: false, location: '', description: '',
-    lat: null, lng: null,
+    lat: null, lng: null, features: [],
   })
+  const toggleFeature = (name) => setF((prev) => ({
+    ...prev,
+    features: prev.features.includes(name) ? prev.features.filter((x) => x !== name) : [...prev.features, name],
+  }))
   const [dealerLocs, setDealerLocs] = useState([])
   const [inventory, setInventory] = useState([])
   const [photos, setPhotos] = useState([])
@@ -236,7 +251,14 @@ export default function PostVehicle() {
 
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Tipo</label>
-              <div className="row wrap gap-6">{BODY_TYPES.map((b) => <Chip key={b} active={f.bodyType === b} onClick={() => setV('bodyType', b)}>{b}</Chip>)}</div>
+              <div className="bodytype-row bodytype-row--compact">
+                {BODY_TYPES.map((b) => (
+                  <button type="button" key={b.type} className={`bt-item ${f.bodyType === b.type ? 'active' : ''}`} onClick={() => setV('bodyType', b.type)}>
+                    <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
+                    <span className="bt-label">{b.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Transmisión</label>
@@ -254,6 +276,13 @@ export default function PostVehicle() {
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>Condición</label>
               <div className="row wrap gap-6">{CONDITIONS.map((c) => <Chip key={c.v} active={f.condition === c.v} onClick={() => setV('condition', c.v)}>{c.l}</Chip>)}</div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 8 }}>
+                Accesorios {f.features.length > 0 && <span className="tiny muted">· {f.features.length} seleccionados</span>}
+              </label>
+              <div className="row wrap gap-6">{ACCESSORIES.map((a) => <Chip key={a} small active={f.features.includes(a)} onClick={() => toggleFeature(a)}>{a}</Chip>)}</div>
             </div>
 
             <Field label="Ubicación">

@@ -678,6 +678,7 @@ export async function createVehicle(v) {
     mileage: Number(v.mileage) || 0, color: v.color, body_type: v.bodyType,
     price: Number(v.price), condition: v.condition, certified: !!v.certified,
     location: v.location, description: v.description,
+    features: Array.isArray(v.features) ? v.features : [],
     lat: v.lat != null && v.lat !== '' ? Number(v.lat) : null,
     lng: v.lng != null && v.lng !== '' ? Number(v.lng) : null,
     monthly: Math.round((Number(v.price) * 0.8 * 0.013) || 0), apr: 9.75, term_years: 7,
