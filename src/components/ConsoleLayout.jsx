@@ -6,7 +6,9 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BankLogo from './BankLogo'
+import DealerLogo from './DealerLogo'
 import useBankIdentity from '../hooks/useBankIdentity'
+import { getMyDealer } from '../data/api'
 
 const DEALER_NAV = [
   { to: '/dealer', label: 'Resumen', icon: LayoutDashboard, end: true },
@@ -28,12 +30,21 @@ export default function ConsoleLayout() {
   const { profile, signOut } = useAuth() || {}
   const [open, setOpen] = useState(false)
   const bank = useBankIdentity(profile)
+  const [dealer, setDealer] = useState(null)
   useEffect(() => { setOpen(false); window.scrollTo(0, 0) }, [loc.pathname])
+
+  // Load the signed-in dealer so the console shows THEIR name + logo (not a placeholder).
+  useEffect(() => {
+    if (!profile?.dealer_id) { setDealer(null); return undefined }
+    let alive = true
+    getMyDealer(profile.dealer_id).then((d) => { if (alive) setDealer(d) }).catch(() => {})
+    return () => { alive = false }
+  }, [profile?.dealer_id])
 
   const isBank = loc.pathname.startsWith('/banco')
   const nav = isBank ? BANK_NAV : DEALER_NAV
   const RoleIcon = isBank ? Landmark : Store
-  const orgName = isBank ? bank.name : 'Auto América'
+  const orgName = isBank ? bank.name : (dealer?.name || 'Portal de dealer')
   const roleLabel = isBank ? 'Portal de banco' : 'Portal de dealer'
 
   return (
@@ -49,7 +60,7 @@ export default function ConsoleLayout() {
             {isBank ? (
               <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={24} />
             ) : (
-              <RoleIcon size={18} />
+              <DealerLogo dealer={dealer || { name: orgName }} style={{ width: 32, height: 32, fontSize: 13, borderRadius: 8 }} />
             )}
           </div>
           <div>
