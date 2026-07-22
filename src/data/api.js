@@ -697,6 +697,40 @@ export async function createVehicle(v) {
   return data
 }
 
+// Change a vehicle's status (publicado | reservado | vendido | borrador). Dealer-owned only (RLS).
+export async function setVehicleStatus(vehicleDbId, status) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { error } = await supabase.from('vehicles').update({ status }).eq('id', vehicleDbId)
+  if (error) throw error
+  return { ok: true }
+}
+
+// Patch the editable listing fields from the dealer console. Recomputes the sample monthly on price change.
+export async function updateVehicleFields(vehicleDbId, fields) {
+  if (!LIVE) return { ok: true, demo: true }
+  const patch = {}
+  if (fields.price != null && fields.price !== '') {
+    patch.price = Number(fields.price)
+    patch.monthly = Math.round((Number(fields.price) * 0.8 * 0.013) || 0)
+  }
+  if (fields.mileage != null && fields.mileage !== '') patch.mileage = Number(fields.mileage) || 0
+  if (fields.location != null) patch.location = fields.location
+  if (fields.description != null) patch.description = fields.description
+  if (fields.status != null) patch.status = fields.status
+  if (Object.keys(patch).length === 0) return { ok: true }
+  const { error } = await supabase.from('vehicles').update(patch).eq('id', vehicleDbId)
+  if (error) throw error
+  return { ok: true }
+}
+
+// Permanently remove a vehicle (and its photos, via FK cascade). Dealer-owned only (RLS).
+export async function deleteVehicle(vehicleDbId) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { error } = await supabase.from('vehicles').delete().eq('id', vehicleDbId)
+  if (error) throw error
+  return { ok: true }
+}
+
 // ---------------- Bank panel ----------------
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {
