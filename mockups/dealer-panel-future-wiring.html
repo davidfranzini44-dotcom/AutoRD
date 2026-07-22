@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD Dealer OS Future Wiring Concept</title>
+  <style>
+    :root {
+      --ink: #0f1f2f;
+      --muted: #627486;
+      --line: #d7e3e6;
+      --page: #edf4f5;
+      --card: #ffffff;
+      --soft: #f7fafb;
+      --teal: #087a72;
+      --teal-2: #12b8ad;
+      --navy: #10233d;
+      --blue: #2563eb;
+      --green: #12845a;
+      --amber: #b7791f;
+      --red: #b42318;
+      --shadow: 0 18px 50px rgba(15, 31, 47, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 6%, rgba(18,184,173,.14), transparent 28%),
+        radial-gradient(circle at 90% 2%, rgba(37,99,235,.10), transparent 26%),
+        linear-gradient(180deg, #f5fbfb 0%, var(--page) 42%, #e7f0f2 100%);
+    }
+    .board {
+      width: 1920px;
+      margin: 0 auto;
+      padding: 38px 44px 46px;
+    }
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .logo {
+      font-size: 34px;
+      font-weight: 950;
+      font-style: italic;
+      color: #06685f;
+      letter-spacing: -.02em;
+    }
+    .head h1 {
+      margin: 8px 0 0;
+      font-size: 36px;
+      letter-spacing: 0;
+    }
+    .head p {
+      max-width: 880px;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 31px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid rgba(8,122,114,.22);
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+    .product-shell {
+      display: grid;
+      grid-template-columns: 248px 1fr 370px;
+      min-height: 965px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .sidebar {
+      padding: 22px 16px;
+      background: #0f2235;
+      color: #dcebef;
+    }
+    .dealer {
+      display: grid;
+      grid-template-columns: 50px 1fr;
+      gap: 11px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,.08);
+      margin-bottom: 19px;
+    }
+    .dealer-logo {
+      width: 50px;
+      height: 50px;
+      border-radius: 13px;
+      background: #fff;
+      color: var(--teal);
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 950;
+    }
+    .dealer strong, .dealer span { display: block; }
+    .dealer strong { color: #fff; font-size: 13px; }
+    .dealer span { margin-top: 3px; color: #a9bdc8; font-size: 10px; line-height: 1.25; }
+    .nav { display: grid; gap: 6px; }
+    .nav a {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 10px;
+      border-radius: 10px;
+      color: #bdd0d9;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 820;
+    }
+    .nav a.active {
+      background: #effdfb;
+      color: #075e58;
+    }
+    .nav i {
+      width: 23px;
+      height: 23px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.10);
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 950;
+    }
+    .nav a.active i { background: #d4fbf6; }
+    .wiring-card {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 13px;
+      border: 1px solid rgba(18,184,173,.22);
+      background: rgba(18,184,173,.10);
+    }
+    .wiring-card b { display: block; color: #fff; font-size: 12px; }
+    .wiring-card span { display: block; margin-top: 5px; color: #b8ccd5; font-size: 10px; line-height: 1.35; }
+    .main {
+      padding: 22px;
+      background: #f6fafb;
+      min-width: 0;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .search {
+      width: 470px;
+      height: 43px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: 0 8px 20px rgba(15,31,47,.04);
+    }
+    .btn {
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .btn.primary {
+      background: linear-gradient(180deg, #12b8ad, #087a72);
+      border-color: #087a72;
+      color: #fff;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .command {
+      min-height: 216px;
+      padding: 22px;
+      border-radius: 16px;
+      color: #fff;
+      background:
+        linear-gradient(135deg, rgba(8,101,94,.98), rgba(13,38,59,.96)),
+        #0f2235;
+      overflow: hidden;
+      position: relative;
+    }
+    .command:after {
+      content: "";
+      position: absolute;
+      right: -82px;
+      bottom: -118px;
+      width: 278px;
+      height: 278px;
+      border-radius: 999px;
+      border: 44px solid rgba(255,255,255,.075);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.12);
+      color: #c8fff9;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .command h2 {
+      margin: 12px 0 8px;
+      max-width: 710px;
+      font-size: 31px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+    .command p {
+      max-width: 760px;
+      margin: 0;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+    .command-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .command .btn {
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.28);
+      color: #fff;
+    }
+    .command .btn.primary {
+      background: #fff;
+      border-color: #fff;
+      color: #075e58;
+    }
+    .deal-room {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--blue);
+      border-radius: 16px;
+      background: #fff;
+      padding: 16px;
+    }
+    .deal-room h3, .panel h3, .right-panel h3 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    .deal-score {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 13px 0;
+    }
+    .score {
+      width: 66px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: #1d4ed8;
+      color: #fff;
+      font-size: 21px;
+      font-weight: 950;
+    }
+    .track {
+      height: 9px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #dbeafe;
+      margin-bottom: 12px;
+    }
+    .track i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--teal-2));
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .mini {
+      padding: 10px;
+      border: 1px solid rgba(37,99,235,.14);
+      border-radius: 10px;
+      background: #fbfdff;
+    }
+    .mini b, .mini span { display: block; }
+    .mini b { font-size: 18px; }
+    .mini span { color: var(--muted); font-size: 10px; font-weight: 760; margin-top: 3px; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      padding: 13px;
+      min-height: 104px;
+      box-shadow: 0 8px 20px rgba(15,31,47,.04);
+    }
+    .kpi i {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #e7fbf8;
+      color: var(--teal);
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 950;
+      margin-bottom: 10px;
+    }
+    .kpi b { display: block; font-size: 24px; line-height: 1; }
+    .kpi span { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; font-weight: 750; }
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(15,31,47,.04);
+      overflow: hidden;
+    }
+    .panel-head {
+      min-height: 52px;
+      padding: 13px 15px 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      background: #fbfdfe;
+    }
+    .panel-body { padding: 13px; }
+    .link { color: var(--teal); font-size: 11px; font-weight: 900; }
+    .lead-card {
+      display: grid;
+      grid-template-columns: 42px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      margin-bottom: 9px;
+    }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--teal);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .lead-card b, .lead-card small { display: block; }
+    .lead-card b { font-size: 12px; }
+    .lead-card small { color: var(--muted); font-size: 10px; margin-top: 3px; line-height: 1.3; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .green { background: #dcfce7; color: var(--green); }
+    .teal { background: #ccfbf1; color: var(--teal); }
+    .amber { background: #fff2c7; color: var(--amber); }
+    .red { background: #fee2e2; color: var(--red); }
+    .blue { background: #dbeafe; color: var(--blue); }
+    .slate { background: #e8eef2; color: #4f6475; }
+    .automation {
+      display: grid;
+      gap: 8px;
+    }
+    .rule {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      display: grid;
+      grid-template-columns: 32px 1fr auto;
+      gap: 9px;
+      align-items: center;
+    }
+    .rule-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #e7fbf8;
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .rule b, .rule span { display: block; }
+    .rule b { font-size: 12px; }
+    .rule span { color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .inventory-intel {
+      display: grid;
+      grid-template-columns: 182px 1fr;
+      gap: 12px;
+    }
+    .car {
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .car img {
+      display: block;
+      width: 100%;
+      height: 128px;
+      object-fit: cover;
+    }
+    .car div { padding: 9px; }
+    .car b, .car small { display: block; }
+    .car b { font-size: 12px; }
+    .car small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .recommendations { display: grid; gap: 8px; }
+    .rec {
+      padding: 10px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      background: #fbfdfe;
+    }
+    .rec b, .rec span { display: block; }
+    .rec b { font-size: 12px; }
+    .rec span { color: var(--muted); font-size: 10px; margin-top: 3px; line-height: 1.35; }
+    .tabs-preview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .tab-preview {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      padding: 12px;
+      min-height: 132px;
+    }
+    .tab-preview h4 { margin: 0 0 8px; font-size: 13px; }
+    .tab-preview p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.38; }
+    .tab-preview .badge { margin-top: 10px; }
+    .right {
+      padding: 18px;
+      background: #f9fcfd;
+      border-left: 1px solid var(--line);
+      min-width: 0;
+    }
+    .right-panel {
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(15,31,47,.04);
+    }
+    .timeline {
+      display: grid;
+      gap: 10px;
+      margin-top: 11px;
+    }
+    .event {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 9px;
+      align-items: start;
+    }
+    .event i {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #e7fbf8;
+      color: var(--teal);
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 950;
+    }
+    .event b, .event span { display: block; }
+    .event b { font-size: 11px; }
+    .event span { color: var(--muted); font-size: 10px; margin-top: 2px; line-height: 1.3; }
+    .quick-stack { display: grid; gap: 8px; margin-top: 10px; }
+    .quick {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfdfe;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .phone {
+      position: absolute;
+      right: 82px;
+      top: 194px;
+      width: 276px;
+      height: 604px;
+      border: 10px solid #102033;
+      border-radius: 34px;
+      background: #f6fafb;
+      box-shadow: 0 24px 70px rgba(16,32,51,.30);
+      overflow: hidden;
+    }
+    .phone-top {
+      height: 60px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+    }
+    .phone-top b { font-size: 13px; }
+    .phone-body { padding: 11px; }
+    .phone-card {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fff;
+      padding: 11px;
+      margin-bottom: 9px;
+    }
+    .phone-card h4 { margin: 0 0 7px; font-size: 12px; }
+    .phone-line {
+      min-height: 31px;
+      border-top: 1px solid #edf3f5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 820;
+    }
+    .wiring-map {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .map-panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+    .map-panel h3 { margin: 0 0 12px; font-size: 17px; }
+    .map-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .wire-node {
+      min-height: 98px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fbfdfe;
+    }
+    .wire-node b, .wire-node span { display: block; }
+    .wire-node b { font-size: 13px; }
+    .wire-node span { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .feature {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fbfdfe;
+    }
+    .feature b, .feature span { display: block; }
+    .feature b { font-size: 13px; }
+    .feature span { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+  </style>
+</head>
+<body>
+  <div class="board">
+    <header class="head">
+      <div>
+        <div class="logo">AutoRD</div>
+        <h1>Dealer OS v2 — mockup con funciones nuevas y wiring futuro</h1>
+        <p>Concepto más ambicioso para que el dealer opere ventas, inventario, WhatsApp, KYC, financiamiento, campañas y reservas desde un solo sistema.</p>
+      </div>
+      <span class="pill">Future wiring concept</span>
+    </header>
+
+    <div style="position: relative;">
+      <section class="product-shell">
+        <aside class="sidebar">
+          <div class="dealer">
+            <div class="dealer-logo">JA</div>
+            <div><strong>Joselito Auto Import</strong><span>Dealer verificado · 31 vehículos activos</span></div>
+          </div>
+          <nav class="nav">
+            <a class="active"><i>OS</i> Command Center</a>
+            <a><i>DR</i> Deal Room</a>
+            <a><i>LI</i> Lead Intelligence</a>
+            <a><i>FI</i> Financiamiento</a>
+            <a><i>IN</i> Inventory IQ</a>
+            <a><i>WA</i> WhatsApp Inbox</a>
+            <a><i>MK</i> Campañas</a>
+            <a><i>AU</i> Automatizaciones</a>
+            <a><i>TM</i> Equipo</a>
+            <a><i>AN</i> Analytics</a>
+          </nav>
+          <div class="wiring-card">
+            <b>Wiring pendiente</b>
+            <span>Reglas, scoring, bancos, mensajes, documentos, reservas y campañas conectados por eventos.</span>
+          </div>
+        </aside>
+
+        <main class="main">
+          <div class="topbar">
+            <div class="search">Buscar lead, cédula, vehículo, banco, reserva, mensaje...</div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn">Crear campaña</button>
+              <button class="btn">Regla automática</button>
+              <button class="btn primary">Publicar vehículo</button>
+            </div>
+          </div>
+
+          <section class="hero">
+            <div class="command">
+              <span class="eyebrow">Dealer command center</span>
+              <h2>Un panel que recomienda la próxima acción para cerrar ventas.</h2>
+              <p>Leads ordenados por intención, expedientes con KYC/consentimiento, bancos con SLA visible, inventario con precio recomendado y campañas listas para activar.</p>
+              <div class="command-actions">
+                <button class="btn primary">Abrir deal room</button>
+                <button class="btn">Enviar links KYC</button>
+                <button class="btn">Activar campaña</button>
+              </div>
+            </div>
+            <aside class="deal-room">
+              <h3>Deal readiness</h3>
+              <div class="deal-score">
+                <div><div style="font-size:11px;color:var(--muted);font-weight:800;">Clientes listos para banco</div><strong>Excelente flujo</strong></div>
+                <div class="score">87%</div>
+              </div>
+              <div class="track"><i style="width:87%"></i></div>
+              <div class="mini-grid">
+                <div class="mini"><b>12</b><span>KYC completos</span></div>
+                <div class="mini"><b>8</b><span>Consentimientos</span></div>
+                <div class="mini"><b>4</b><span>Ofertas bancarias</span></div>
+                <div class="mini"><b>2</b><span>Reservas activas</span></div>
+              </div>
+            </aside>
+          </section>
+
+          <div class="kpis">
+            <div class="kpi"><i>HOT</i><b>9</b><span>Leads alta intención</span></div>
+            <div class="kpi"><i>SLA</i><b>3</b><span>Bancos fuera de SLA</span></div>
+            <div class="kpi"><i>KYC</i><b>12</b><span>Identidades verificadas</span></div>
+            <div class="kpi"><i>DOC</i><b>5</b><span>Docs pendientes</span></div>
+            <div class="kpi"><i>ADS</i><b>4</b><span>Campañas activas</span></div>
+            <div class="kpi"><i>RD$</i><b>7.4M</b><span>Pipeline pre-aprobado</span></div>
+          </div>
+
+          <section class="grid-main">
+            <article class="panel">
+              <div class="panel-head"><h3>Lead Intelligence</h3><span class="link">Ver scoring</span></div>
+              <div class="panel-body">
+                <div class="lead-card">
+                  <div class="avatar">RP</div>
+                  <div><b>Ramón Peralta · Lexus RX 350</b><small>Score 96 · abrió cuota 3 veces · listo para llamada</small></div>
+                  <span class="badge green">Llamar ahora</span>
+                </div>
+                <div class="lead-card">
+                  <div class="avatar">YS</div>
+                  <div><b>Yleana Santos · Grand Highlander</b><small>Score 88 · KYC pendiente · quiere 60 meses</small></div>
+                  <span class="badge teal">Enviar KYC</span>
+                </div>
+                <div class="lead-card">
+                  <div class="avatar">CM</div>
+                  <div><b>Carla Mejía · LX 600</b><small>Score 81 · oferta recibida · negociar inicial</small></div>
+                  <span class="badge blue">Enviar oferta</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Automation Studio</h3><span class="link">Nueva regla</span></div>
+              <div class="panel-body automation">
+                <div class="rule"><div class="rule-icon">1</div><div><b>Si KYC no se completa en 12 h</b><span>Enviar recordatorio por WhatsApp y crear tarea para vendedor.</span></div><span class="badge green">Activa</span></div>
+                <div class="rule"><div class="rule-icon">2</div><div><b>Si banco pide documentos</b><span>Crear checklist, avisar cliente y mostrar SLA del expediente.</span></div><span class="badge green">Activa</span></div>
+                <div class="rule"><div class="rule-icon">3</div><div><b>Si vehículo baja en intención</b><span>Sugerir ajuste de precio, nuevas fotos o promoción destacada.</span></div><span class="badge amber">Draft</span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="grid-main">
+            <article class="panel">
+              <div class="panel-head"><h3>Inventory IQ</h3><span class="link">Abrir inventario</span></div>
+              <div class="panel-body inventory-intel">
+                <div class="car">
+                  <img src="../public/vehicle-photos/joselito/lexus-rx-350-f-sport-2022/rx-01.jpg" alt="">
+                  <div><b>Lexus RX 350 F Sport</b><small>RD$ 4,250,000 · 128 vistas</small></div>
+                </div>
+                <div class="recommendations">
+                  <div class="rec"><b>Precio recomendado</b><span>Rango competitivo: RD$ 4.15M - 4.35M. Está bien posicionado.</span></div>
+                  <div class="rec"><b>Mejora sugerida</b><span>Agregar video walkaround y fotos interior para subir conversión estimada +14%.</span></div>
+                  <div class="rec"><b>Promoción</b><span>Recomendado destacar por 72 h porque tiene 6 leads y 3 solicitudes.</span></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-head"><h3>Tabs nuevos que se pueden wirear</h3><span class="link">Roadmap UI</span></div>
+              <div class="panel-body tabs-preview">
+                <div class="tab-preview"><h4>Deal Room</h4><p>Vista única por cliente: WhatsApp, KYC, banco, docs, reserva y timeline.</p><span class="badge teal">Nuevo</span></div>
+                <div class="tab-preview"><h4>Inventory IQ</h4><p>Score de publicación, precio recomendado, demanda y promociones.</p><span class="badge blue">Nuevo</span></div>
+                <div class="tab-preview"><h4>Campañas</h4><p>Destacar vehículos, WhatsApp broadcast, social posts y banners.</p><span class="badge amber">Nuevo</span></div>
+                <div class="tab-preview"><h4>Automations</h4><p>Reglas simples con triggers: KYC, bancos, leads, documentos y reservas.</p><span class="badge green">Nuevo</span></div>
+              </div>
+            </article>
+          </section>
+        </main>
+
+        <aside class="right">
+          <div class="right-panel">
+            <h3>Deal Room · Ramón Peralta</h3>
+            <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;">
+              <span class="badge green">Hot lead</span>
+              <span class="badge teal">KYC listo</span>
+              <span class="badge blue">Banco evaluando</span>
+            </div>
+            <div class="timeline">
+              <div class="event"><i>WA</i><div><b>Mensaje recibido</b><span>Pregunta por aceptar vehículo como inicial.</span></div></div>
+              <div class="event"><i>K</i><div><b>KYC aprobado</b><span>Cédula y prueba de vida completadas por DIDIT.</span></div></div>
+              <div class="event"><i>C</i><div><b>Consentimiento firmado</b><span>Autorizó consulta crediticia para bancos seleccionados.</span></div></div>
+              <div class="event"><i>B</i><div><b>Enviado a bancos</b><span>Popular, BHD y Banreservas con SLA de 2 h.</span></div></div>
+            </div>
+            <div class="quick-stack">
+              <div class="quick"><span>Solicitar prueba de ingresos</span><span class="badge amber">Doc</span></div>
+              <div class="quick"><span>Enviar oferta pre-aprobada</span><span class="badge green">Oferta</span></div>
+              <div class="quick"><span>Crear reserva del vehículo</span><span class="badge blue">Reserva</span></div>
+            </div>
+          </div>
+
+          <div class="right-panel">
+            <h3>Bank SLA Monitor</h3>
+            <div class="quick-stack">
+              <div class="quick"><span>Banco Popular</span><span class="badge green">42 min</span></div>
+              <div class="quick"><span>BHD</span><span class="badge amber">1 h 55 min</span></div>
+              <div class="quick"><span>Banreservas</span><span class="badge red">+24 h</span></div>
+              <div class="quick"><span>Scotiabank</span><span class="badge blue">Nuevo</span></div>
+            </div>
+          </div>
+
+          <div class="right-panel">
+            <h3>Campaign Studio</h3>
+            <div class="quick-stack">
+              <div class="quick"><span>Destacar Lexus RX 350</span><span class="badge teal">72 h</span></div>
+              <div class="quick"><span>Broadcast SUVs certificados</span><span class="badge blue">312 leads</span></div>
+              <div class="quick"><span>Post Instagram automático</span><span class="badge slate">Draft</span></div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <aside class="phone">
+        <div class="phone-top"><b>Dealer OS</b><span class="badge teal">Live</span></div>
+        <div class="phone-body">
+          <div class="phone-card"><h4>Próxima acción</h4><div style="font-size:11px;line-height:1.35;color:var(--muted);">Llamar a Ramón. Score 96, KYC listo, banco evaluando.</div><button class="btn primary" style="width:100%;margin-top:9px;">Abrir deal room</button></div>
+          <div class="phone-card"><h4>Alertas</h4><div class="phone-line"><span>BHD cerca de SLA</span><b>1h55</b></div><div class="phone-line"><span>Docs pendientes</span><b>5</b></div><div class="phone-line"><span>Leads sin respuesta</span><b>3</b></div></div>
+          <div class="phone-card"><h4>Acciones rápidas</h4><div class="phone-line"><span>Enviar KYC</span><span class="badge teal">Link</span></div><div class="phone-line"><span>Reservar vehículo</span><span class="badge blue">RD$</span></div><div class="phone-line"><span>Crear campaña</span><span class="badge amber">Ads</span></div></div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="wiring-map">
+      <article class="map-panel">
+        <h3>Mapa de wiring propuesto</h3>
+        <div class="map-grid">
+          <div class="wire-node"><b>Leads</b><span>Origen, vehículo, vendedor, score, mensajes, próximas tareas.</span></div>
+          <div class="wire-node"><b>KYC / Consent</b><span>DIDIT status, autorización bancaria, expiración, recordatorios.</span></div>
+          <div class="wire-node"><b>Bancos</b><span>Solicitud, SLA, estado, documentos, tasas, respuesta final.</span></div>
+          <div class="wire-node"><b>Docs</b><span>Checklist, solicitud, carga, revisión y notificación.</span></div>
+          <div class="wire-node"><b>Inventory IQ</b><span>Fotos, score, demanda, pricing, promoción y reservas.</span></div>
+          <div class="wire-node"><b>WhatsApp</b><span>Inbox, plantillas, eventos, recordatorios y asignaciones.</span></div>
+          <div class="wire-node"><b>Automations</b><span>Triggers, condiciones, acciones, owner y auditoría.</span></div>
+          <div class="wire-node"><b>Analytics</b><span>Conversión, tiempos, vendedores, bancos, campañas y ROI.</span></div>
+        </div>
+      </article>
+
+      <article class="map-panel">
+        <h3>Funciones nuevas recomendadas</h3>
+        <div class="feature-list">
+          <div class="feature"><b>Deal Room</b><span>Una página por cliente para manejar todo el proceso comercial.</span></div>
+          <div class="feature"><b>Lead Score</b><span>Prioriza por intención, actividad, KYC, presupuesto y respuesta.</span></div>
+          <div class="feature"><b>Bank SLA</b><span>Muestra qué banco respondió rápido y cuáles requieren seguimiento.</span></div>
+          <div class="feature"><b>Inventory IQ</b><span>Calidad, demanda, precio recomendado y campañas por vehículo.</span></div>
+          <div class="feature"><b>Reservation Hold</b><span>Separar vehículo con depósito o promesa manual, sin contrato digital.</span></div>
+          <div class="feature"><b>Automation Studio</b><span>Reglas simples para KYC, docs, bancos, leads y WhatsApp.</span></div>
+        </div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>
