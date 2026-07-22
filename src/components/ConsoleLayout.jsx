@@ -2,7 +2,7 @@ import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Boxes, Users, PlusCircle, Inbox, FileCheck2, BarChart3,
-  ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle,
+  ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle, Users2, Lock,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BankLogo from './BankLogo'
@@ -12,11 +12,12 @@ import { getMyDealer } from '../data/api'
 
 const DEALER_NAV = [
   { to: '/dealer', label: 'Resumen', icon: LayoutDashboard, end: true },
-  { to: '/dealer/inventario', label: 'Inventario', icon: Boxes },
-  { to: '/dealer/leads', label: 'Leads de financiamiento', icon: Users },
-  { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle },
-  { to: '/dealer/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store },
+  { to: '/dealer/inventario', label: 'Inventario', icon: Boxes, perm: 'inventario' },
+  { to: '/dealer/leads', label: 'Leads de financiamiento', icon: Users, perm: 'financiamiento' },
+  { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle, perm: 'inventario' },
+  { to: '/dealer/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
+  { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store, perm: 'perfil' },
+  { to: '/dealer/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 const BANK_NAV = [
   { to: '/banco', label: 'Bandeja de solicitudes', icon: Inbox, end: true },
@@ -27,7 +28,7 @@ const BANK_NAV = [
 // Operational console shell (sidebar) for dealer + bank portals.
 export default function ConsoleLayout() {
   const loc = useLocation()
-  const { profile, signOut } = useAuth() || {}
+  const { profile, signOut, can } = useAuth() || {}
   const [open, setOpen] = useState(false)
   const bank = useBankIdentity(profile)
   const [dealer, setDealer] = useState(null)
@@ -42,7 +43,9 @@ export default function ConsoleLayout() {
   }, [profile?.dealer_id])
 
   const isBank = loc.pathname.startsWith('/banco')
-  const nav = isBank ? BANK_NAV : DEALER_NAV
+  const nav = isBank ? BANK_NAV : DEALER_NAV.filter((n) => !n.perm || (can ? can(n.perm) : false))
+  const requiredPerm = !isBank ? DEALER_NAV.find((n) => n.to === loc.pathname)?.perm : null
+  const blocked = requiredPerm && can && !can(requiredPerm)
   const RoleIcon = isBank ? Landmark : Store
   const orgName = isBank ? bank.name : (dealer?.name || 'Portal de dealer')
   const roleLabel = isBank ? 'Portal de banco' : 'Portal de dealer'
@@ -102,7 +105,13 @@ export default function ConsoleLayout() {
           )}
         </div>
         <div className="console-main">
-          <Outlet />
+          {blocked ? (
+            <div className="card card-pad" style={{ textAlign: 'center', maxWidth: 460, margin: '40px auto' }}>
+              <div className="verify-ic" style={{ margin: '0 auto 12px', color: 'var(--muted)', background: 'var(--surface-2, #f1f5f9)' }}><Lock size={22} /></div>
+              <h2 style={{ fontSize: 18 }}>Sin acceso a esta sección</h2>
+              <p className="muted small">Tu cuenta no tiene permiso para esta área. Pídele acceso al propietario del dealer.</p>
+            </div>
+          ) : <Outlet />}
         </div>
       </div>
     </div>

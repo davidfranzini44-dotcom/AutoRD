@@ -312,6 +312,34 @@ export async function uploadDealerLogo(dealerDbId, file) {
   return { url: data?.publicUrl || null }
 }
 
+// ---------------- Dealer team (employees + permissions) ----------------
+// All operations run through the dealer-team edge function (service role,
+// owner-only). Accounts are created server-side — never in the browser.
+async function invokeTeam(body) {
+  const { data, error } = await supabase.functions.invoke('dealer-team', { body })
+  if (error) {
+    let msg = error.message
+    try { const j = await error.context.json(); if (j?.error) msg = j.error } catch (_) { /* ignore */ }
+    throw new Error(msg)
+  }
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+export async function listTeam() {
+  if (!LIVE) return []
+  const data = await invokeTeam({ action: 'list' })
+  return data?.team || []
+}
+export async function createEmployee({ fullName, email, permissions }) {
+  return invokeTeam({ action: 'create', fullName, email, permissions })
+}
+export async function setEmployeePermissions(userId, permissions) {
+  return invokeTeam({ action: 'update', userId, permissions })
+}
+export async function setEmployeeActive(userId, active) {
+  return invokeTeam({ action: 'update', userId, active })
+}
+
 // Buyer contacts a dealer about a specific car — seeds a conversation into the
 // dealer's WhatsApp inbox. Requires an auth session (mint an anonymous one if
 // needed). Returns { ok } or { error: <code> }.

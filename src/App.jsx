@@ -20,6 +20,7 @@ import ComoFunciona from './pages/ComoFunciona'
 import Login from './pages/Login'
 import DealerPanel from './pages/DealerPanel'
 import DealerProfileEdit from './pages/DealerProfileEdit'
+import DealerTeam from './pages/DealerTeam'
 import PostVehicle from './pages/PostVehicle'
 import BankPanel from './pages/BankPanel'
 import BankReports from './pages/BankReports'
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/dealer/inventario" element={<DealerPanel view="inventario" />} />
         <Route path="/dealer/leads" element={<DealerPanel view="leads" />} />
         <Route path="/dealer/perfil" element={<DealerProfileEdit />} />
+        <Route path="/dealer/equipo" element={<DealerTeam />} />
         <Route path="/dealer/publicar" element={<PostVehicle />} />
         <Route path="/dealer/whatsapp" element={<WhatsAppInbox />} />
       </Route>

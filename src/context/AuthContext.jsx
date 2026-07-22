@@ -62,12 +62,28 @@ export function AuthProvider({ children }) {
     setSession(null); setProfile(null)
   }, [])
 
+  // Dealer team permissions: owners have full access; employees are gated by
+  // their per-area toggles. Admins bypass everything.
+  const dealerRole = profile?.dealer_role || null
+  const isOwner = dealerRole === 'owner'
+  const permissions = (profile && typeof profile.permissions === 'object' && profile.permissions) || {}
+  const can = (perm) => {
+    if (!profile) return false
+    if (profile.role === 'admin') return true
+    if (isOwner) return true
+    return !!permissions[perm]
+  }
+
   const value = {
     configured: isSupabaseConfigured,
     session,
     user: session?.user || null,
     profile,
     role: profile?.role || null,
+    dealerRole,
+    isOwner,
+    permissions,
+    can,
     loading,
     signIn, signUp, signInAnon, signOut,
     refreshProfile: () => loadProfile(session?.user?.id),
