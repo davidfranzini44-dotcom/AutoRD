@@ -110,6 +110,16 @@ function FichaShell({ v, close }) {
             </div>
           ) : null}
 
+          <div className="ficha-mobile-quick-actions" aria-label="Acciones rápidas">
+            <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'}`} onClick={() => setCmp(toggleCompare(v.id).on)}>
+              <Scale size={15} /> Comparar
+            </button>
+            <button className="btn btn-outline" onClick={shareCurrentVehicle}>
+              <Share2 size={15} /> {shareMsg || 'Compartir'}
+            </button>
+            <ContactDealer vehicle={v} triggerClass="btn btn-outline" triggerLabel="WhatsApp" />
+          </div>
+
           <div className="ficha-specs">
             {specs.map((s) => {
               const Icon = s.ic
@@ -149,15 +159,15 @@ function FichaShell({ v, close }) {
         </div>
 
         <div className="ficha-actions">
-          <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" onClick={close}>Solicitar financiamiento</Link>
-          <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'} btn-block`} onClick={() => setCmp(toggleCompare(v.id).on)}>
+          <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg ficha-action-primary" onClick={close}>Solicitar financiamiento</Link>
+          <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'} btn-block ficha-action-secondary`} onClick={() => setCmp(toggleCompare(v.id).on)}>
             <Scale size={16} /> {cmp ? 'Quitar de comparar' : 'Comparar vehiculo'}
           </button>
-          <button className="btn btn-outline btn-block" onClick={shareCurrentVehicle}>
+          <button className="btn btn-outline btn-block ficha-action-secondary" onClick={shareCurrentVehicle}>
             <Share2 size={16} /> {shareMsg || 'Compartir link'}
           </button>
-          <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
-          <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
+          <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block ficha-action-contact" triggerLabel={`Contactar a ${v.dealer}`} />
+          <Link to={`/vehiculo/${v.id}`} className="btn btn-ghost btn-block btn-sm ficha-action-full" onClick={close}>Ver ficha completa <ChevronRight size={16} /></Link>
         </div>
       </aside>
     </div>
