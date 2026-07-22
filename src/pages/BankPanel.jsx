@@ -3,7 +3,8 @@ import {
   Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search, ShieldCheck, FileCheck2,
   Car, Upload, Info, Landmark, Send, FileText, ExternalLink, Plus, Clock, Users,
   AlertTriangle, ChevronLeft, UserCheck, Phone, Mail, MapPin, Briefcase, Eye, X,
-  MessageSquare, ClipboardList, CalendarClock, Filter,
+  MessageSquare, ClipboardList, CalendarClock, Filter, TimerReset, WalletCards,
+  BarChart3, BadgeCheck, ArrowUpRight, Building2,
 } from 'lucide-react'
 import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
@@ -64,6 +65,19 @@ export default function BankPanel() {
 
   const dealers = [...new Set(apps.map((a) => a.dealer).filter(Boolean))].sort()
   const stats = bankStats(apps)
+  const activeApps = apps.filter((a) => !['preaprobada', 'rechazada'].includes(a.status)).length
+  const completeDossiers = apps.filter((a) => a.kyc === 'aprobado' && a.consent && a.status !== 'docs').length
+  const readyApps = apps.filter((a) => ['nueva', 'evaluando'].includes(a.status) && a.kyc === 'aprobado' && a.consent).length
+  const missingConsent = apps.filter((a) => a.kyc === 'aprobado' && !a.consent).length
+  const slaRisk = stats.waiting.length
+  const decisionScore = apps.length ? Math.round((completeDossiers / apps.length) * 100) : 0
+  const decisionLabel = decisionScore >= 75 ? 'Flujo saludable' : decisionScore >= 50 ? 'Revisión activa' : 'Necesita atención'
+  const approvalVolume = stats.totalApproved || 0
+  const reviewerLoad = REVIEWERS.map((r) => ({
+    ...r,
+    count: apps.filter((a) => a.reviewer?.id === r.id && !['preaprobada', 'rechazada'].includes(a.status)).length,
+    ready: apps.filter((a) => a.reviewer?.id === r.id && a.kyc === 'aprobado' && a.consent && a.status === 'evaluando').length,
+  }))
 
   const list = apps.filter((a) => {
     if (filter !== 'todas' && a.status !== filter) return false
@@ -104,9 +118,31 @@ export default function BankPanel() {
     const ev = a.timeline[a.timeline.length - 1]
     return { text: `${ev?.name || 'Actualización'} · ${a.customer}`, when: ev?.when || a.receivedAt }
   })
+  const commandCards = [
+    {
+      key: 'ready', icon: BadgeCheck, tone: 'green', label: 'Listas para decisión',
+      value: readyApps, hint: 'KYC y consentimiento completos',
+      onClick: () => { setFilter('evaluando'); setKycOnly(true); setConsentOnly(true); setDocsOnly(false) },
+    },
+    {
+      key: 'sla', icon: TimerReset, tone: slaRisk ? 'red' : 'teal', label: 'SLA en riesgo',
+      value: slaRisk, hint: 'solicitudes con más de 24 h',
+      onClick: () => { setFilter('todas'); setShowFilters(true) },
+    },
+    {
+      key: 'consent', icon: ShieldCheck, tone: missingConsent ? 'amber' : 'green', label: 'Falta consentimiento',
+      value: missingConsent, hint: 'clientes con KYC aprobado',
+      onClick: () => { setFilter('todas'); setKycOnly(true); setConsentOnly(false); setShowFilters(true) },
+    },
+    {
+      key: 'volume', icon: WalletCards, tone: 'blue', label: 'Volumen aprobado',
+      value: approvalVolume ? fmtRD(approvalVolume) : 'RD$0', hint: 'ofertas pre-aprobadas',
+      onClick: () => setFilter('preaprobada'),
+    },
+  ]
 
   return (
-    <main className="page">
+    <main className="page bank-console-page">
       <div className="container">
         <div className="admin-head">
           <div className="row center gap-8">
@@ -119,11 +155,59 @@ export default function BankPanel() {
           <span className="chip chip-navy" style={{ height: 30 }}><ShieldCheck size={14} /> La evaluación de crédito la realiza el banco de forma externa</span>
         </div>
 
+        <section className="bank-hero-panel">
+          <div className="bank-hero-main">
+            <div className="bank-hero-brand">
+              <div className="bank-console-logo"><BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={42} /></div>
+              <span><Building2 size={14} /> Mesa de crédito</span>
+            </div>
+            <h2>Solicitudes listas, SLA y documentos al frente.</h2>
+            <p>Revisa KYC, consentimiento, ingresos y documentos desde una cola pensada para que el analista tome la próxima decisión sin perder contexto.</p>
+            <div className="bank-hero-actions">
+              <button className="btn btn-primary" onClick={() => { setFilter('evaluando'); setKycOnly(true); setConsentOnly(true) }}><BadgeCheck size={16} /> Revisar listas</button>
+              <button className="btn btn-outline" onClick={() => setShowFilters((s) => !s)}><Filter size={16} /> Filtros avanzados</button>
+            </div>
+          </div>
+          <div className="bank-readiness-card">
+            <div className="row between center">
+              <div>
+                <div className="tiny muted">Preparación para decisión</div>
+                <strong>{decisionLabel}</strong>
+              </div>
+              <div className="bank-readiness-score">{decisionScore}%</div>
+            </div>
+            <div className="bank-readiness-track"><span style={{ width: `${Math.max(4, decisionScore)}%` }} /></div>
+            <div className="bank-readiness-grid">
+              <MiniStat label="Activas" value={activeApps} />
+              <MiniStat label="Listas" value={readyApps} />
+              <MiniStat label="Docs" value={stats.docs} />
+              <MiniStat label="SLA +24 h" value={slaRisk} />
+            </div>
+            <div className="bank-privacy-line"><ShieldCheck size={14} /> El banco realiza la evaluación crediticia externa.</div>
+          </div>
+        </section>
+
         {/* KPI cards */}
         <div className="bank-kpis">
           {kpis.map((k) => { const Icon = k.icon; return (
             <div className="metric-card" key={k.l}><div className="mc-ic"><Icon size={18} /></div><div className="mc-v">{k.v}</div><div className="mc-l">{k.l}</div></div>
           ) })}
+        </div>
+
+        <div className="bank-command-grid">
+          {commandCards.map((c) => {
+            const Icon = c.icon
+            const t = TONE[c.tone] || TONE.slate
+            return (
+              <button key={c.key} className="bank-command-card" onClick={c.onClick}>
+                <span style={{ background: t.bg, color: t.fg }}><Icon size={17} /></span>
+                <b>{c.value}</b>
+                <strong>{c.label}</strong>
+                <small>{c.hint}</small>
+                <ArrowUpRight size={15} className="muted" />
+              </button>
+            )
+          })}
         </div>
 
         {/* Priority queue + recent activity */}
@@ -144,6 +228,16 @@ export default function BankPanel() {
             <div className="col">
               {activity.map((e, i) => (
                 <div key={i} className="row gap-10 dash-activity"><div className="dash-act-ic"><FileText size={13} /></div><div className="grow"><div className="small">{e.text}</div><div className="tiny muted">{e.when}</div></div></div>
+              ))}
+            </div>
+            <div className="bank-workload">
+              <div className="small strong row center gap-8"><BarChart3 size={15} color="var(--teal-700)" /> Carga por analista</div>
+              {reviewerLoad.map((r) => (
+                <button key={r.id} className="bank-workload-row" onClick={() => { setReviewerF(r.id); setShowFilters(true) }}>
+                  <span className="avatar">{r.initials}</span>
+                  <span className="grow"><strong>{r.name}</strong><small>{r.ready} listas para decisión</small></span>
+                  <b>{r.count}</b>
+                </button>
               ))}
             </div>
           </div>
@@ -249,6 +343,15 @@ export default function BankPanel() {
         </div>
       </div>
     </main>
+  )
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="bank-mini-stat">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
   )
 }
 
