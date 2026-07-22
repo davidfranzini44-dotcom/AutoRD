@@ -2582,3 +2582,518 @@ select.preap-input { padding-right: 16px; }
   .dealers-list { max-height: none; overflow: visible; }
   .dealers-map, .dealers-map-wrap .dealers-map { height: 340px; }
 }
+
+/* ============================================================
+   Homepage polish pass
+   ============================================================ */
+.hero2 {
+  min-height: 382px;
+  border-radius: 16px;
+  border-color: #dce5ec;
+  background:
+    linear-gradient(112deg, #f8fbfb 0%, #edf6f7 47%, #dcebed 100%);
+  box-shadow: 0 18px 48px rgba(16, 41, 63, .08);
+}
+.hero2-photo { width: 63%; }
+.hero2-photo .vphoto-img {
+  object-position: center left;
+  filter: saturate(1.03) contrast(1.02);
+}
+.hero2-photo::after {
+  background:
+    linear-gradient(90deg, rgba(248,251,251,0) 0%, rgba(248,251,251,.03) 46%, rgba(248,251,251,.62) 72%, #f8fbfb 94%),
+    linear-gradient(0deg, rgba(248,251,251,.92) 0%, rgba(248,251,251,0) 32%);
+}
+.hero2-text {
+  width: 50%;
+  max-width: 640px;
+  padding: 42px 46px 104px 12px;
+}
+.hero2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  margin-bottom: 13px;
+  border: 1px solid rgba(15, 118, 110, .18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .86);
+  color: var(--teal-800);
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: var(--shadow-sm);
+}
+.hero2-text h1 {
+  font-size: clamp(34px, 3.2vw, 48px);
+  line-height: 1.04;
+  font-weight: 900;
+}
+.hero2-text p {
+  max-width: 470px;
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+.hero2-trust { gap: 12px; margin-top: 20px; }
+.hero2-trust span {
+  min-height: 36px;
+  padding-right: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .58);
+}
+.hero2-trust .ht-ic {
+  width: 36px;
+  height: 36px;
+}
+.hero2-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+.hero2-actions .btn {
+  height: 44px;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-bar {
+  margin: -58px 12px 0;
+  padding: 18px;
+  border-radius: 14px;
+  border-top-left-radius: 0;
+  background:
+    linear-gradient(165deg, #0d5650 0%, #0a3736 100%);
+  box-shadow: 0 18px 42px rgba(12, 32, 51, .18);
+}
+.search-bar::after {
+  width: 180px;
+  background: #f8fbfb;
+}
+.search-tab {
+  height: 46px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-bottom: 0;
+}
+.search-tab.active {
+  color: var(--teal-900);
+  box-shadow: 0 -8px 18px rgba(5, 30, 37, .16);
+}
+.search-fields {
+  grid-template-columns: .86fr .95fr .95fr .88fr 1.05fr 1fr 134px;
+  gap: 12px;
+}
+.search-fields .select {
+  height: 46px;
+  border-color: rgba(255,255,255,.38);
+  box-shadow: 0 8px 18px rgba(5, 30, 37, .13);
+}
+.search-fields .sp-btn {
+  height: 46px;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(15, 139, 136, .24);
+}
+.search-advanced-cta {
+  padding: 2px 0;
+  color: #c8f3ef;
+}
+
+.home-results-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.home-results-strip strong {
+  color: var(--navy-900);
+  font-size: 15px;
+}
+.home-sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.home-sort-control .select {
+  width: 176px;
+  height: 38px;
+  font-size: 13px;
+  background-color: #fff;
+}
+
+.home-market-snapshot {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.home-stat-card {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: var(--shadow-sm);
+}
+.home-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: #edf8f6;
+  color: var(--teal-700);
+}
+.home-stat-card strong {
+  display: block;
+  color: var(--navy-900);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+}
+.home-stat-card span:not(.home-stat-icon) {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 850;
+}
+.home-stat-card p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.home-discovery-row {
+  grid-template-columns: minmax(0, 1fr) minmax(390px, 480px);
+  gap: 18px;
+  margin-top: 18px;
+}
+.bodytype-section--showcase {
+  min-height: 184px;
+  padding: 20px 20px 15px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%);
+}
+.bodytype-row--showcase {
+  gap: 12px;
+}
+.bodytype-section--showcase .bt-item {
+  min-height: 112px;
+  border-radius: 10px;
+  border-color: #e5ebf0;
+  background: #fff;
+  box-shadow: 0 1px 1px rgba(16, 41, 63, .04);
+}
+.bodytype-section--showcase .bt-item:hover {
+  transform: translateY(-2px);
+  border-color: #cddbe4;
+  box-shadow: 0 8px 20px rgba(16, 41, 63, .08);
+}
+.bodytype-section--showcase .bt-image {
+  height: 52px;
+  max-width: 118px;
+}
+.finance-eligibility-card {
+  min-height: 184px;
+  padding: 22px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, #f0fbf9 0%, #ffffff 88%);
+  box-shadow: 0 10px 26px rgba(16, 41, 63, .08);
+}
+.finance-eligibility-card h2 {
+  font-size: 24px;
+}
+.finance-eligibility-pills {
+  gap: 8px;
+  padding: 9px;
+  border-radius: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.finance-eligibility-pills::-webkit-scrollbar { display: none; }
+.finance-eligibility-pills span {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+.section-title-rich {
+  align-items: flex-end;
+  gap: 16px;
+}
+.section-title-rich .section-kicker {
+  margin-bottom: 6px;
+  color: var(--teal-800);
+  letter-spacing: .04em;
+}
+.section-title-rich h2 {
+  color: var(--navy-900);
+  font-size: 23px;
+  line-height: 1.1;
+}
+.featured-panel {
+  margin-top: 20px;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(16, 41, 63, .07);
+}
+.featured-home-grid {
+  gap: 16px;
+}
+.featured-home-grid .vcard,
+.recent-card,
+.brand-tile,
+.dealer-card {
+  border-radius: 12px;
+}
+.featured-home-grid .vcard {
+  box-shadow: 0 2px 10px rgba(16, 41, 63, .06);
+}
+.featured-home-grid .vcard:hover,
+.recent-card:hover,
+.brand-tile:hover,
+.dealer-card:hover {
+  border-color: #cddbe4;
+  box-shadow: 0 14px 30px rgba(16, 41, 63, .10);
+}
+.recent-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+.recent-card {
+  box-shadow: 0 2px 10px rgba(16, 41, 63, .06);
+}
+.brand-grid {
+  gap: 14px;
+}
+.brand-tile {
+  height: 132px;
+  background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%);
+}
+.dealer-card {
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.dealer-card:hover {
+  transform: translateY(-2px);
+}
+.sell-cta {
+  border-radius: 16px;
+  background:
+    linear-gradient(100deg, #f8fbfb 0%, #e8f5f1 58%, #d7ece8 100%);
+  box-shadow: 0 14px 34px rgba(16, 41, 63, .08);
+}
+
+@media (max-width: 1180px) {
+  .home-market-snapshot { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recent-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1140px) {
+  .search-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .search-fields .btn { grid-column: 1 / -1; }
+}
+@media (max-width: 980px) {
+  .hero2 { min-height: 300px; }
+  .hero2-text {
+    width: 56%;
+    padding: 30px 26px 74px 0;
+  }
+  .hero2-text h1 { font-size: 31px; }
+  .hero2-actions { margin-top: 16px; }
+  .home-discovery-row {
+    grid-template-columns: 1fr;
+  }
+  .finance-eligibility-card {
+    min-height: 0;
+  }
+}
+@media (max-width: 860px) {
+  .hero2 {
+    min-height: 268px;
+    border-radius: 14px;
+  }
+  .hero2-photo {
+    width: 68%;
+    opacity: .94;
+  }
+  .hero2-photo::after {
+    background:
+      linear-gradient(90deg, rgba(248,251,251,0) 0%, rgba(248,251,251,.2) 44%, rgba(248,251,251,.88) 76%, #f8fbfb 100%),
+      linear-gradient(0deg, #f8fbfb 0%, rgba(248,251,251,0) 34%);
+  }
+  .hero2-text {
+    width: 58%;
+    padding: 24px 16px 24px 0;
+  }
+  .hero2-badge {
+    height: 28px;
+    margin-bottom: 9px;
+    font-size: 11px;
+  }
+  .hero2-text h1 {
+    font-size: 25px;
+  }
+  .hero2-text p {
+    max-width: 240px;
+    font-size: 13px;
+  }
+  .hero2-actions {
+    display: none;
+  }
+  .search-bar {
+    margin: 14px 0 0;
+    padding: 14px;
+    border-top-left-radius: 14px;
+  }
+  .search-bar::after { display: none; }
+  .search-tabs {
+    gap: 6px;
+    padding-bottom: 12px;
+  }
+  .search-tab {
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+  }
+  .search-tab.active {
+    background: #fff;
+    box-shadow: none;
+  }
+  .search-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .search-fields .btn {
+    grid-column: 1 / -1;
+  }
+  .home-results-strip {
+    padding: 12px 2px 0;
+  }
+  .home-market-snapshot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .home-stat-card {
+    padding: 13px;
+  }
+  .home-stat-card p {
+    display: none;
+  }
+  .bodytype-section--showcase {
+    padding: 16px;
+  }
+  .bodytype-section--showcase .bt-item {
+    flex: 0 0 128px;
+  }
+  .featured-panel {
+    padding: 16px;
+  }
+  .recent-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 14px;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .recent-row::-webkit-scrollbar { display: none; }
+  .recent-card {
+    flex: 0 0 230px;
+    scroll-snap-align: start;
+  }
+}
+@media (max-width: 560px) {
+  .hero2 {
+    min-height: 236px;
+  }
+  .hero2-photo {
+    width: 76%;
+  }
+  .hero2-text {
+    width: 62%;
+    padding: 18px 12px 18px 0;
+  }
+  .hero2-badge {
+    max-width: 100%;
+    padding: 0 9px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hero2-text h1 {
+    font-size: 21px;
+    line-height: 1.06;
+  }
+  .hero2-text p {
+    max-width: 190px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .search-fields .field label {
+    color: #d9efec;
+  }
+  .home-results-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .home-sort-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .home-sort-control .select {
+    flex: 1;
+    max-width: 188px;
+  }
+  .home-market-snapshot {
+    grid-template-columns: 1fr 1fr;
+  }
+  .home-stat-card {
+    align-items: flex-start;
+    gap: 9px;
+  }
+  .home-stat-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .home-stat-card strong {
+    font-size: 18px;
+  }
+  .home-stat-card span:not(.home-stat-icon) {
+    font-size: 11px;
+    line-height: 1.15;
+  }
+  .section-title-rich {
+    align-items: flex-start;
+  }
+  .section-title-rich h2 {
+    font-size: 20px;
+  }
+  .section-title-rich .link-teal {
+    white-space: nowrap;
+  }
+  .bodytype-section--showcase .bt-item {
+    flex-basis: 118px;
+  }
+  .finance-eligibility-card {
+    padding: 18px;
+  }
+  .finance-eligibility-card h2 {
+    font-size: 21px;
+  }
+  .finance-eligibility-actions .btn {
+    width: 100%;
+  }
+}

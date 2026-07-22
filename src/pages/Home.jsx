@@ -4,7 +4,8 @@ import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
   MonitorSmartphone as Monitor, Calculator, FileCheck,
-  IdCard, Store, MapPin, SlidersHorizontal,
+  IdCard, Store, MapPin, SlidersHorizontal, Sparkles,
+  TrendingUp, Building2,
 } from 'lucide-react'
 import VehicleCard from '../components/VehicleCard'
 import CarImage from '../components/CarImage'
@@ -181,6 +182,32 @@ export default function Home() {
   const preapLink = incomeNum > 0
     ? `/financiamiento?ingreso=${incomeNum}&monto=${preapprovalAmount}&plazo=${calcYears}`
     : '/financiamiento'
+  const marketplaceStats = [
+    {
+      icon: Car,
+      value: loading ? '...' : all.length.toLocaleString('es-DO'),
+      label: 'vehículos publicados',
+      detail: `${list.length.toLocaleString('es-DO')} coinciden con tu búsqueda`,
+    },
+    {
+      icon: Landmark,
+      value: '+10',
+      label: 'bancos conectados',
+      detail: 'pre-aprobación con KYC y consentimiento',
+    },
+    {
+      icon: Building2,
+      value: dealers.length ? dealers.filter((d) => d.verified).length.toLocaleString('es-DO') : '3+',
+      label: 'dealers verificados',
+      detail: 'inventario revisado y contacto directo',
+    },
+    {
+      icon: TrendingUp,
+      value: `${Math.round((all.filter((v) => v.financing).length / Math.max(all.length, 1)) * 100)}%`,
+      label: 'financiables',
+      detail: 'vehículos listos para solicitar ofertas',
+    },
+  ]
 
   useEffect(() => {
     try {
@@ -222,12 +249,17 @@ export default function Home() {
         <section className="hero2">
           <div className="hero2-photo"><CarImage make="Toyota" model="RAV4" bodyType="SUV" seed="hero" photo={heroVehiclePhoto} label="Vehículo" /></div>
           <div className="hero2-text">
+            <span className="hero2-badge"><Sparkles size={15} /> Marketplace automotriz RD</span>
             <h1>Compra tu vehículo<br />con financiamiento real</h1>
             <p>Encuentra tu próximo vehículo y obtén ofertas de los mejores bancos de la República Dominicana.</p>
             <div className="hero2-trust">
               <span><i className="ht-ic"><MonitorSmartphone size={17} /></i> 100% Online</span>
               <span><i className="ht-ic"><Landmark size={17} /></i> Respuesta de bancos</span>
               <span><i className="ht-ic"><ShieldCheck size={17} /></i> Seguridad y transparencia</span>
+            </div>
+            <div className="hero2-actions">
+              <button type="button" className="btn btn-primary" onClick={runSearch}><Search size={16} /> Buscar vehículos</button>
+              <Link to="/financiamiento" className="btn btn-outline">Solicitar pre-aprobación</Link>
             </div>
           </div>
         </section>
@@ -276,6 +308,35 @@ export default function Home() {
             <Link to="/buscar" className="search-advanced-cta"><SlidersHorizontal size={15} /> Búsqueda avanzada</Link>
           </div>
         </div>
+
+        <div className="home-results-strip">
+          <span><strong>{loading ? 'Cargando' : list.length.toLocaleString('es-DO')}</strong> vehículos disponibles en AutoRD</span>
+          <label className="home-sort-control">
+            Ordenar por
+            <select className="select" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Ordenar vehículos">
+              <option value="relevancia">Más relevantes</option>
+              <option value="menor">Menor precio</option>
+              <option value="mayor">Mayor precio</option>
+              <option value="nuevo">Más recientes</option>
+            </select>
+          </label>
+        </div>
+
+        <section className="home-market-snapshot" aria-label="Resumen del marketplace">
+          {marketplaceStats.map((stat) => {
+            const Icon = stat.icon
+            return (
+              <article className="home-stat-card" key={stat.label}>
+                <span className="home-stat-icon"><Icon size={18} /></span>
+                <div>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                  <p>{stat.detail}</p>
+                </div>
+              </article>
+            )
+          })}
+        </section>
 
         {/* ---------------- Discovery + financing ---------------- */}
         <section className="home-discovery-row" aria-label="Explorar vehículos y financiamiento">
@@ -421,8 +482,11 @@ export default function Home() {
         </section>
 
         <section className="featured-panel" id="vehiculos-destacados">
-          <div className="section-title">
-            <h2>Vehículos destacados</h2>
+          <div className="section-title section-title-rich">
+            <div>
+              <span className="section-kicker"><BadgeCheck size={14} /> Selección AutoRD</span>
+              <h2>Vehículos destacados</h2>
+            </div>
             <Link to="/buscar" className="link-teal">Ver todos los vehículos <ArrowRight size={15} /></Link>
           </div>
 
@@ -438,8 +502,11 @@ export default function Home() {
         {/* ---------------- Recent listings ---------------- */}
         {!loading && recentRailList.length > 0 && (
           <section className="home-section">
-            <div className="section-title">
-              <h2>{recentRailIsHistory ? 'Vistos recientemente' : 'Recién publicados'}</h2>
+            <div className="section-title section-title-rich">
+              <div>
+                <span className="section-kicker"><Clock size={14} /> Actualizado</span>
+                <h2>{recentRailIsHistory ? 'Vistos recientemente' : 'Recién publicados'}</h2>
+              </div>
               <Link to={recentRailIsHistory ? '/vistos' : '/buscar'} className="link-teal">
                 {recentRailIsHistory ? 'Ver historial' : 'Ver todos'} <ArrowRight size={15} />
               </Link>
@@ -452,8 +519,11 @@ export default function Home() {
 
         {/* ---------------- Explore by brand ---------------- */}
         <section className="home-section">
-          <div className="section-title">
-            <h2>Explorar por marca</h2>
+          <div className="section-title section-title-rich">
+            <div>
+              <span className="section-kicker"><Car size={14} /> Marcas populares</span>
+              <h2>Explorar por marca</h2>
+            </div>
             <Link to="/buscar" className="link-teal">Ver todas las marcas <ArrowRight size={15} /></Link>
           </div>
           <div className="brand-grid">
@@ -473,8 +543,11 @@ export default function Home() {
 
         {/* ---------------- Verified dealers ---------------- */}
         <section className="home-section">
-          <div className="section-title">
-            <h2>Dealers verificados</h2>
+          <div className="section-title section-title-rich">
+            <div>
+              <span className="section-kicker"><ShieldCheck size={14} /> Dealers confiables</span>
+              <h2>Dealers verificados</h2>
+            </div>
             <Link to="/dealers" className="link-teal">Ver dealers <ArrowRight size={15} /></Link>
           </div>
           <div className="dealer-grid">
