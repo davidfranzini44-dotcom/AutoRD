@@ -433,6 +433,7 @@ function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
             <KV k="Firmado" v={a.consent ? <Chip tone="green"><FileCheck2 size={11} /> Sí</Chip> : <Chip tone="red">No</Chip>} />
             {a.consent && <><KV k="Fecha" v={a.consentAt} /><KV k="Versión" v={a.consentVersion} /><KV k="Bancos autorizados" v={a.banksAuthorized} /></>}
             {a.consent && <div className="notice" style={{ marginTop: 8, background: 'var(--teal-50)', borderColor: 'var(--teal-100)' }}><ShieldCheck size={15} color="var(--teal-700)" /><span className="tiny">El cliente autorizó a este banco a consultar su historial crediticio.</span></div>}
+            {a.contractToken && <a className="btn btn-outline btn-sm btn-block" href={`/contrato/${a.contractToken}`} target="_blank" rel="noreferrer" style={{ marginTop: 10 }}><FileText size={14} /> Ver contrato firmado (DIDIT)</a>}
           </Block>
 
           {/* Vehicle / dealer */}
