@@ -186,12 +186,16 @@ export default function VehicleDetail() {
             <div className="card card-pad">
               <h3 style={{ marginBottom: 8 }}>Descripción</h3>
               <p className="small" style={{ color: 'var(--ink-2)', lineHeight: 1.7 }}>{v.description}</p>
-              <h3 style={{ margin: '16px 0 10px', fontSize: 15 }}>Equipamiento</h3>
-              <div className="grid grid-3" style={{ gap: 8 }}>
-                {v.features.map((f) => (
-                  <div key={f} className="row center gap-8 small"><Check size={15} color="var(--teal-700)" strokeWidth={2.5} /> {f}</div>
-                ))}
-              </div>
+              {Array.isArray(v.features) && v.features.length > 0 && (
+                <>
+                  <h3 style={{ margin: '18px 0 10px', fontSize: 15 }}>Accesorios <span className="tiny muted" style={{ fontWeight: 600 }}>· {v.features.length}</span></h3>
+                  <div className="grid grid-3" style={{ gap: 8 }}>
+                    {v.features.map((f) => (
+                      <div key={f} className="row center gap-8 small"><Check size={15} color="var(--teal-700)" strokeWidth={2.5} /> {f}</div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
