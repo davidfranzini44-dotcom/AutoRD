@@ -706,17 +706,31 @@ export async function setVehicleStatus(vehicleDbId, status) {
 }
 
 // Patch the editable listing fields from the dealer console. Recomputes the sample monthly on price change.
-export async function updateVehicleFields(vehicleDbId, fields) {
+export async function updateVehicleFields(vehicleDbId, f) {
   if (!LIVE) return { ok: true, demo: true }
   const patch = {}
-  if (fields.price != null && fields.price !== '') {
-    patch.price = Number(fields.price)
-    patch.monthly = Math.round((Number(fields.price) * 0.8 * 0.013) || 0)
+  if (f.make != null) patch.make = f.make
+  if (f.model != null) patch.model = f.model
+  if (f.year != null && f.year !== '') patch.year = Number(f.year)
+  if (f.trim != null) patch.trim = f.trim
+  if (f.transmission != null) patch.transmission = f.transmission
+  if (f.fuel != null) patch.fuel = f.fuel
+  if (f.engine != null) patch.engine = f.engine
+  if (f.color != null) patch.color = f.color
+  if (f.bodyType != null) patch.body_type = f.bodyType
+  if (f.condition != null) {
+    patch.condition = f.condition
+    patch.certified = f.condition === 'certificado'
   }
-  if (fields.mileage != null && fields.mileage !== '') patch.mileage = Number(fields.mileage) || 0
-  if (fields.location != null) patch.location = fields.location
-  if (fields.description != null) patch.description = fields.description
-  if (fields.status != null) patch.status = fields.status
+  if (f.mileage != null && f.mileage !== '') patch.mileage = Number(f.mileage) || 0
+  if (f.location != null) patch.location = f.location
+  if (f.description != null) patch.description = f.description
+  if (f.status != null) patch.status = f.status
+  if (Array.isArray(f.features)) patch.features = f.features
+  if (f.price != null && f.price !== '') {
+    patch.price = Number(f.price)
+    patch.monthly = Math.round((Number(f.price) * 0.8 * 0.013) || 0)
+  }
   if (Object.keys(patch).length === 0) return { ok: true }
   const { error } = await supabase.from('vehicles').update(patch).eq('id', vehicleDbId)
   if (error) throw error
