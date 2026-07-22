@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import suv1 from '../assets/cars/suv-1.jpg'
 import suv3 from '../assets/cars/suv-3.jpg'
 import heroSuv from '../assets/cars/hero-suv.jpg'
@@ -27,13 +27,19 @@ function photoFor(bodyType, seed, make, model) {
 }
 
 export default function CarImage({ tone = '#4b5563', className = '', label, make, model, bodyType, seed, photo }) {
+  const imgRef = useRef(null)
   const [ok, setOk] = useState(false)
   const [dead, setDead] = useState(false)
   const src = photo || (seed === 'hero' ? heroSuv : (make || bodyType ? photoFor(bodyType, seed, make, model) : null))
 
   useEffect(() => {
-    setOk(false)
     setDead(false)
+    setOk(false)
+    const img = imgRef.current
+    if (img?.complete) {
+      if (img.naturalWidth > 0) setOk(true)
+      else setDead(true)
+    }
   }, [src])
 
   return (
@@ -50,6 +56,8 @@ export default function CarImage({ tone = '#4b5563', className = '', label, make
       </svg>
       {src && !dead && (
         <img
+          key={src}
+          ref={imgRef}
           src={src}
           alt={label || 'Vehículo'}
           className="vphoto-img"

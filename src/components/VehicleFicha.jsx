@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronRight, BadgeCheck, Scale, Share2,
+  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronLeft, ChevronRight, BadgeCheck, Scale, Share2,
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
@@ -30,6 +30,7 @@ function FichaShell({ v, close }) {
   const [fav, setFav] = useState(() => isFavorite(v.id))
   const [cmp, setCmp] = useState(() => isCompared(v.id))
   const [shareMsg, setShareMsg] = useState('')
+  const [activePhoto, setActivePhoto] = useState(0)
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close() }
@@ -50,6 +51,14 @@ function FichaShell({ v, close }) {
     { ic: Palette, l: 'Color', val: v.color },
   ]
   const initials = String(v.dealer || '').split(' ').map((w) => w[0]).slice(0, 2).join('')
+  const realGalleryPhotos = Array.isArray(v.photoUrls) ? v.photoUrls.filter(Boolean) : []
+  const galleryPhotos = realGalleryPhotos.length ? realGalleryPhotos : (v.coverPhoto ? [v.coverPhoto] : [])
+  const currentPhoto = galleryPhotos[Math.min(activePhoto, Math.max(0, galleryPhotos.length - 1))] || v.coverPhoto
+  const canSwitchPhotos = galleryPhotos.length > 1
+  const switchPhoto = (delta) => {
+    if (!canSwitchPhotos) return
+    setActivePhoto((i) => (i + delta + galleryPhotos.length) % galleryPhotos.length)
+  }
   const shareCurrentVehicle = async () => {
     const result = await shareVehicle(v)
     if (result === 'cancelled') return
@@ -61,7 +70,14 @@ function FichaShell({ v, close }) {
     <div className="ficha-overlay" onClick={close}>
       <aside className="ficha-panel" role="dialog" aria-modal="true" aria-label={`${v.make} ${v.model}`} onClick={(e) => e.stopPropagation()}>
         <div className="ficha-photo">
-          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} label={`${v.make} ${v.model}`} />
+          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${activePhoto}`} tone={v.tone} photo={currentPhoto} label={`${v.make} ${v.model}`} />
+          {canSwitchPhotos && (
+            <>
+              <button type="button" className="gallery-nav prev" aria-label="Foto anterior" onClick={() => switchPhoto(-1)}><ChevronLeft size={21} /></button>
+              <button type="button" className="gallery-nav next" aria-label="Siguiente foto" onClick={() => switchPhoto(1)}><ChevronRight size={21} /></button>
+              <span className="gallery-count ficha-photo-count">{activePhoto + 1} / {galleryPhotos.length}</span>
+            </>
+          )}
           <button className="ficha-close" onClick={close} aria-label="Cerrar"><X size={19} /></button>
           <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'absolute', top: 12, right: 54 }} onClick={() => setFav(toggleFavorite(v.id))} aria-label="Guardar en favoritos"><Heart size={17} /></button>
           {v.dealerVerified && <span className="verified-shield" title="Dealer verificado" style={{ left: 12, top: 12, right: 'auto' }}><ShieldCheck size={14} /></span>}

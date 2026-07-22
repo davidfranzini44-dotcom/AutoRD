@@ -169,7 +169,7 @@ export async function getVehicleBySlug(slug) {
     const fallback = joselitoFallbackVehicles().find((v) => v.id === slug)
     return fallback ? withPriceInsights([fallback])[0] : null
   }
-  return mapVehicle(data)
+  return withPriceInsights(mergeVehiclesById([mapVehicle(data)], joselitoFallbackVehicles()))[0]
 }
 
 // ---------------- Lead tracking (views / share / contact / financing) ----------------

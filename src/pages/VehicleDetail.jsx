@@ -69,11 +69,20 @@ export default function VehicleDetail() {
     { ic: Fuel, l: 'Combustible', v: v.fuel },
     { ic: Palette, l: 'Color', v: v.color },
   ]
-  const galleryPhotos = v.photoUrls?.length
-    ? v.photoUrls
+  const realGalleryPhotos = Array.isArray(v.photoUrls) ? v.photoUrls.filter(Boolean) : []
+  const galleryPhotos = realGalleryPhotos.length
+    ? realGalleryPhotos
+    : v.coverPhoto
+      ? [v.coverPhoto]
     : Array.from({ length: Math.max(1, Math.min(v.photos || 5, 5)) }, () => null)
   const galleryCount = galleryPhotos.length
-  const activePhoto = galleryPhotos[Math.min(active, galleryCount - 1)]
+  const activeIndex = Math.min(active, galleryCount - 1)
+  const activePhoto = galleryPhotos[activeIndex]
+  const canSwitchPhotos = galleryCount > 1
+  const switchPhoto = (delta) => {
+    if (!canSwitchPhotos) return
+    setActive((i) => (i + delta + galleryCount) % galleryCount)
+  }
 
   // Reuse an existing pre-approval instead of restarting KYC.
   const canUsePre = preApp && (!preApp.approvedAmount || v.price <= preApp.approvedAmount)
@@ -118,8 +127,14 @@ export default function VehicleDetail() {
           {/* Left: gallery + info */}
           <div className="col gap-16">
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ position: 'relative' }}>
+              <div className="gallery-stage">
                 <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${active}`} tone={v.tone} photo={activePhoto} className="tall" label={`${v.make} ${v.model}`} />
+                {canSwitchPhotos && (
+                  <>
+                    <button type="button" className="gallery-nav prev" aria-label="Foto anterior" onClick={() => switchPhoto(-1)}><ChevronLeft size={22} /></button>
+                    <button type="button" className="gallery-nav next" aria-label="Siguiente foto" onClick={() => switchPhoto(1)}><ChevronRight size={22} /></button>
+                  </>
+                )}
                 <div className="row gap-8" style={{ position: 'absolute', top: 12, right: 12 }}>
                   <button className="fav-btn" style={{ position: 'static' }} aria-label="Compartir" onClick={shareCurrentVehicle}><Share2 size={16} /></button>
                   <button className={`fav-btn ${cmp ? 'active' : ''}`} style={{ position: 'static', borderRadius: 8, width: 'auto', padding: '0 10px' }} onClick={() => setCmp(toggleCompare(v.id).on)} aria-label="Comparar">
@@ -128,15 +143,17 @@ export default function VehicleDetail() {
                   <button className={`fav-btn ${fav ? 'active' : ''}`} style={{ position: 'static' }} onClick={() => setFav(!fav)} aria-label="Guardar"><Heart size={16} /></button>
                 </div>
                 {shareMsg && <span className="share-toast">{shareMsg}</span>}
-                <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(12,32,51,.8)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
-                  {Math.min(active + 1, galleryCount)} / {galleryCount}
+                <span className="gallery-count">
+                  {activeIndex + 1} / {galleryCount}
                 </span>
               </div>
               <div className="row gap-8" style={{ padding: 12, overflowX: 'auto' }}>
                 {galleryPhotos.map((photo, i) => (
-                  <button key={i} onClick={() => setActive(i)}
-                    className="gallery-thumb"
-                    style={{ width: 92, flex: 'none', outline: active === i ? '2px solid var(--teal-700)' : 'none' }}>
+                  <button key={photo || i} type="button" onClick={() => setActive(i)}
+                    className={`gallery-thumb ${activeIndex === i ? 'active' : ''}`}
+                    aria-label={`Ver foto ${i + 1}`}
+                    aria-current={activeIndex === i}
+                    style={{ width: 92, flex: 'none' }}>
                     <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-thumb-${i}`} tone={v.tone} photo={photo} />
                   </button>
                 ))}
