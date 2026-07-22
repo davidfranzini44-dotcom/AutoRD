@@ -502,6 +502,10 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 
 /* side drawer (bank detail) */
 .split { display:grid; grid-template-columns: 1fr 400px; gap: 18px; align-items: start; }
+/* Let grid tracks shrink below their content min-content so the detail page
+   never overflows horizontally on mobile (the single-column layout at ≤1140px). */
+.split { min-width: 0; }
+.split > * { min-width: 0; }
 .kv { display:flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-2); font-size: 13.5px; }
 .kv:last-child { border-bottom: none; }
 .kv .k { color: var(--muted); }
