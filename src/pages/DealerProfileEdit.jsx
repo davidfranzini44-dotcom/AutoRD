@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays, Image as ImageIcon, Trash2, Instagram, Facebook, Globe, ExternalLink } from 'lucide-react'
-import { getMyDealer, updateDealerProfile, uploadDealerLogo } from '../data/api'
+import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays, Image as ImageIcon, Trash2, Instagram, Facebook, Globe, ExternalLink, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
+import { getMyDealer, updateDealerProfile, uploadDealerLogo, uploadDealerPhoto } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import LocationPicker from '../components/LocationPicker'
 import DealerLogo from '../components/DealerLogo'
@@ -22,6 +22,8 @@ export default function DealerProfileEdit() {
   const [logoBusy, setLogoBusy] = useState(false)
   const [slug, setSlug] = useState('')
   const [social, setSocial] = useState({})
+  const [photos, setPhotos] = useState([])
+  const [photoBusy, setPhotoBusy] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -36,6 +38,7 @@ export default function DealerProfileEdit() {
         setLogoUrl(d.logoUrl || d.logo_url || '')
         setSlug(d.slug || '')
         setSocial(d.social && typeof d.social === 'object' ? d.social : {})
+        setPhotos(Array.isArray(d.photos) ? d.photos : [])
         setLocs((d.locations || []).map((l) => ({ name: l.name || '', address: l.address || '', city: l.city || '', lat: l.lat ?? '', lng: l.lng ?? '' })))
       }
       setLoading(false)
@@ -58,6 +61,28 @@ export default function DealerProfileEdit() {
     setLogoBusy(false)
   }
 
+  const onAddPhotos = async (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (!files.length) return
+    setPhotoBusy(true)
+    try {
+      const uploaded = []
+      for (const f of files.slice(0, 12)) {
+        const { url, path } = await uploadDealerPhoto(profile?.dealer_id, f)
+        if (url) uploaded.push({ url, path })
+      }
+      setPhotos((arr) => [...arr, ...uploaded])
+    } catch (_) { /* denied */ }
+    setPhotoBusy(false)
+  }
+  const removePhoto = (i) => setPhotos((arr) => arr.filter((_, idx) => idx !== i))
+  const movePhoto = (i, dir) => setPhotos((arr) => {
+    const j = i + dir
+    if (j < 0 || j >= arr.length) return arr
+    const a = [...arr]; [a[i], a[j]] = [a[j], a[i]]; return a
+  })
+
   const save = async () => {
     setSaving(true); setSaved(false)
     const cleanLocs = locs.filter((l) => l.name || l.address || l.city).map((l) => ({
@@ -67,7 +92,7 @@ export default function DealerProfileEdit() {
     try {
       await updateDealerProfile(profile?.dealer_id, {
         whatsapp: whatsapp.replace(/[^\d]/g, ''), hours, locations: cleanLocs,
-        description, foundedYear: foundedYear ? Number(foundedYear) : null, logoUrl, social,
+        description, foundedYear: foundedYear ? Number(foundedYear) : null, logoUrl, social, photos,
       })
       setSaved(true)
     } catch (_) { /* offline/denied */ }
@@ -150,6 +175,34 @@ export default function DealerProfileEdit() {
         <div className="field" style={{ marginTop: 12 }}>
           <label><Globe size={13} style={{ verticalAlign: -2 }} /> Sitio web</label>
           <input className="input" value={social.website || ''} onChange={(e) => setSocial((s) => ({ ...s, website: e.target.value }))} placeholder="https://tudealer.com" />
+        </div>
+      </div>
+
+      <div className="card card-pad" style={{ marginBottom: 16, maxWidth: 660 }}>
+        <div className="row between center" style={{ marginBottom: 8 }}>
+          <div className="small strong"><Camera size={13} style={{ verticalAlign: -2 }} /> Fotos del local</div>
+          {photoBusy && <span className="tiny muted">Subiendo…</span>}
+        </div>
+        <div className="tiny muted" style={{ marginBottom: 10 }}>Muestra tu showroom, fachada e instalaciones. Aparecen en tu perfil público.</div>
+        <div className="row wrap gap-8">
+          {photos.map((p, i) => {
+            const src = typeof p === 'string' ? p : p.url
+            return (
+              <div key={i} style={{ width: 120 }}>
+                <img src={src} alt="" style={{ width: 120, height: 84, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line-2, #e2e8f0)', display: 'block' }} />
+                <div className="row gap-4" style={{ marginTop: 4, justifyContent: 'center' }}>
+                  <button className="btn btn-outline btn-sm" style={{ padding: '4px 6px' }} disabled={photoBusy || i === 0} onClick={() => movePhoto(i, -1)} title="Mover a la izquierda"><ChevronLeft size={13} /></button>
+                  <button className="btn btn-outline btn-sm" style={{ padding: '4px 6px' }} disabled={photoBusy || i === photos.length - 1} onClick={() => movePhoto(i, 1)} title="Mover a la derecha"><ChevronRight size={13} /></button>
+                  <button className="btn btn-outline btn-sm" style={{ padding: '4px 6px', color: '#dc2626' }} disabled={photoBusy} onClick={() => removePhoto(i)} title="Eliminar"><Trash2 size={13} /></button>
+                </div>
+              </div>
+            )
+          })}
+          <label className="col center gap-4" title="Agregar fotos" style={{ width: 120, height: 84, border: '1.5px dashed var(--line-2, #cbd5e1)', borderRadius: 8, cursor: photoBusy ? 'not-allowed' : 'pointer', color: 'var(--muted)', justifyContent: 'center', opacity: photoBusy ? 0.6 : 1 }}>
+            <ImageIcon size={18} />
+            <span className="tiny">Agregar</span>
+            <input type="file" accept="image/*" multiple hidden disabled={photoBusy} onChange={onAddPhotos} />
+          </label>
         </div>
       </div>
 

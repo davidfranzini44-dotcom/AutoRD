@@ -123,6 +123,18 @@ export default function DealerProfile() {
           </div>
         )}
 
+        {Array.isArray(d.photos) && d.photos.length > 0 && (
+          <div className="card card-pad" style={{ marginBottom: 16 }}>
+            <div className="small strong" style={{ marginBottom: 12 }}>Fotos del local</div>
+            <div className="dealer-gallery">
+              {d.photos.map((p, i) => {
+                const src = typeof p === 'string' ? p : p.url
+                return <img key={i} src={src} alt={`${d.name} — foto ${i + 1}`} loading="lazy" className="dealer-gallery-img" />
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="section-title"><h2 style={{ fontSize: 18 }}>Vehículos de {d.name}</h2></div>
         {d.vehicles.length === 0 ? (
           <div className="card card-pad muted small" style={{ textAlign: 'center' }}><Car size={22} className="muted" style={{ margin: '0 auto 8px' }} /> Este dealer no tiene vehículos publicados por ahora.</div>

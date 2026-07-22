@@ -3127,6 +3127,11 @@ select.preap-input { padding-right: 16px; }
 .crm-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .crm-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--teal-700); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
 
+/* Dealership photos gallery (public profile) */
+.dealer-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.dealer-gallery-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--line-2, #e2e8f0); display: block; }
+@media (max-width: 560px) { .dealer-gallery { grid-template-columns: repeat(2, 1fr); } }
+
 @media (max-width: 1100px) {
   .dash-kpis { grid-template-columns: repeat(3, 1fr); }
   .dash-grid { grid-template-columns: 1fr; }
