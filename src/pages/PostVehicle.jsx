@@ -286,11 +286,16 @@ export default function PostVehicle() {
             </div>
 
             <Field label="Ubicación">
-              {dealerLocs.length > 0 ? (
+              {dealerLocs.length > 1 ? (
                 <>
                   <select className="select" value={f.location} onChange={onLocationChange}>
                     {dealerLocs.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
+                  <span className="help">Sucursal donde está el vehículo · <Link to="/dealer/perfil" className="link-teal">editar sucursales</Link></span>
+                </>
+              ) : dealerLocs.length === 1 ? (
+                <>
+                  <input className="input" value={dealerLocs[0].label} readOnly disabled />
                   <span className="help">Ubicación de tu dealer · <Link to="/dealer/perfil" className="link-teal">editar sucursales</Link></span>
                 </>
               ) : (

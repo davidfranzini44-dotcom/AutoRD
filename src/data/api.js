@@ -43,6 +43,7 @@ function mapVehicle(r) {
     certified: r.certified,
     location: r.location, dealer: dealer.name, dealerVerified: dealer.verified,
     dealerSlug: dealer.slug || null, dealerWhatsapp: dealer.whatsapp || null, dealerPhone: dealer.phone || null,
+    dealerLogoUrl: dealer.logo_url || null,
     lat: r.lat != null ? Number(r.lat) : null, lng: r.lng != null ? Number(r.lng) : null,
     financing: r.financing, tone: r.tone,
     monthly: Number(r.monthly), downPct: 20, apr: Number(r.apr), termYears: r.term_years,
@@ -59,7 +60,7 @@ function mapVehicle(r) {
 }
 
 const VEHICLE_PHOTOS_SELECT = 'photo_rows:vehicle_photos(id, url, storage_path, position, is_cover)'
-const VEHICLE_SELECT = `*, dealer:dealers(name, verified, slug, initials, whatsapp, phone), ${VEHICLE_PHOTOS_SELECT}`
+const VEHICLE_SELECT = `*, dealer:dealers(name, verified, slug, initials, whatsapp, phone, logo_url), ${VEHICLE_PHOTOS_SELECT}`
 
 function withDemoCoords(v) {
   if (v.lat != null && v.lng != null) return v
@@ -254,11 +255,12 @@ export async function getDealerBySlug(slug) {
   }
   const { data, error } = await supabase
     .from('dealers')
-    .select(`id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
+    .select(`id, name, slug, city, verified, initials, phone, whatsapp, hours, locations, description, rating, rating_count, founded_year, logo_url, vehicles(*, ${VEHICLE_PHOTOS_SELECT})`)
     .eq('slug', slug).single()
   if (error) return slug === JOSELITO_SLUG ? joselitoFallbackDealer() : null
   return withJoselitoDealerFallback({
     id: data.id, name: data.name, slug: data.slug, city: data.city, verified: data.verified,
+    logoUrl: data.logo_url || null,
     phone: data.phone, whatsapp: data.whatsapp, hours: data.hours,
     description: data.description || '', rating: data.rating != null ? Number(data.rating) : null,
     ratingCount: data.rating_count || 0, foundedYear: data.founded_year || null,
@@ -275,13 +277,13 @@ export async function getMyDealer(dealerDbId) {
   if (!LIVE || !dealerDbId) return null
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year')
+    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year, logo_url')
     .eq('id', dealerDbId).single()
   if (error) return null
-  return { ...data, locations: Array.isArray(data.locations) ? data.locations : [] }
+  return { ...data, logoUrl: data.logo_url || null, locations: Array.isArray(data.locations) ? data.locations : [] }
 }
 
-export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations, description, foundedYear }) {
+export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations, description, foundedYear, logoUrl }) {
   if (!LIVE || !dealerDbId) return { ok: false, demo: true }
   const patch = {
     whatsapp: whatsapp || null,
@@ -290,9 +292,23 @@ export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locatio
   }
   if (description !== undefined) patch.description = description || null
   if (foundedYear !== undefined) patch.founded_year = foundedYear || null
+  if (logoUrl !== undefined) patch.logo_url = logoUrl || null
   const { error } = await supabase.from('dealers').update(patch).eq('id', dealerDbId)
   if (error) throw error
   return { ok: true }
+}
+
+// Upload a dealer logo to the public dealer-logos bucket → returns its public URL.
+// Path is prefixed with the dealer id so the storage RLS policy authorizes the write.
+export async function uploadDealerLogo(dealerDbId, file) {
+  if (!LIVE || !dealerDbId) return { url: null, demo: true }
+  const path = `${dealerDbId}/${Date.now()}-${safeFileName(file.name)}`
+  const { error: upErr } = await supabase.storage
+    .from('dealer-logos')
+    .upload(path, file, { cacheControl: '31536000', contentType: file.type || undefined, upsert: false })
+  if (upErr) throw upErr
+  const { data } = supabase.storage.from('dealer-logos').getPublicUrl(path)
+  return { url: data?.publicUrl || null }
 }
 
 // Buyer contacts a dealer about a specific car — seeds a conversation into the

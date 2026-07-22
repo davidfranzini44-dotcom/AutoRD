@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays } from 'lucide-react'
-import { getMyDealer, updateDealerProfile } from '../data/api'
+import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { getMyDealer, updateDealerProfile, uploadDealerLogo } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import LocationPicker from '../components/LocationPicker'
+import DealerLogo from '../components/DealerLogo'
 
 const emptyLoc = () => ({ name: '', address: '', city: '', lat: '', lng: '' })
 
@@ -17,6 +18,8 @@ export default function DealerProfileEdit() {
   const [locs, setLocs] = useState([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [logoUrl, setLogoUrl] = useState('')
+  const [logoBusy, setLogoBusy] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -28,6 +31,7 @@ export default function DealerProfileEdit() {
         setHours(d.hours || '')
         setDescription(d.description || '')
         setFoundedYear(d.founded_year ? String(d.founded_year) : '')
+        setLogoUrl(d.logoUrl || d.logo_url || '')
         setLocs((d.locations || []).map((l) => ({ name: l.name || '', address: l.address || '', city: l.city || '', lat: l.lat ?? '', lng: l.lng ?? '' })))
       }
       setLoading(false)
@@ -38,6 +42,18 @@ export default function DealerProfileEdit() {
   const addLoc = () => setLocs((arr) => [...arr, emptyLoc()])
   const removeLoc = (i) => setLocs((arr) => arr.filter((_, idx) => idx !== i))
 
+  const onLogoFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setLogoBusy(true)
+    try {
+      const { url } = await uploadDealerLogo(profile?.dealer_id, file)
+      if (url) setLogoUrl(url)
+    } catch (_) { /* denied */ }
+    setLogoBusy(false)
+  }
+
   const save = async () => {
     setSaving(true); setSaved(false)
     const cleanLocs = locs.filter((l) => l.name || l.address || l.city).map((l) => ({
@@ -47,7 +63,7 @@ export default function DealerProfileEdit() {
     try {
       await updateDealerProfile(profile?.dealer_id, {
         whatsapp: whatsapp.replace(/[^\d]/g, ''), hours, locations: cleanLocs,
-        description, foundedYear: foundedYear ? Number(foundedYear) : null,
+        description, foundedYear: foundedYear ? Number(foundedYear) : null, logoUrl,
       })
       setSaved(true)
     } catch (_) { /* offline/denied */ }
@@ -75,7 +91,20 @@ export default function DealerProfileEdit() {
       )}
 
       <div className="card card-pad" style={{ marginBottom: 16, maxWidth: 660 }}>
-        {name && <div className="small strong" style={{ marginBottom: 14 }}>{name}</div>}
+        <div className="row center gap-14" style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--line-2, #e2e8f0)' }}>
+          <DealerLogo dealer={{ name, logoUrl }} style={{ width: 64, height: 64, borderRadius: 12, fontSize: 20 }} />
+          <div className="grow">
+            {name && <div className="small strong">{name}</div>}
+            <div className="tiny muted" style={{ marginTop: 2 }}>Logo de la empresa · PNG o JPG cuadrado (mín. 200×200)</div>
+            <div className="row gap-8" style={{ marginTop: 8 }}>
+              <label className="btn btn-outline btn-sm" style={{ cursor: logoBusy ? 'not-allowed' : 'pointer', opacity: logoBusy ? 0.6 : 1 }}>
+                <ImageIcon size={14} /> {logoBusy ? 'Subiendo…' : (logoUrl ? 'Cambiar logo' : 'Subir logo')}
+                <input type="file" accept="image/*" hidden disabled={logoBusy} onChange={onLogoFile} />
+              </label>
+              {logoUrl && <button className="btn btn-ghost btn-sm" onClick={() => setLogoUrl('')} disabled={logoBusy}><Trash2 size={14} /> Quitar</button>}
+            </div>
+          </div>
+        </div>
         <div className="field">
           <label><FileText size={13} style={{ verticalAlign: -2 }} /> Descripción</label>
           <textarea className="input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)}

@@ -128,13 +128,24 @@ function FichaShell({ v, close }) {
             </p>
           )}
 
-          <div className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12 }}>
-            <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
-            <div className="grow">
-              <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
-              <div className="tiny muted">{v.dealerVerified ? 'Dealer verificado' : 'Vendedor particular'}</div>
+          {v.dealerSlug ? (
+            <Link to={`/dealers/${v.dealerSlug}`} onClick={close} className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12, color: 'inherit' }}>
+              <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
+              <div className="grow">
+                <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
+                <div className="tiny link-teal">Ver perfil del dealer</div>
+              </div>
+              <ChevronRight size={18} className="muted" />
+            </Link>
+          ) : (
+            <div className="row center gap-10" style={{ borderTop: '1px solid var(--line-2)', paddingTop: 12 }}>
+              <DealerLogo dealer={{ name: v.dealer, initials, logoUrl: v.dealerLogoUrl }} style={{ width: 36, height: 36, borderRadius: 9, fontSize: 12 }} />
+              <div className="grow">
+                <div className="row center gap-6"><span className="strong small">{v.dealer}</span>{v.dealerVerified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
+                <div className="tiny muted">{v.dealerVerified ? 'Dealer verificado' : 'Vendedor particular'}</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="ficha-actions">

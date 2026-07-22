@@ -354,7 +354,6 @@ export default function Home() {
                 >
                   <img className="bt-image" src={b.image} alt="" aria-hidden="true" />
                   <span className="bt-label">{b.label}</span>
-                  <small>{BODY_TYPE_PRICES[b.type]}</small>
                 </Link>
               ))}
             </div>
