@@ -278,13 +278,18 @@ export async function getMyDealer(dealerDbId) {
   if (!LIVE || !dealerDbId) return null
   const { data, error } = await supabase
     .from('dealers')
-    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year, logo_url, verified')
+    .select('id, name, slug, city, phone, whatsapp, hours, locations, description, founded_year, logo_url, verified, social')
     .eq('id', dealerDbId).single()
   if (error) return null
-  return { ...data, logoUrl: data.logo_url || null, locations: Array.isArray(data.locations) ? data.locations : [] }
+  return {
+    ...data,
+    logoUrl: data.logo_url || null,
+    social: (data.social && typeof data.social === 'object') ? data.social : {},
+    locations: Array.isArray(data.locations) ? data.locations : [],
+  }
 }
 
-export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations, description, foundedYear, logoUrl }) {
+export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locations, description, foundedYear, logoUrl, social }) {
   if (!LIVE || !dealerDbId) return { ok: false, demo: true }
   const patch = {
     whatsapp: whatsapp || null,
@@ -294,6 +299,7 @@ export async function updateDealerProfile(dealerDbId, { whatsapp, hours, locatio
   if (description !== undefined) patch.description = description || null
   if (foundedYear !== undefined) patch.founded_year = foundedYear || null
   if (logoUrl !== undefined) patch.logo_url = logoUrl || null
+  if (social !== undefined) patch.social = social && typeof social === 'object' ? social : {}
   const { error } = await supabase.from('dealers').update(patch).eq('id', dealerDbId)
   if (error) throw error
   return { ok: true }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
   Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight, ChevronLeft,
-  MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter, Star, UploadCloud,
+  MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter, Star, UploadCloud, ImageOff,
 } from 'lucide-react'
 import { fmtRD, fmtMoney } from '../data/demo'
 import {
@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { BRANDS, YEARS, TRANSMISSIONS, FUELS, COLORS, CONDITIONS, ACCESSORIES } from '../data/vehicleOptions'
+import { listingScore } from '../data/dealerDemo'
 
 const STATUS_LABELS = [
   ['publicado', 'Publicado'], ['reservado', 'Reservado'], ['vendido', 'Vendido'], ['borrador', 'Borrador (oculto)'],
@@ -43,6 +44,13 @@ function estadoChip(status) {
   if (status === 'vendido') return <span className="chip" style={{ background: '#e2e8f0', color: '#475569' }}>Vendido</span>
   if (status === 'borrador') return <span className="chip" style={{ background: '#e2e8f0', color: '#475569' }}>Borrador</span>
   return <span className="chip chip-green">Publicado</span>
+}
+
+// Listing-quality badge (score de publicación).
+function scoreChip(v) {
+  const { score, missing } = listingScore(v)
+  const c = score >= 80 ? { bg: '#dcfce7', fg: '#166534' } : score >= 60 ? { bg: '#fef3c7', fg: '#b45309' } : { bg: '#fee2e2', fg: '#b91c1c' }
+  return <span className="chip" title={missing.length ? `Mejora: ${missing.join(', ')}` : 'Publicación completa'} style={{ background: c.bg, color: c.fg, minWidth: 44, justifyContent: 'center' }}>{score}%</span>
 }
 
 const SEC = { fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', margin: '4px 0 2px' }
@@ -274,6 +282,7 @@ export default function DealerPanel({ view = 'resumen' }) {
   const [q, setQ] = useState('')
   const [brand, setBrand] = useState('')
   const [statusF, setStatusF] = useState('')
+  const [onlyIncomplete, setOnlyIncomplete] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -335,6 +344,7 @@ export default function DealerPanel({ view = 'resumen' }) {
   const filteredInventory = inventory.filter((v) => {
     if (brand && v.make !== brand) return false
     if (statusF && (v.status || 'publicado') !== statusF) return false
+    if (onlyIncomplete && listingScore(v).score >= 70) return false
     if (ql && !`${v.make} ${v.model} ${v.trim || ''} ${v.year}`.toLowerCase().includes(ql)) return false
     return true
   })
@@ -431,8 +441,9 @@ export default function DealerPanel({ view = 'resumen' }) {
                 <option value="">Todos los estados</option>
                 {STATUS_LABELS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-              {(q || brand || statusF) && (
-                <button className="btn btn-ghost btn-sm" onClick={() => { setQ(''); setBrand(''); setStatusF('') }}><X size={14} /> Limpiar</button>
+              <button className={`btn btn-sm ${onlyIncomplete ? 'btn-primary' : 'btn-outline'}`} onClick={() => setOnlyIncomplete((x) => !x)}><ImageOff size={14} /> Incompletos</button>
+              {(q || brand || statusF || onlyIncomplete) && (
+                <button className="btn btn-ghost btn-sm" onClick={() => { setQ(''); setBrand(''); setStatusF(''); setOnlyIncomplete(false) }}><X size={14} /> Limpiar</button>
               )}
             </div>
             <span className="tiny muted row center gap-4"><Filter size={13} /> {filteredInventory.length} de {inventory.length}</span>
@@ -441,7 +452,7 @@ export default function DealerPanel({ view = 'resumen' }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Vehículo</th><th className="num">Precio</th><th>Estado</th>
+                  <th>Vehículo</th><th className="num">Precio</th><th>Estado</th><th>Calidad</th>
                   <th className="num">Vistas</th><th className="num">Leads</th><th className="num">Solicitudes fin.</th><th>Acciones</th>
                 </tr>
               </thead>
@@ -462,6 +473,7 @@ export default function DealerPanel({ view = 'resumen' }) {
                       </td>
                       <td className="num">{fmtMoney(r.price, r.currency)}</td>
                       <td>{estadoChip(r.status)}</td>
+                      <td>{scoreChip(r)}</td>
                       <td className="num"><span className="row center gap-4" style={{ justifyContent: 'flex-end' }}><Eye size={13} className="muted" /> {(r.views || 0).toLocaleString('es-DO')}</span></td>
                       <td className="num">{r.leads ?? '—'}</td>
                       <td className="num strong">{r.requests ?? '—'}</td>
@@ -487,8 +499,8 @@ export default function DealerPanel({ view = 'resumen' }) {
                     </tr>
                   )
                 })}
-                {inventory.length === 0 && <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 26 }}>Aún no tienes vehículos publicados. <Link to="/dealer/publicar" className="link-teal">Publica el primero</Link>.</td></tr>}
-                {inventory.length > 0 && filteredInventory.length === 0 && <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 26 }}>Ningún vehículo coincide con tu búsqueda.</td></tr>}
+                {inventory.length === 0 && <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 26 }}>Aún no tienes vehículos publicados. <Link to="/dealer/publicar" className="link-teal">Publica el primero</Link>.</td></tr>}
+                {inventory.length > 0 && filteredInventory.length === 0 && <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 26 }}>Ningún vehículo coincide con tu búsqueda.</td></tr>}
               </tbody>
             </table>
           </div>

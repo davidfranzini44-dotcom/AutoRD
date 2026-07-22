@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays, Image as ImageIcon, Trash2 } from 'lucide-react'
+import { Plus, Save, MapPin, MessageCircle, Clock, CheckCircle2, FileText, CalendarDays, Image as ImageIcon, Trash2, Instagram, Facebook, Globe, ExternalLink } from 'lucide-react'
 import { getMyDealer, updateDealerProfile, uploadDealerLogo } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import LocationPicker from '../components/LocationPicker'
@@ -20,6 +20,8 @@ export default function DealerProfileEdit() {
   const [saved, setSaved] = useState(false)
   const [logoUrl, setLogoUrl] = useState('')
   const [logoBusy, setLogoBusy] = useState(false)
+  const [slug, setSlug] = useState('')
+  const [social, setSocial] = useState({})
 
   useEffect(() => {
     let alive = true
@@ -32,6 +34,8 @@ export default function DealerProfileEdit() {
         setDescription(d.description || '')
         setFoundedYear(d.founded_year ? String(d.founded_year) : '')
         setLogoUrl(d.logoUrl || d.logo_url || '')
+        setSlug(d.slug || '')
+        setSocial(d.social && typeof d.social === 'object' ? d.social : {})
         setLocs((d.locations || []).map((l) => ({ name: l.name || '', address: l.address || '', city: l.city || '', lat: l.lat ?? '', lng: l.lng ?? '' })))
       }
       setLoading(false)
@@ -63,7 +67,7 @@ export default function DealerProfileEdit() {
     try {
       await updateDealerProfile(profile?.dealer_id, {
         whatsapp: whatsapp.replace(/[^\d]/g, ''), hours, locations: cleanLocs,
-        description, foundedYear: foundedYear ? Number(foundedYear) : null, logoUrl,
+        description, foundedYear: foundedYear ? Number(foundedYear) : null, logoUrl, social,
       })
       setSaved(true)
     } catch (_) { /* offline/denied */ }
@@ -79,9 +83,12 @@ export default function DealerProfileEdit() {
           <h1 style={{ fontSize: 22 }}>Perfil del dealer</h1>
           <p className="tiny muted">Tu contacto, horario y ubicaciones que ven los compradores</p>
         </div>
-        <button className="btn btn-primary" onClick={save} disabled={saving}>
-          {saving ? 'Guardando…' : <><Save size={16} /> Guardar cambios</>}
-        </button>
+        <div className="row gap-8 wrap">
+          {slug && <a className="btn btn-outline" href={`/dealers/${slug}`} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Ver perfil público</a>}
+          <button className="btn btn-primary" onClick={save} disabled={saving}>
+            {saving ? 'Guardando…' : <><Save size={16} /> Guardar cambios</>}
+          </button>
+        </div>
       </div>
 
       {saved && (
@@ -125,6 +132,24 @@ export default function DealerProfileEdit() {
         <div className="field" style={{ marginTop: 12 }}>
           <label><Clock size={13} style={{ verticalAlign: -2 }} /> Horario</label>
           <input className="input" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Lun a Sáb: 9:00 AM – 6:00 PM · Dom: cerrado" />
+        </div>
+      </div>
+
+      <div className="card card-pad" style={{ marginBottom: 16, maxWidth: 660 }}>
+        <div className="small strong" style={{ marginBottom: 12 }}>Redes sociales</div>
+        <div className="grid grid-2" style={{ gap: 12 }}>
+          <div className="field">
+            <label><Instagram size={13} style={{ verticalAlign: -2 }} /> Instagram</label>
+            <input className="input" value={social.instagram || ''} onChange={(e) => setSocial((s) => ({ ...s, instagram: e.target.value }))} placeholder="@tudealer" />
+          </div>
+          <div className="field">
+            <label><Facebook size={13} style={{ verticalAlign: -2 }} /> Facebook</label>
+            <input className="input" value={social.facebook || ''} onChange={(e) => setSocial((s) => ({ ...s, facebook: e.target.value }))} placeholder="facebook.com/tudealer" />
+          </div>
+        </div>
+        <div className="field" style={{ marginTop: 12 }}>
+          <label><Globe size={13} style={{ verticalAlign: -2 }} /> Sitio web</label>
+          <input className="input" value={social.website || ''} onChange={(e) => setSocial((s) => ({ ...s, website: e.target.value }))} placeholder="https://tudealer.com" />
         </div>
       </div>
 
