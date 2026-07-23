@@ -883,4 +883,9 @@
   .dl-drawer-body {
     padding: 14px 14px 22px;
   }
+  /* Cola-first: on phones the pipeline board only shows on the Pipeline tab, so
+     the initial view is the priority queue, not the full kanban (mockup concept). */
+  .dealer-leads-v2:not([data-view="pipeline"]) .dl-pipeline-panel {
+    display: none;
+  }
 }

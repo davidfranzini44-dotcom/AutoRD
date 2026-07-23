@@ -192,7 +192,7 @@ export default function DealerLeads() {
   }
 
   return (
-    <div className="dealer-leads-v2" data-testid="dealer-leads-page">
+    <div className="dealer-leads-v2" data-view={view} data-testid="dealer-leads-page">
       <div className="dl-page-head">
         <div>
           <h1>Responde lo que puede cerrar hoy</h1>
