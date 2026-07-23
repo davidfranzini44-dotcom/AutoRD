@@ -19,6 +19,7 @@ export default function MiniMap({ lat, lng, label, height = 200 }) {
       const map = new maps.Map(ref.current, {
         center: pos, zoom: 14,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        gestureHandling: 'greedy', // one finger pans the map; page never scrolls under the touch
         renderingType: maps.RenderingType?.RASTER,
       })
       mapRef.current = map

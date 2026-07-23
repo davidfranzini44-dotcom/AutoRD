@@ -158,7 +158,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
 
   return (
     <article className={`dealer-row ${active ? 'active' : ''}`} onClick={onSelect}>
-      <div className="row center gap-12">
+      <div className="row center gap-12 dealer-row-head">
         <DealerLogo dealer={d} />
         <div className="grow" style={{ minWidth: 0 }}>
           <div className="row center gap-6"><strong>{d.name}</strong>{d.verified && <BadgeCheck size={15} color="var(--teal-700)" />}</div>
@@ -169,7 +169,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
           </div>
         </div>
         {prices.length > 0 && (
-          <div className="tiny muted" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtRD(min)}{max !== min ? ` – ${fmtRD(max)}` : ''}</div>
+          <div className="tiny muted dealer-row-price" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{fmtRD(min)}{max !== min ? ` – ${fmtRD(max)}` : ''}</div>
         )}
       </div>
 

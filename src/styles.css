@@ -2707,6 +2707,13 @@ select.preap-input { padding-right: 16px; }
 .dealer-row { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
 .dealer-row:hover { border-color: var(--teal-700); }
 .dealer-row.active { border-color: var(--teal-700); box-shadow: inset 0 0 0 1px var(--teal-700); }
+/* On phones the nowrap price range steals width from the name (forcing it to
+   wrap) and then floats vertically centered against it. Let the header wrap and
+   drop the price onto its own full-width line so the name keeps its space. */
+@media (max-width: 560px) {
+  .dealer-row-head { flex-wrap: wrap; }
+  .dealer-row-price { flex-basis: 100%; text-align: left !important; margin-top: 2px; }
+}
 .dealer-mark { width: 46px; height: 46px; flex: none; border-radius: 12px; background: var(--navy-800); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; }
 .dealer-logo-mark.has-logo {
   background: #fff;

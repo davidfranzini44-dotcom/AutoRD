@@ -38,6 +38,7 @@ export default function DealersMap({ dealers, selId, onSelect, userLoc }) {
       const map = new maps.Map(ref.current, {
         center: DR_CENTER, zoom: 8,
         mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
+        gestureHandling: 'greedy', // one finger pans the map; page never scrolls under the touch
         // Raster tiles (image-based) render without WebGL, so the map shows on any
         // device/browser and in headless/GPU-less environments.
         renderingType: maps.RenderingType?.RASTER,
