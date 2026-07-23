@@ -74,87 +74,88 @@ export default function BankRates() {
   const hasChanges = dirty.size > 0 || rulesDirty
   const maxNew = Number(rules.maxTermNew) || 8
   const maxUsed = Number(rules.maxTermUsed) || 5
+  const SaveBtn = ({ block }) => (
+    <button className={`btn btn-primary ${block ? 'btn-block' : ''}`} onClick={save} disabled={!hasChanges || saving}>
+      {saving ? 'Guardando…' : saved ? <><Check size={16} /> Guardado</> : <><Save size={16} /> Guardar cambios</>}
+    </button>
+  )
 
   return (
-    <div>
-      <div className="admin-head">
-        <div className="row center gap-10">
-          <BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={30} />
-          <div>
-            <h1>Tasas y reglas de financiamiento</h1>
-            <p className="muted small">Configura la tasa (APR) de {bank.name} por tipo de combustible y plazo, y hasta cuántos años financias según la condición del vehículo.</p>
+    <div className="bankx">
+      <div className="container bankx-container">
+        <div className="bankx-head">
+          <div className="row center gap-10">
+            <div className="bankx-brand-logo"><BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={30} /></div>
+            <div>
+              <h1>Tasas y reglas · {bank.name}</h1>
+              <p className="muted small">Configura la tasa (APR) por combustible y plazo, y hasta cuántos años financias según la condición.</p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Financing rules */}
-      <div className="card card-pad" style={{ marginBottom: 14 }}>
-        <h3 style={{ margin: '0 0 3px' }}>Reglas de financiamiento</h3>
-        <p className="tiny muted" style={{ margin: '0 0 14px' }}>Plazo máximo que financias según la condición. Ej.: si no financias un usado a 7 años, pon 5 o 6 en “usados”.</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          <label className="col gap-4">
-            <span className="tiny strong">Plazo máx. · autos nuevos</span>
-            <div className="rate-input-wrap" style={{ maxWidth: 130 }}>
-              <input className="input rate-input" inputMode="numeric" value={rules.maxTermNew} onChange={(e) => onEditRule('maxTermNew', e.target.value)} aria-label="Plazo máximo autos nuevos" />
-              <span className="rate-pct" style={{ fontSize: 12 }}>años</span>
-            </div>
-          </label>
-          <label className="col gap-4">
-            <span className="tiny strong">Plazo máx. · autos usados</span>
-            <div className="rate-input-wrap" style={{ maxWidth: 130 }}>
-              <input className="input rate-input" inputMode="numeric" value={rules.maxTermUsed} onChange={(e) => onEditRule('maxTermUsed', e.target.value)} aria-label="Plazo máximo autos usados" />
-              <span className="rate-pct" style={{ fontSize: 12 }}>años</span>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      {/* Rate card by fuel */}
-      <div className="card card-pad rate-card">
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {FUELS.map((f) => {
-            const on = activeFuel === f.key
-            return (
-              <button key={f.key} type="button" onClick={() => setActiveFuel(f.key)}
-                style={{ flex: '1 1 auto', minWidth: 84, height: 38, borderRadius: 9, cursor: 'pointer', fontWeight: 700, fontSize: 13,
-                  background: on ? 'var(--teal-700)' : '#fff', color: on ? '#fff' : 'var(--ink-2)', border: `1px solid ${on ? 'var(--teal-700)' : 'var(--line)'}` }}>
-                {f.label}
-              </button>
-            )
-          })}
+          <div className="hide-mobile"><SaveBtn /></div>
         </div>
 
-        <div className="rate-row rate-head">
-          <span>Plazo</span>
-          <span>Tasa anual (APR)</span>
-          <span className="rate-preview-col">Cuota por {fmtRD(SAMPLE)}</span>
-        </div>
-        {TERMS.map((t) => {
-          const raw = rates[activeFuel]?.[t] ?? ''
-          const apr = Number(raw)
-          const valid = raw !== '' && !Number.isNaN(apr)
-          const monthly = valid ? estimateMonthly(SAMPLE, apr, t * 12) : null
-          const hint = t > maxNew ? { t: 'No financiado', c: 'var(--red, #b42318)' }
-            : t > maxUsed ? { t: 'Solo nuevos', c: '#b45309' } : null
-          return (
-            <div className="rate-row" key={t} style={hint && hint.t === 'No financiado' ? { opacity: .55 } : undefined}>
-              <div className="rate-term">
-                {t} {t === 1 ? 'año' : 'años'}
-                {hint && <span style={{ display: 'block', fontSize: 10, fontWeight: 700, color: hint.c, letterSpacing: '.02em' }}>{hint.t}</span>}
-              </div>
-              <div className="rate-input-wrap">
-                <input className="input rate-input" inputMode="decimal" value={raw} onChange={(e) => onEditRate(activeFuel, t, e.target.value)} placeholder="0.00" aria-label={`Tasa ${activeFuel} a ${t} años`} />
-                <span className="rate-pct">%</span>
-              </div>
-              <div className="rate-preview-col rate-preview">{monthly != null ? `${fmtRD(Math.round(monthly))}/mes` : '—'}</div>
+        <div className="bankx-rate-layout">
+          {/* Rules */}
+          <aside className="card pad">
+            <div className="strong" style={{ marginBottom: 3 }}>Reglas de financiamiento</div>
+            <p className="tiny muted" style={{ marginBottom: 16 }}>Plazo máximo que financias según la condición del vehículo.</p>
+            <div className="col gap-10">
+              <label className="bankx-rule">
+                <span className="tiny strong">Autos nuevos · plazo máx.</span>
+                <div className="bankx-rule-input">
+                  <input className="input" inputMode="numeric" value={rules.maxTermNew} onChange={(e) => onEditRule('maxTermNew', e.target.value)} aria-label="Plazo máximo autos nuevos" />
+                  <span>años</span>
+                </div>
+              </label>
+              <label className="bankx-rule">
+                <span className="tiny strong">Autos usados · plazo máx.</span>
+                <div className="bankx-rule-input">
+                  <input className="input" inputMode="numeric" value={rules.maxTermUsed} onChange={(e) => onEditRule('maxTermUsed', e.target.value)} aria-label="Plazo máximo autos usados" />
+                  <span>años</span>
+                </div>
+              </label>
             </div>
-          )
-        })}
-        <div className="rate-actions">
-          <button className="btn btn-primary" onClick={save} disabled={!hasChanges || saving}>
-            {saving ? 'Guardando…' : saved ? <><Check size={16} /> Guardado</> : <><Save size={16} /> Guardar cambios</>}
-          </button>
-          <span className="tiny muted">Cuota de referencia (sin inicial, {fmtRD(SAMPLE)}). “Solo nuevos” = ese plazo supera tu máximo para usados.</span>
+            <div className="tiny muted" style={{ marginTop: 12 }}>Ej.: si no financias un usado a 7 años, pon 5 o 6 en “usados”.</div>
+            <div style={{ marginTop: 16 }}><SaveBtn block /></div>
+          </aside>
+
+          {/* Rate card by fuel */}
+          <section className="card pad">
+            <div className="bankx-fuels">
+              {FUELS.map((f) => {
+                const on = activeFuel === f.key
+                return (
+                  <button key={f.key} type="button" className={`bankx-fuel ${on ? 'active' : ''}`} onClick={() => setActiveFuel(f.key)}>
+                    <b>{f.label}</b>
+                    <span className={`pill ${on ? 'green' : ''}`}>{on ? 'Activo' : 'Config'}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="bankx-rate-table">
+              <div className="bankx-rate-row head"><span>Plazo</span><span>Tasa APR</span><span>Cuota por {fmtRD(SAMPLE)}</span><span>Regla</span></div>
+              {TERMS.map((t) => {
+                const raw = rates[activeFuel]?.[t] ?? ''
+                const apr = Number(raw)
+                const valid = raw !== '' && !Number.isNaN(apr)
+                const monthly = valid ? estimateMonthly(SAMPLE, apr, t * 12) : null
+                const hint = t > maxNew ? { t: 'No financiado', cls: 'red' } : t > maxUsed ? { t: 'Solo nuevos', cls: 'amber' } : { t: 'Nuevo/usado', cls: 'green' }
+                return (
+                  <div className="bankx-rate-row" key={t} style={hint.t === 'No financiado' ? { opacity: 0.55 } : undefined}>
+                    <b>{t} {t === 1 ? 'año' : 'años'}</b>
+                    <div className="bankx-rate-input">
+                      <input className="input" inputMode="decimal" value={raw} onChange={(e) => onEditRate(activeFuel, t, e.target.value)} placeholder="0.00" aria-label={`Tasa ${activeFuel} a ${t} años`} />
+                      <span>%</span>
+                    </div>
+                    <b className="tiny bankx-rate-cuota">{monthly != null ? `${fmtRD(Math.round(monthly))}/mes` : '—'}</b>
+                    <span className={`pill ${hint.cls}`}>{hint.t}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="tiny muted" style={{ marginTop: 12 }}>Cuota de referencia por {fmtRD(SAMPLE)} sin inicial. “Solo nuevos” = ese plazo supera tu máximo para usados; “No financiado” = supera el máximo para nuevos.</p>
+          </section>
         </div>
       </div>
     </div>

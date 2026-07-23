@@ -4128,3 +4128,149 @@ select.preap-input { padding-right: 16px; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   Bank portal redesign (bankx) — mockups/bank-portal-redesign.html
+   Scoped under .bankx so it never collides with global styles.
+   ============================================================ */
+.bankx-container { max-width: 1340px; }
+.bankx-topbar {
+  position: sticky; top: 10px; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  background: #fff; border: 1px solid #dbe4ee; border-radius: 13px;
+  padding: 9px 12px; margin-bottom: 16px; box-shadow: 0 8px 26px rgba(15, 35, 63, .06);
+}
+.bankx-search { position: relative; flex: 1; max-width: 520px; }
+.bankx-search > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8aa0b9; pointer-events: none; }
+.bankx-search input { width: 100%; height: 40px; border: 1px solid #dbe4ee; border-radius: 11px; padding: 0 12px 0 36px; background: #f8fafc; outline: 0; color: #0f172a; font-size: 13px; }
+.bankx-search input:focus { border-color: var(--teal-700); background: #fff; }
+
+.bankx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.bankx-head h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
+.bankx-brand-logo { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #fff; border: 1px solid #dbe4ee; flex: none; }
+.bankx-ext { height: 30px; align-self: center; }
+
+.bankx-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.bankx-kpis-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.bankx-kpi { background: #fff; border: 1px solid #dbe4ee; border-radius: 14px; padding: 15px; display: grid; gap: 7px; align-content: start; min-height: 112px; box-shadow: 0 8px 25px rgba(15, 23, 42, .04); }
+.bankx-kpi-top { display: flex; align-items: center; justify-content: space-between; color: #64748b; font-size: 12px; font-weight: 800; }
+.bankx-kpi-top svg { color: #8aa0b9; }
+.bankx-kpi strong { font-size: 25px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.bankx-delta { font-size: 11px; font-weight: 800; color: #64748b; }
+
+.bankx .pad { padding: 16px; }
+.bankx .split { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.bankx .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Pills (mockup palette), scoped so global .pill is untouched */
+.bankx .pill { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.bankx .pill.active { background: #10233f; color: #fff; }
+.bankx .pill.green { background: #dcfce7; color: #166534; }
+.bankx .pill.amber { background: #fef3c7; color: #b45309; }
+.bankx .pill.red { background: #fee2e2; color: #b91c1c; }
+.bankx .pill.blue { background: #dbeafe; color: #1d4ed8; }
+
+.bankx-command { display: grid; grid-template-columns: 1.3fr .7fr; gap: 16px; margin-bottom: 16px; }
+.bankx-priority { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.bankx-priority-card { border: 1px solid #dbe4ee; border-radius: 13px; padding: 13px; text-align: left; background: #fff; cursor: pointer; min-height: 92px; transition: border-color .15s, box-shadow .15s, transform .05s; }
+.bankx-priority-card:hover { border-color: var(--teal-700); box-shadow: 0 8px 20px rgba(15, 118, 110, .12); }
+.bankx-priority-card:active { transform: translateY(1px); }
+.bankx-priority-card b { font-size: 26px; display: block; margin-bottom: 4px; color: #0f172a; }
+.bankx-priority-card span { color: #64748b; font-size: 12px; line-height: 1.35; }
+
+.bankx-heat { display: grid; gap: 10px; margin-top: 12px; }
+.bankx-heat-row { display: grid; grid-template-columns: 62px 1fr 28px; align-items: center; gap: 10px; background: none; border: 0; padding: 0; cursor: pointer; font-size: 12px; }
+.bankx-heat-name { text-align: left; font-weight: 750; color: #334155; }
+.bankx-heat-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.bankx-bar { height: 9px; border-radius: 999px; background: #eaf1f7; overflow: hidden; }
+.bankx-bar i { display: block; height: 100%; border-radius: inherit; background: var(--teal-700); }
+
+.bankx-filters { margin-bottom: 14px; }
+
+.bankx-work { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; align-items: start; }
+.bankx-list { overflow: hidden; }
+.bankx-toolbar { padding: 14px 16px; border-bottom: 1px solid #edf2f7; }
+.bankx-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.bankx-row { display: grid; grid-template-columns: 1.15fr .95fr .74fr .78fr .7fr; gap: 14px; padding: 14px 16px; align-items: center; border-bottom: 1px solid #edf2f7; width: 100%; text-align: left; background: none; border-left: 4px solid transparent; cursor: pointer; font: inherit; color: inherit; }
+.bankx-row.head { color: #8aa0b9; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; background: #fbfdff; cursor: default; }
+.bankx-row:not(.head):hover { background: #f8fbfd; }
+.bankx-row.selected { background: #eefaf8; border-left-color: var(--teal-700); }
+.bankx-row .money { text-align: right; font-variant-numeric: tabular-nums; }
+
+.bankx-cards { display: none; }
+.bankx-card { display: block; width: 100%; text-align: left; background: #fff; border: 1px solid #dbe4ee; border-radius: 14px; padding: 14px; margin-bottom: 10px; cursor: pointer; font: inherit; color: inherit; }
+.bankx-card-cta { width: 100%; margin-top: 12px; }
+
+.bankx-kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bankx-kv { border: 1px solid #edf2f7; border-radius: 11px; padding: 10px; background: #fbfdff; }
+.bankx-kv span { display: block; color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+.bankx-kv b { display: block; font-size: 13px; }
+
+.bankx-check-row { display: flex; align-items: center; gap: 10px; }
+.bankx-check-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.bankx-check-ic.ok { background: #dcfce7; color: #166534; }
+.bankx-check-ic.warn { background: #fef3c7; color: #b45309; }
+.bankx-check-ic.bad { background: #fee2e2; color: #b91c1c; }
+
+.bankx-detail { position: sticky; top: 84px; display: grid; gap: 12px; align-self: start; }
+.bankx-detail-hero { padding: 18px; background: linear-gradient(135deg, #10233f, #0f766e); color: #fff; border-radius: 14px; box-shadow: 0 12px 30px rgba(15, 35, 63, .18); }
+.bankx-detail-hero h2 { margin: 4px 0 0; font-size: 21px; }
+.bankx-detail-hero .tiny { opacity: .82; }
+.bankx-hero-sub { margin-top: 10px; color: #dff7f2; }
+
+.bankx-checklist { display: grid; gap: 9px; }
+.bankx-check-full { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 11px; border: 1px solid #edf2f7; }
+
+.bankx-tabs { display: flex; gap: 6px; padding: 5px; border: 1px solid #dbe4ee; background: #fff; border-radius: 13px; }
+.bankx-tabs button { flex: 1; border: 0; background: transparent; border-radius: 9px; padding: 9px 10px; font-size: 13px; font-weight: 800; color: #475569; cursor: pointer; }
+.bankx-tabs button.active { background: #10233f; color: #fff; }
+
+.bankx-back { align-self: flex-start; display: none; }
+.bankx-decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bankx .bankx-danger { color: #b91c1c; border-color: #fecaca; }
+
+/* Tasas y reglas */
+.bankx-rate-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.bankx-rule { display: grid; gap: 6px; }
+.bankx-rule-input { display: flex; align-items: center; gap: 8px; }
+.bankx-rule-input .input { width: 88px; text-align: center; font-weight: 800; }
+.bankx-rule-input span { color: #64748b; font-size: 13px; font-weight: 700; }
+.bankx-fuels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 16px; }
+.bankx-fuel { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; border: 1px solid #dbe4ee; border-radius: 12px; padding: 12px; background: #fff; cursor: pointer; text-align: left; }
+.bankx-fuel b { font-size: 14px; }
+.bankx-fuel.active { border-color: var(--teal-700); background: #effaf8; }
+.bankx-rate-table { display: grid; gap: 8px; }
+.bankx-rate-row { display: grid; grid-template-columns: .8fr 1fr 1.1fr .95fr; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #edf2f7; border-radius: 12px; background: #fff; }
+.bankx-rate-row.head { background: #f8fafc; color: #8aa0b9; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; border-color: transparent; }
+.bankx-rate-input { position: relative; display: flex; align-items: center; }
+.bankx-rate-input .input { padding-right: 26px; }
+.bankx-rate-input span { position: absolute; right: 11px; color: #8aa0b9; font-weight: 700; font-size: 13px; pointer-events: none; }
+.bankx-rate-cuota { font-variant-numeric: tabular-nums; }
+@media (max-width: 1024px) { .bankx-rate-layout { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .bankx-fuels { grid-template-columns: 1fr 1fr; }
+  .bankx-rate-row { grid-template-columns: 1fr 1fr; }
+  .bankx-rate-row.head { display: none; }
+}
+
+@media (max-width: 1180px) {
+  .bankx-work { grid-template-columns: minmax(0, 1fr) 380px; }
+  .bankx-detail { top: 76px; }
+}
+@media (max-width: 1024px) {
+  .bankx-kpis { grid-template-columns: repeat(3, 1fr); }
+  .bankx-work { grid-template-columns: 1fr; }
+  .bankx-detail { position: static; }
+}
+@media (max-width: 720px) {
+  .bankx-kpis { grid-template-columns: repeat(2, 1fr); }
+  .bankx-command { grid-template-columns: 1fr; }
+  .bankx-priority { grid-template-columns: 1fr 1fr; }
+  .bankx-rows { display: none; }
+  .bankx-cards { display: block; }
+  .bankx-detail { display: none; }
+  .bankx-detail.sheet-open { display: grid; position: fixed; inset: 0; z-index: 60; background: #f5f8fb; padding: 14px; overflow-y: auto; }
+  .bankx-back { display: inline-flex; }
+  .bankx-head h1 { font-size: 20px; }
+}
