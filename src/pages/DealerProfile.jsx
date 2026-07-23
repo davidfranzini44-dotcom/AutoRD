@@ -70,7 +70,7 @@ export default function DealerProfile() {
           {/* Banner */}
           <div style={{ height: 96, background: 'linear-gradient(120deg, var(--teal-800), var(--teal-600, #0f766e))' }} />
           <div className="card-pad" style={{ paddingTop: 0 }}>
-            <div className="row wrap gap-16" style={{ alignItems: 'flex-end', marginTop: -32 }}>
+            <div className="row wrap gap-16 dealer-profile-head" style={{ alignItems: 'flex-end', marginTop: -32 }}>
               <DealerLogo dealer={d} style={{ width: 76, height: 76, fontSize: 24, border: '3px solid var(--surface, #fff)', boxShadow: 'var(--shadow-sm, 0 2px 8px rgba(0,0,0,.12))' }} />
               <div className="grow" style={{ minWidth: 0, paddingBottom: 2 }}>
                 <div className="row center gap-8"><h1 style={{ fontSize: 24 }}>{d.name}</h1>{d.verified && <BadgeCheck size={20} color="var(--teal-700)" />}</div>

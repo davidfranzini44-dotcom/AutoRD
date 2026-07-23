@@ -654,6 +654,31 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   border-right: 1px solid var(--line-2);
 }
 .compare-cell:last-child { border-right: 0; }
+/* On phones the 220px columns force a wide scroll where barely one vehicle
+   shows. Shrink the per-column minimum so two cars fill the screen (and stretch
+   when there are only two), while 3+ scroll with a clear peek of the next. */
+@media (max-width: 640px) {
+  .compare-grid,
+  .compare-values {
+    grid-template-columns: repeat(var(--compare-cols), minmax(150px, 1fr));
+  }
+}
+
+/* Dealer profile header: on phones the logo + fixed-width action column squeeze
+   the name block to a sliver, so the title wraps and rides up onto the banner.
+   Stack logo / name / actions vertically, with the two actions side by side. */
+@media (max-width: 640px) {
+  .dealer-profile-head {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 14px;
+  }
+  .dealer-profile-head > .col {
+    min-width: 0 !important;
+    flex-direction: row;
+  }
+  .dealer-profile-head > .col .btn { flex: 1; }
+}
 
 /* saved search alerts */
 .buscar-save-alert:disabled { opacity: .52; }
