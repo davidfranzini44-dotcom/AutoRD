@@ -67,8 +67,11 @@ export default function WhatsAppInbox() {
 
   return (
     <div className="wa">
-      <div className="row between center" style={{ marginBottom: 12 }}>
-        <div className="row center gap-8"><MessageCircle size={20} /><h1 style={{ fontSize: 20 }}>WhatsApp</h1></div>
+      <div className="wa-head">
+        <div className="row center gap-10">
+          <div className="wa-head-ic"><MessageCircle size={20} /></div>
+          <div><h1 style={{ fontSize: 20, margin: 0 }}>WhatsApp</h1><p className="tiny muted" style={{ margin: 0 }}>Chatea con tus clientes desde tu número vinculado.</p></div>
+        </div>
         <span className={`chip ${meta.cls}`}>{meta.label}</span>
       </div>
 
@@ -113,8 +116,8 @@ export default function WhatsAppInbox() {
       {(connected || convs.length > 0) && (
         <div className={`wa-inbox ${active ? 'has-active' : ''}`}>
           <aside className="wa-list">
-            <div className="row between center" style={{ padding: '4px 6px 8px' }}>
-              <span className="tiny muted">{convs.length} conversaciones</span>
+            <div className="row between center" style={{ padding: '6px 6px 8px' }}>
+              <div><div className="wa-list-title">Conversaciones</div><span className="tiny muted">{convs.length} en total</span></div>
               <button className="icon-btn" onClick={loadConvs} title="Actualizar"><RefreshCw size={15} /></button>
             </div>
             {convs.length === 0 ? (
@@ -139,7 +142,8 @@ export default function WhatsAppInbox() {
                 <div className="wa-chat-head">
                   <button className="icon-btn show-mobile" onClick={() => setActive(null)}><ArrowLeft size={18} /></button>
                   <div className="wa-avatar sm">{(active.wa_name || active.wa_phone || '?').slice(0, 1).toUpperCase()}</div>
-                  <div><div className="strong small">{active.wa_name || `+${active.wa_phone}`}</div><div className="tiny muted">+{active.wa_phone}</div></div>
+                  <div className="grow" style={{ minWidth: 0 }}><div className="strong small ellipsis">{active.wa_name || `+${active.wa_phone}`}</div><div className="tiny muted">+{active.wa_phone} · Chat de WhatsApp</div></div>
+                  <span className="chip chip-teal" style={{ flexShrink: 0 }}>Cliente</span>
                 </div>
                 <div className="wa-msgs" ref={scrollRef}>
                   {msgs.map((m) => (
