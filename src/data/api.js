@@ -972,18 +972,35 @@ export async function submitBankResponse(responseId, body) {
   return { ok: true }
 }
 
-// ---------------- Bank rate card (tasas per term year) ----------------
-// The signed-in bank's own APR per loan term. Returns a { [year]: apr } map.
+// ---------------- Bank rate card (tasas per fuel type x term year) ----------------
+// The signed-in bank's APR keyed by fuel + term. Returns { [fuel]: { [year]: apr } }.
 export async function getMyBankRates() {
   if (!LIVE) return {}
   const { data, error } = await supabase.rpc('get_my_bank_term_rates')
   if (error || !Array.isArray(data)) return {}
-  return Object.fromEntries(data.map((r) => [r.term_years, Number(r.apr)]))
+  const map = {}
+  data.forEach((r) => { (map[r.fuel_type] ||= {})[r.term_years] = Number(r.apr) })
+  return map
 }
 
-export async function saveBankRate(term, apr) {
+export async function saveBankRate(fuel, term, apr) {
   if (!LIVE) return { ok: true }
-  const { error } = await supabase.rpc('set_bank_term_rate', { p_term: Number(term), p_apr: Number(apr) })
+  const { error } = await supabase.rpc('set_bank_term_rate', { p_fuel: fuel, p_term: Number(term), p_apr: Number(apr) })
+  return { ok: !error, error: error?.message }
+}
+
+// Per-bank financing rules: max term by vehicle condition.
+export async function getMyBankRules() {
+  if (!LIVE) return { maxTermNew: 8, maxTermUsed: 5 }
+  const { data, error } = await supabase.rpc('get_my_bank_rules')
+  const row = Array.isArray(data) ? data[0] : data
+  if (error || !row) return { maxTermNew: 8, maxTermUsed: 5 }
+  return { maxTermNew: row.max_term_new, maxTermUsed: row.max_term_used }
+}
+
+export async function saveBankRules(maxTermNew, maxTermUsed) {
+  if (!LIVE) return { ok: true }
+  const { error } = await supabase.rpc('set_bank_rules', { p_new: Number(maxTermNew), p_used: Number(maxTermUsed) })
   return { ok: !error, error: error?.message }
 }
 
