@@ -303,7 +303,7 @@ export default function Financing() {
 
         {vehicle && (
           <div className="card card-pad row center gap-12" style={{ marginBottom: 14 }}>
-            <div style={{ width: 96, flex: 'none', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)' }}>
+            <div className="fin-thumb" style={{ width: 96, flex: 'none', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)' }}>
               <CarImage make={vehicle.make} model={vehicle.model} bodyType={vehicle.bodyType} seed={vehicle.id} tone={vehicle.tone} photo={vehicle.coverPhoto} label={`${vehicle.make} ${vehicle.model}`} />
             </div>
             <div className="grow">

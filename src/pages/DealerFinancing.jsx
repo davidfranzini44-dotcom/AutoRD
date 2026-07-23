@@ -77,7 +77,7 @@ export default function DealerFinancing() {
           <div className="card card-pad" key={a.id}>
             <div className="row between center wrap gap-10" style={{ marginBottom: 10 }}>
               <div className="row center gap-10" style={{ minWidth: 0 }}>
-                <div className="dash-top-photo" style={{ width: 60, height: 44 }}><CarImage make={a.vehicle.make} model={a.vehicle.model} bodyType={a.vehicle.bodyType} seed={a.vehicle.id || a.id} tone={a.vehicle.tone} photo={a.vehicle.photo} /></div>
+                <div className="dash-top-photo fin-thumb" style={{ width: 60, height: 44 }}><CarImage make={a.vehicle.make} model={a.vehicle.model} bodyType={a.vehicle.bodyType} seed={a.vehicle.id || a.id} tone={a.vehicle.tone} photo={a.vehicle.photo} /></div>
                 <div style={{ minWidth: 0 }}>
                   <div className="strong">{a.customer}</div>
                   <div className="tiny muted">{a.id} · {a.vehicle.name}</div>
@@ -140,7 +140,7 @@ function AppDrawer({ app, onClose }) {
         </div>
         <div className="col gap-14" style={{ padding: 18 }}>
           <div className="row center gap-10">
-            <div className="dash-top-photo" style={{ width: 72, height: 52 }}><CarImage make={app.vehicle.make} model={app.vehicle.model} bodyType={app.vehicle.bodyType} seed={app.vehicle.id || app.id} tone={app.vehicle.tone} photo={app.vehicle.photo} /></div>
+            <div className="dash-top-photo fin-thumb" style={{ width: 72, height: 52 }}><CarImage make={app.vehicle.make} model={app.vehicle.model} bodyType={app.vehicle.bodyType} seed={app.vehicle.id || app.id} tone={app.vehicle.tone} photo={app.vehicle.photo} /></div>
             <div><div className="strong small">{app.vehicle.name}</div>{app.vehicle.price ? <div className="tiny muted">{fmtMoney(app.vehicle.price, app.vehicle.currency)}</div> : null}</div>
           </div>
 

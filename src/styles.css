@@ -2614,6 +2614,10 @@ select.preap-input { padding-right: 16px; }
 .ficha-photo .vphoto { width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; background: transparent; }
 /* Show the whole vehicle in the preview instead of cropping it. */
 .ficha-photo .vphoto-img { object-fit: contain; }
+/* Financing car thumbnails: show the whole car on a clean backdrop. */
+.fin-thumb { background: linear-gradient(135deg,#eef3f6,#dfe7ee); }
+.fin-thumb .vphoto { background: transparent; }
+.fin-thumb .vphoto-img { object-fit: contain; }
 .ficha-close {
   position: absolute; top: 12px; right: 12px;
   width: 34px; height: 34px; border-radius: 50%;
