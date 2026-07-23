@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD - Dealer Leads Mockup</title>
+  <style>
+    :root {
+      --ink: #102030;
+      --muted: #647384;
+      --line: #d9e5e7;
+      --line-soft: #edf3f4;
+      --page: #eef4f5;
+      --card: #ffffff;
+      --soft: #f8fbfb;
+      --teal: #087a72;
+      --teal-2: #12b8ad;
+      --navy: #11243a;
+      --blue: #2563eb;
+      --green: #16845c;
+      --amber: #b7791f;
+      --red: #b42318;
+      --shadow: 0 18px 50px rgba(15, 31, 47, .10);
+      --shadow-sm: 0 8px 24px rgba(15, 31, 47, .07);
+      --radius: 14px;
+      --radius-sm: 9px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f7fbfb 0%, var(--page) 52%, #e7eff1 100%);
+    }
+    button, input, select { font: inherit; }
+    .board {
+      width: 1920px;
+      margin: 0 auto;
+      padding: 34px 42px 46px;
+    }
+    .mock-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+    .logo {
+      font-size: 34px;
+      font-style: italic;
+      font-weight: 950;
+      letter-spacing: -.02em;
+      color: var(--teal);
+    }
+    .mock-head h1 {
+      margin: 8px 0 4px;
+      font-size: 36px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    .mock-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 15px;
+      max-width: 820px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 30px;
+      padding: 0 11px;
+      border: 1px solid rgba(8,122,114,.22);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .stage-note {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      max-width: 600px;
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: 248px 1fr;
+      min-height: 1030px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+    .side {
+      background: #10243a;
+      color: #c6d4df;
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .side .logo {
+      font-size: 23px;
+      color: #5be0d2;
+      padding: 0 2px 2px;
+    }
+    .dealer {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      gap: 11px;
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      background: rgba(255,255,255,.07);
+    }
+    .dealer-logo {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--teal);
+      font-size: 15px;
+      font-weight: 950;
+    }
+    .dealer strong,
+    .dealer span { display: block; }
+    .dealer strong { color: #fff; font-size: 13px; }
+    .dealer span { margin-top: 3px; color: #9eb1c1; font-size: 11px; }
+    .nav {
+      display: grid;
+      gap: 4px;
+    }
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 40px;
+      padding: 0 12px;
+      border-radius: 10px;
+      color: #b4c5d3;
+      font-size: 13px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+    .nav a.active {
+      background: var(--teal);
+      color: #fff;
+    }
+    .nav-dot {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,.22);
+      font-size: 10px;
+    }
+    .side-foot {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,.09);
+      padding-top: 14px;
+      color: #90a5b6;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .main {
+      background: var(--page);
+      padding: 26px;
+    }
+    .page-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    .page-top h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    .page-top p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .btn {
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .btn.primary {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+    .btn.dark {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: #fff;
+    }
+    .today {
+      display: grid;
+      grid-template-columns: 1.05fr 1.5fr .9fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .focus-card,
+    .priority-card,
+    .panel,
+    .mini-card,
+    .lead-card,
+    .mobile-frame {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .focus-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 235px;
+    }
+    .eyebrow {
+      color: var(--teal);
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .focus-card h3 {
+      margin: 10px 0 8px;
+      font-size: 32px;
+      line-height: 1.02;
+      letter-spacing: 0;
+      max-width: 390px;
+    }
+    .focus-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      max-width: 430px;
+    }
+    .focus-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .focus-metrics div {
+      padding: 10px 11px;
+      border: 1px solid var(--line-soft);
+      border-radius: 11px;
+      background: var(--soft);
+    }
+    .focus-metrics strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .focus-metrics span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .priority-card {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 78px 1fr 165px;
+      gap: 15px;
+      align-items: center;
+      min-height: 235px;
+    }
+    .avatar {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: #eaf7f5;
+      color: var(--teal);
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .priority-main h3 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+    }
+    .priority-main p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+    .vehicle-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 8px 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 11px;
+      background: var(--soft);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .car-thumb {
+      width: 46px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #c7d2da, #ffffff);
+      border: 1px solid #d3dee2;
+      position: relative;
+      flex: none;
+    }
+    .car-thumb::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 7px;
+      height: 10px;
+      border-radius: 10px 10px 5px 5px;
+      background: #6e7d89;
+    }
+    .priority-side {
+      display: grid;
+      gap: 8px;
+    }
+    .tiny-stat {
+      padding: 10px 11px;
+      border: 1px solid var(--line-soft);
+      border-radius: 11px;
+      background: #fff;
+    }
+    .tiny-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tiny-stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 16px;
+    }
+    .signal-card {
+      padding: 16px;
+      min-height: 235px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .signal-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 12px;
+      background: var(--soft);
+    }
+    .signal-row strong {
+      font-size: 13px;
+    }
+    .signal-row span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--teal);
+      flex: none;
+    }
+    .dot.amber { background: var(--amber); }
+    .dot.blue { background: var(--blue); }
+    .dot.red { background: var(--red); }
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 170px 150px auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(12px);
+    }
+    .input {
+      height: 38px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0 12px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .tab {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      padding: 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .tab.active {
+      color: #fff;
+      border-color: var(--navy);
+      background: var(--navy);
+    }
+    .work-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.42fr 388px;
+      gap: 14px;
+      align-items: start;
+    }
+    .panel {
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .panel-head h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+    .panel-head span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .queue-list {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+    }
+    .lead-card {
+      box-shadow: none;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      border-radius: 12px;
+    }
+    .lead-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .lead-top strong {
+      display: block;
+      font-size: 14px;
+    }
+    .lead-top span,
+    .lead-meta,
+    .small-muted {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 25px;
+      padding: 0 9px;
+      border-radius: 999px;
+      background: #eef7f6;
+      color: var(--teal);
+      font-size: 10px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .pill.amber { background: #fff7e6; color: var(--amber); }
+    .pill.blue { background: #eff6ff; color: var(--blue); }
+    .pill.green { background: #eaf8f0; color: var(--green); }
+    .pill.red { background: #fff0ee; color: var(--red); }
+    .lead-actions {
+      display: flex;
+      gap: 7px;
+    }
+    .lead-actions .btn {
+      height: 34px;
+      flex: 1;
+      padding: 0 9px;
+      font-size: 12px;
+    }
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+    .stage {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--soft);
+      min-height: 478px;
+      overflow: hidden;
+    }
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      background: #fff;
+    }
+    .stage-head strong {
+      font-size: 13px;
+    }
+    .stage-body {
+      display: grid;
+      gap: 8px;
+      padding: 9px;
+    }
+    .stage-card {
+      padding: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 11px;
+      background: #fff;
+    }
+    .stage-card strong {
+      display: block;
+      font-size: 12.5px;
+    }
+    .stage-card span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .owner-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 9px;
+    }
+    .owner {
+      width: 25px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .drawer {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .drawer-title {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .drawer-title h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .drawer-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .detail-block {
+      padding: 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: 12px;
+      background: var(--soft);
+    }
+    .detail-block h4 {
+      margin: 0 0 9px;
+      font-size: 12px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 7px 0;
+      border-top: 1px solid #e8f0f1;
+      font-size: 12px;
+    }
+    .kv:first-of-type { border-top: 0; padding-top: 0; }
+    .kv span { color: var(--muted); font-weight: 700; }
+    .kv strong { text-align: right; }
+    .timeline {
+      display: grid;
+      gap: 10px;
+    }
+    .time-item {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 9px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .time-item i {
+      width: 9px;
+      height: 9px;
+      margin-top: 4px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 0 4px #e6f5f3;
+    }
+    .template {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: #fff;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .mobile-section {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: 1fr 415px 415px;
+      gap: 18px;
+      align-items: start;
+    }
+    .mobile-copy {
+      padding: 22px;
+    }
+    .mobile-copy h3 {
+      margin: 0;
+      font-size: 27px;
+      line-height: 1.08;
+    }
+    .mobile-copy p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 600px;
+    }
+    .mobile-frame {
+      width: 415px;
+      min-height: 735px;
+      padding: 14px;
+      border-radius: 30px;
+      background: #10243a;
+      box-shadow: var(--shadow);
+    }
+    .phone-screen {
+      min-height: 707px;
+      overflow: hidden;
+      border-radius: 23px;
+      background: var(--page);
+    }
+    .phone-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    .phone-top strong { font-size: 16px; }
+    .phone-body {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+    .phone-hero {
+      padding: 16px;
+      border-radius: 17px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .phone-hero h4 {
+      margin: 4px 0 5px;
+      font-size: 28px;
+      line-height: 1;
+    }
+    .phone-lead {
+      padding: 12px;
+      border-radius: 15px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .bottom-sheet {
+      margin: 76px 8px 0;
+      border-radius: 24px 24px 0 0;
+      background: #fff;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      box-shadow: 0 -16px 36px rgba(15,31,47,.14);
+    }
+    .grab {
+      width: 42px;
+      height: 4px;
+      margin: 10px auto 4px;
+      border-radius: 999px;
+      background: #c8d4db;
+    }
+    .sheet-body {
+      padding: 12px 14px 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .wireframe-notes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .note {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(255,255,255,.82);
+    }
+    .note strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    .note span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+  </style>
+</head>
+<body>
+  <div class="board">
+    <header class="mock-head">
+      <div>
+        <div class="logo">AutoRD</div>
+        <h1>Leads de dealer, rediseño operativo</h1>
+        <p>Mockup enfocado en que el equipo responda primero al cliente con mayor intención, vea el estado de financiamiento y avance el seguimiento sin perder contexto.</p>
+      </div>
+      <div class="stage-note">
+        <span class="badge">Mockup primero</span>
+        <span class="badge">Desktop + mobile</span>
+        <span class="badge">Frontend-design</span>
+      </div>
+    </header>
+
+    <main class="shell">
+      <aside class="side">
+        <div class="logo">AutoRD</div>
+        <div class="dealer">
+          <div class="dealer-logo">JA</div>
+          <div>
+            <strong>Joselito Auto Import</strong>
+            <span>Portal de dealer verificado</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="#"><span class="nav-dot">1</span> Resumen</a>
+          <a href="#"><span class="nav-dot">2</span> Inventario</a>
+          <a class="active" href="#"><span class="nav-dot">3</span> Leads</a>
+          <a href="#"><span class="nav-dot">4</span> Financiamiento</a>
+          <a href="#"><span class="nav-dot">5</span> WhatsApp</a>
+          <a href="#"><span class="nav-dot">6</span> Equipo</a>
+        </nav>
+        <div class="side-foot">
+          El sidebar mantiene el patrón actual de AutoRD, pero el contenido prioriza acción y claridad sobre cantidad de columnas.
+        </div>
+      </aside>
+
+      <section class="main">
+        <div class="page-top">
+          <div>
+            <h2>Responde lo que puede cerrar hoy</h2>
+            <p>Leads ordenados por intención, KYC, financiamiento y tiempo sin respuesta.</p>
+          </div>
+          <div class="actions">
+            <button class="btn primary">Abrir WhatsApp</button>
+            <button class="btn">Crear lead manual</button>
+          </div>
+        </div>
+
+        <section class="today">
+          <article class="focus-card">
+            <div>
+              <span class="eyebrow">Prioridad del día</span>
+              <h3>7 leads necesitan respuesta</h3>
+              <p>AutoRD agrupa nuevos mensajes, KYC pendiente, documentos solicitados y clientes pre-aprobados para que el vendedor no empiece desde cero.</p>
+            </div>
+            <div class="focus-metrics">
+              <div><strong>3</strong><span>Sin responder</span></div>
+              <div><strong>2</strong><span>Pre-aprobados</span></div>
+              <div><strong>18m</strong><span>SLA promedio</span></div>
+            </div>
+          </article>
+
+          <article class="priority-card">
+            <div class="avatar">CM</div>
+            <div class="priority-main">
+              <span class="eyebrow">Siguiente mejor acción</span>
+              <h3>Carla Mejía ya tiene pre-aprobación</h3>
+              <p>BHD respondió con una tasa competitiva. Falta confirmar inicial y reservar el vehículo antes de que otro cliente lo tome.</p>
+              <div class="vehicle-line">
+                <span class="car-thumb"></span>
+                Toyota Grand Highlander 2024 - RD$ 4,950,000
+              </div>
+            </div>
+            <div class="priority-side">
+              <div class="tiny-stat"><span>Mejor oferta</span><strong>BHD 9.25%</strong></div>
+              <div class="tiny-stat"><span>Cuota estimada</span><strong>RD$ 79,500</strong></div>
+              <button class="btn primary">Responder</button>
+              <button class="btn">Reservar</button>
+            </div>
+          </article>
+
+          <aside class="signal-card panel">
+            <div class="panel-head" style="padding: 0 0 8px; border: 0;">
+              <h3>Señales vivas</h3>
+              <span>Actualizado ahora</span>
+            </div>
+            <div class="signal-row">
+              <span><span class="dot amber"></span></span>
+              <div style="flex:1"><strong>Banco pidió documentos</strong><br><span>José Almonte - carta de trabajo</span></div>
+            </div>
+            <div class="signal-row">
+              <span><span class="dot red"></span></span>
+              <div style="flex:1"><strong>Lead caliente sin respuesta</strong><br><span>Ramón Peralta - hace 48 min</span></div>
+            </div>
+            <div class="signal-row">
+              <span><span class="dot blue"></span></span>
+              <div style="flex:1"><strong>Cita por confirmar</strong><br><span>Diana Castillo - mañana 3:00pm</span></div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="filters">
+          <input class="input" value="Buscar cliente, vehículo, teléfono o monto" />
+          <select class="input"><option>Todos los vendedores</option></select>
+          <select class="input"><option>Todas las etapas</option></select>
+          <div class="tabs">
+            <button class="tab active">Hoy</button>
+            <button class="tab">Pipeline</button>
+            <button class="tab">Citas</button>
+            <button class="tab">Financ.</button>
+          </div>
+        </section>
+
+        <section class="work-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Prioridad de hoy</h3>
+              <span>Ordenado por urgencia</span>
+            </div>
+            <div class="queue-list">
+              <div class="lead-card">
+                <div class="lead-top">
+                  <div><strong>Ramón Peralta</strong><span>Hace 48 min - nuevo mensaje</span></div>
+                  <span class="pill red">Responder</span>
+                </div>
+                <div class="lead-meta">Lexus RX 2023 - pregunta por disponibilidad y cambio</div>
+                <div class="lead-actions"><button class="btn primary">WhatsApp</button><button class="btn">Asignar</button></div>
+              </div>
+              <div class="lead-card">
+                <div class="lead-top">
+                  <div><strong>José Almonte</strong><span>BHD pidió documentos</span></div>
+                  <span class="pill amber">Docs</span>
+                </div>
+                <div class="lead-meta">Lexus LX 2022 - carta de trabajo y estados de cuenta</div>
+                <div class="lead-actions"><button class="btn primary">Enviar plantilla</button><button class="btn">Ver caso</button></div>
+              </div>
+              <div class="lead-card">
+                <div class="lead-top">
+                  <div><strong>Yleana Santos</strong><span>Quiere cuota estimada</span></div>
+                  <span class="pill blue">KYC</span>
+                </div>
+                <div class="lead-meta">Toyota RAV4 2021 - falta verificación de identidad</div>
+                <div class="lead-actions"><button class="btn primary">Solicitar KYC</button><button class="btn">Llamar</button></div>
+              </div>
+              <div class="lead-card">
+                <div class="lead-top">
+                  <div><strong>Diana Castillo</strong><span>Cita mañana 3:00pm</span></div>
+                  <span class="pill green">Reservado</span>
+                </div>
+                <div class="lead-meta">Toyota Grand Highlander 2024 - pre-aprobada por Banreservas</div>
+                <div class="lead-actions"><button class="btn primary">Confirmar</button><button class="btn">Detalles</button></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <h3>Pipeline compacto</h3>
+              <span>Arrastrar o mover por etapa</span>
+            </div>
+            <div class="pipeline">
+              <div class="stage">
+                <div class="stage-head"><strong>Nuevo</strong><span class="pill blue">4</span></div>
+                <div class="stage-body">
+                  <div class="stage-card"><strong>Ramón Peralta</strong><span>Lexus RX - sin responder</span><div class="owner-row"><span class="owner">CJ</span><span class="pill red">48m</span></div></div>
+                  <div class="stage-card"><strong>Yleana Santos</strong><span>RAV4 - pregunta cuota</span><div class="owner-row"><span class="owner">MR</span><span class="pill blue">KYC</span></div></div>
+                  <div class="stage-card"><strong>Gabriela Lora</strong><span>Pide fotos del interior</span><div class="owner-row"><span class="owner">LF</span><span class="pill">Fotos</span></div></div>
+                </div>
+              </div>
+              <div class="stage">
+                <div class="stage-head"><strong>Contactado</strong><span class="pill">3</span></div>
+                <div class="stage-body">
+                  <div class="stage-card"><strong>Pedro Guzmán</strong><span>Quiere prueba de manejo</span><div class="owner-row"><span class="owner">CJ</span><span class="pill">Mañana</span></div></div>
+                  <div class="stage-card"><strong>Wendy Fernández</strong><span>Esperando bancos</span><div class="owner-row"><span class="owner">MR</span><span class="pill blue">Financ.</span></div></div>
+                </div>
+              </div>
+              <div class="stage">
+                <div class="stage-head"><strong>Financiamiento</strong><span class="pill amber">3</span></div>
+                <div class="stage-body">
+                  <div class="stage-card"><strong>José Almonte</strong><span>BHD solicitó documentos</span><div class="owner-row"><span class="owner">LF</span><span class="pill amber">Docs</span></div></div>
+                  <div class="stage-card"><strong>Carla Mejía</strong><span>Pre-aprobada 9.25%</span><div class="owner-row"><span class="owner">MR</span><span class="pill green">Oferta</span></div></div>
+                  <div class="stage-card"><strong>Diana Castillo</strong><span>Banreservas aprobó</span><div class="owner-row"><span class="owner">CJ</span><span class="pill green">Lista</span></div></div>
+                </div>
+              </div>
+              <div class="stage">
+                <div class="stage-head"><strong>Cierre</strong><span class="pill green">2</span></div>
+                <div class="stage-body">
+                  <div class="stage-card"><strong>Frank Reyes</strong><span>Negociando inicial</span><div class="owner-row"><span class="owner">LF</span><span class="pill amber">Oferta</span></div></div>
+                  <div class="stage-card"><strong>Manuel Ovalles</strong><span>Vendido - entrega lista</span><div class="owner-row"><span class="owner">MR</span><span class="pill green">Vendido</span></div></div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="panel drawer">
+            <div class="drawer-title">
+              <div class="avatar">CM</div>
+              <div>
+                <h3>Carla Mejía</h3>
+                <p>Lead seleccionado - pre-aprobada</p>
+              </div>
+            </div>
+            <div class="actions" style="justify-content: stretch;">
+              <button class="btn primary" style="flex: 1;">WhatsApp</button>
+              <button class="btn" style="flex: 1;">Llamar</button>
+            </div>
+            <div class="detail-block">
+              <h4>Vehículo e intención</h4>
+              <div class="kv"><span>Vehículo</span><strong>Toyota Grand Highlander 2024</strong></div>
+              <div class="kv"><span>Precio</span><strong>RD$ 4,950,000</strong></div>
+              <div class="kv"><span>Inicial</span><strong>RD$ 900,000</strong></div>
+            </div>
+            <div class="detail-block">
+              <h4>Financiamiento</h4>
+              <div class="kv"><span>KYC</span><strong>Verificado</strong></div>
+              <div class="kv"><span>Mejor banco</span><strong>BHD</strong></div>
+              <div class="kv"><span>Tasa</span><strong>9.25%</strong></div>
+              <div class="kv"><span>Cuota</span><strong>RD$ 79,500</strong></div>
+            </div>
+            <div class="detail-block">
+              <h4>Timeline</h4>
+              <div class="timeline">
+                <div class="time-item"><i></i><div><strong>Hace 12 min</strong><br><span class="small-muted">BHD envió pre-aprobación.</span></div></div>
+                <div class="time-item"><i></i><div><strong>Hace 2 h</strong><br><span class="small-muted">Cliente completó KYC y consentimiento.</span></div></div>
+                <div class="time-item"><i></i><div><strong>Ayer</strong><br><span class="small-muted">Pregunta inicial por cuota mensual.</span></div></div>
+              </div>
+            </div>
+            <div class="detail-block">
+              <h4>Plantilla sugerida</h4>
+              <div class="template">Hola Carla, ya tenemos una pre-aprobación para la Grand Highlander. La mejor oferta llegó con BHD. ¿Confirmamos la inicial para reservar el vehículo?</div>
+            </div>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <section class="mobile-section">
+      <article class="panel mobile-copy">
+        <span class="eyebrow">Mobile-first idea</span>
+        <h3>En teléfono, el dealer ve la cola antes que el tablero</h3>
+        <p>La versión móvil no intenta meter el Kanban completo. Muestra prioridad, búsqueda rápida y tarjetas accionables. El detalle entra como bottom sheet con WhatsApp, KYC, banco y notas.</p>
+        <div class="wireframe-notes">
+          <div class="note"><strong>1. Menos columnas</strong><span>La cola de hoy reemplaza el tablero como vista inicial.</span></div>
+          <div class="note"><strong>2. Contexto completo</strong><span>Cada lead muestra vehículo, financiación y próximo paso.</span></div>
+          <div class="note"><strong>3. Acciones visibles</strong><span>WhatsApp, KYC, llamar o reservar sin abrir varias pantallas.</span></div>
+        </div>
+      </article>
+
+      <div class="mobile-frame">
+        <div class="phone-screen">
+          <div class="phone-top"><strong>Leads</strong><span class="pill red">3 urgentes</span></div>
+          <div class="phone-body">
+            <div class="phone-hero">
+              <span class="eyebrow">Hoy</span>
+              <h4>7 por responder</h4>
+              <p class="small-muted">Primero clientes con mensajes nuevos, KYC pendiente o pre-aprobación.</p>
+            </div>
+            <input class="input" value="Buscar lead o vehículo" />
+            <div class="phone-lead">
+              <div class="lead-top"><div><strong>Carla Mejía</strong><span>Pre-aprobada - BHD 9.25%</span></div><span class="pill green">Oferta</span></div>
+              <div class="lead-meta" style="margin-top:8px;">Grand Highlander 2024 - RD$ 4,950,000</div>
+              <div class="lead-actions" style="margin-top:10px;"><button class="btn primary">WhatsApp</button><button class="btn">Ver</button></div>
+            </div>
+            <div class="phone-lead">
+              <div class="lead-top"><div><strong>José Almonte</strong><span>Banco pidió documentos</span></div><span class="pill amber">Docs</span></div>
+              <div class="lead-meta" style="margin-top:8px;">Lexus LX 2022 - carta de trabajo pendiente</div>
+              <div class="lead-actions" style="margin-top:10px;"><button class="btn primary">Plantilla</button><button class="btn">Ver</button></div>
+            </div>
+            <div class="phone-lead">
+              <div class="lead-top"><div><strong>Ramón Peralta</strong><span>Hace 48 min</span></div><span class="pill red">Sin respuesta</span></div>
+              <div class="lead-meta" style="margin-top:8px;">Lexus RX 2023 - pregunta disponibilidad</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-frame">
+        <div class="phone-screen">
+          <div class="phone-top"><strong>Carla Mejía</strong><span class="pill green">Lista</span></div>
+          <div class="bottom-sheet">
+            <div class="grab"></div>
+            <div class="sheet-body">
+              <div class="drawer-title">
+                <div class="avatar">CM</div>
+                <div><h3>Carla Mejía</h3><p>Grand Highlander 2024</p></div>
+              </div>
+              <div class="sheet-actions"><button class="btn primary">WhatsApp</button><button class="btn">Llamar</button></div>
+              <div class="detail-block">
+                <h4>Próximo paso</h4>
+                <div class="template">Confirmar inicial y reservar. Cliente ya tiene oferta bancaria.</div>
+              </div>
+              <div class="detail-block">
+                <h4>Financiamiento</h4>
+                <div class="kv"><span>KYC</span><strong>Verificado</strong></div>
+                <div class="kv"><span>Banco</span><strong>BHD</strong></div>
+                <div class="kv"><span>Oferta</span><strong>9.25%</strong></div>
+                <div class="kv"><span>Cuota</span><strong>RD$ 79,500</strong></div>
+              </div>
+              <div class="sheet-actions"><button class="btn dark">Reservar</button><button class="btn">Mover etapa</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
