@@ -102,11 +102,12 @@ export default function DealerProfileEdit() {
   if (loading) return <div className="muted">Cargando perfil…</div>
 
   return (
-    <div>
-      <div className="admin-head">
+    <div className="dlrx">
+      <div className="container dlrx-container">
+      <div className="dlrx-head">
         <div>
-          <h1 style={{ fontSize: 22 }}>Perfil del dealer</h1>
-          <p className="tiny muted">Tu contacto, horario y ubicaciones que ven los compradores</p>
+          <h1>Perfil del dealer</h1>
+          <p className="small muted">Logo, descripción, WhatsApp, redes, fotos del local y ubicaciones.</p>
         </div>
         <div className="row gap-8 wrap">
           {slug && <a className="btn btn-outline" href={`/dealers/${slug}`} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Ver perfil público</a>}
@@ -223,6 +224,7 @@ export default function DealerProfileEdit() {
             />
           ))}
         </div>
+      </div>
       </div>
     </div>
   )

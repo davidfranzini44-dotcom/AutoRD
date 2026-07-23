@@ -46,11 +46,12 @@ export default function DealerTeam() {
   const employees = team.filter((m) => m.dealer_role !== 'owner')
 
   return (
-    <div>
-      <div className="admin-head">
+    <div className="dlrx">
+      <div className="container dlrx-container">
+      <div className="dlrx-head">
         <div>
-          <h1 style={{ fontSize: 22 }}>Equipo</h1>
-          <p className="tiny muted">Crea cuentas para tus empleados y define a qué pueden acceder</p>
+          <h1>Equipo</h1>
+          <p className="small muted">Crea empleados, activa/desactiva cuentas y controla permisos.</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setCreated(null); setAdding(true) }}><UserPlus size={17} /> Agregar empleado</button>
       </div>
@@ -132,6 +133,7 @@ export default function DealerTeam() {
       )}
 
       {created && <CredentialsModal created={created} onClose={() => setCreated(null)} />}
+      </div>
     </div>
   )
 }
