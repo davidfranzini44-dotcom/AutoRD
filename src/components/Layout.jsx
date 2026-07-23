@@ -44,7 +44,6 @@ export default function Layout() {
     { to: '/ingresar', label: 'Vender' },
     { to: '/financiamiento', label: 'Financiamiento' },
     { to: '/como-funciona', label: 'Cómo funciona' },
-    { to: '/como-funciona', label: 'Blog' },
   ]
 
   const consoleLink = profile?.role === 'dealer' ? '/dealer'
