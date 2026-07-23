@@ -9,6 +9,7 @@ import BankLogo from './BankLogo'
 import DealerLogo from './DealerLogo'
 import useBankIdentity from '../hooks/useBankIdentity'
 import { getMyDealer } from '../data/api'
+import './ConsoleLayout.css'
 
 const DEALER_NAV = [
   { to: '/dealer', label: 'Resumen', icon: LayoutDashboard, end: true },
@@ -21,8 +22,8 @@ const DEALER_NAV = [
   { to: '/dealer/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 const BANK_NAV = [
-  { to: '/banco', label: 'Bandeja de solicitudes', icon: Inbox, end: true },
-  { to: '/banco/tasas', label: 'Tasas por plazo', icon: Percent },
+  { to: '/banco', label: 'Bandeja de solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true },
+  { to: '/banco/tasas', label: 'Tasas por plazo', bottomLabel: 'Tasas', icon: Percent },
   { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/banco/reportes', label: 'Reportes', icon: BarChart3 },
 ]
@@ -53,7 +54,7 @@ export default function ConsoleLayout() {
   const roleLabel = isBank ? 'Portal de banco' : 'Portal de dealer'
 
   return (
-    <div className="console">
+    <div className={`console ${isBank ? 'bank-console-shell' : ''}`}>
       <aside className={`console-side ${open ? 'open' : ''}`}>
         <div className="side-brand">
           <Link to="/" className="logo" style={{ fontSize: 19 }}><span className="a1">Auto</span><span className="a2">RD</span></Link>
@@ -116,6 +117,20 @@ export default function ConsoleLayout() {
           ) : <Outlet />}
         </div>
       </div>
+
+      {isBank && (
+        <nav className="bank-bottom-nav" aria-label="Navegación rápida del banco">
+          {BANK_NAV.map((n) => {
+            const Icon = n.icon
+            return (
+              <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => isActive ? 'active' : ''}>
+                <Icon size={19} />
+                <span>{n.bottomLabel || n.label}</span>
+              </NavLink>
+            )
+          })}
+        </nav>
+      )}
     </div>
   )
 }
