@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getPublicContract } from '../data/api'
+import { getPublicContract, getContractIdentity } from '../data/api'
 import { fmtRD } from '../data/demo'
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }) : '—')
@@ -9,6 +9,9 @@ export default function Contrato() {
   const { token = '' } = useParams()
   const [state, setState] = useState('loading') // loading | ok | notfound
   const [c, setC] = useState(null)
+  // Identity images: null while loading, then { authorized, idUrl, livenessUrl }.
+  // Only the buyer, the assigned bank, or an admin ever get authorized:true.
+  const [ident, setIdent] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -17,6 +20,14 @@ export default function Contrato() {
       if (!data) { setState('notfound'); return }
       setC(data); setState('ok')
     }).catch(() => { if (alive) setState('notfound') })
+    return () => { alive = false }
+  }, [token])
+
+  useEffect(() => {
+    let alive = true
+    getContractIdentity(token)
+      .then((r) => { if (alive) setIdent(r || { authorized: false }) })
+      .catch(() => { if (alive) setIdent({ authorized: false }) })
     return () => { alive = false }
   }, [token])
 
@@ -69,6 +80,23 @@ export default function Contrato() {
             </div>
           </section>
 
+          {ident?.authorized && (
+            <section className="fc-section">
+              <div className="fc-idhead">
+                <h2>Verificación de identidad (DIDIT)</h2>
+                <span className="fc-restricted">🔒 Visible solo para el cliente, el banco autorizado y AutoRD</span>
+              </div>
+              {(ident.idUrl || ident.livenessUrl) ? (
+                <div className="fc-ids">
+                  <IdCard title="Documento — Cédula" ok="Validada" src={ident.idUrl} foot="Capturada y verificada por DIDIT" />
+                  <IdCard title="Prueba de vida — Selfie" ok="Aprobada" src={ident.livenessUrl} foot="Prueba de vida superada (DIDIT)" />
+                </div>
+              ) : (
+                <div className="fc-idnote">Verificación DIDIT completada. Las imágenes no están disponibles para esta solicitud.</div>
+              )}
+            </section>
+          )}
+
           <section className="fc-section">
             <h2>Solicitud</h2>
             <div className="fc-details">
@@ -90,7 +118,7 @@ export default function Contrato() {
           <section className="fc-section">
             <h2>Declaración y autorización</h2>
             <div className="fc-legal">
-              <p><b>1. Verificación de identidad y datos.</b> El solicitante consiente la verificación de su identidad mediante su cédula dominicana y una prueba de vida (DIDIT), y autoriza a AutoRD a tratar sus datos personales con el único fin de gestionar esta solicitud, prevenir fraude y cumplir obligaciones legales. Los datos biométricos no se almacenan en AutoRD ni se comparten con dealers ni bancos.</p>
+              <p><b>1. Verificación de identidad y datos.</b> El solicitante consiente la verificación de su identidad mediante su cédula dominicana y una prueba de vida (DIDIT), y autoriza a AutoRD a tratar sus datos personales con el único fin de gestionar esta solicitud, prevenir fraude y cumplir obligaciones legales. Las imágenes de su documento de identidad y de la prueba de vida se incorporan a este contrato como evidencia de la verificación y se comparten únicamente con el/los banco(s) autorizado(s) para evaluar esta solicitud; no se comparten con dealers ni con terceros ajenos a la solicitud.</p>
               <p><b>2. Autorización de consulta crediticia.</b> El solicitante autoriza expresamente a {banksText} a consultar su historial crediticio en los burós de crédito para evaluar esta solicitud de financiamiento.</p>
               <p><b>3. Alcance.</b> AutoRD no realiza la evaluación de crédito ni actúa como prestamista; únicamente transmite esta solicitud y el presente consentimiento a los bancos seleccionados. AutoRD no emite contratos de préstamo ni firma digital de crédito: la relación de crédito, de aprobarse, se formaliza directamente entre el cliente y el banco.</p>
               <p><b>4. Veracidad.</b> El solicitante declara que la información suministrada es verdadera y que la identidad verificada por DIDIT corresponde a la persona que otorga este consentimiento.</p>
@@ -109,6 +137,18 @@ export default function Contrato() {
         </article>
       </div>
     </main>
+  )
+}
+
+function IdCard({ title, ok, src, foot }) {
+  return (
+    <div className="fc-id">
+      <div className="fc-id-cap"><b>{title}</b>{src ? <span className="fc-id-ok">✓ {ok}</span> : null}</div>
+      <div className="fc-id-frame">
+        {src ? <img src={src} alt={title} /> : <div className="fc-id-empty">Imagen no disponible</div>}
+      </div>
+      {src ? <div className="fc-id-foot">{foot}</div> : null}
+    </div>
   )
 }
 
@@ -141,6 +181,19 @@ const CSS = `
 .fc-section h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #475569; }
 .fc-details { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
 .fc-detail { min-height: 54px; border: 1px solid #e3eaf2; border-radius: 12px; background: #f8fafc; padding: 9px 10px; }
+.fc-idhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; }
+.fc-idhead h2 { margin: 0; }
+.fc-restricted { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #cdd9ea; background: #eef3fb; color: #35507e; border-radius: 999px; padding: 3px 9px; font-size: 10px; font-weight: 800; letter-spacing: .03em; }
+.fc-ids { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.fc-id { border: 1px solid #e3eaf2; border-radius: 13px; background: #f8fafc; overflow: hidden; }
+.fc-id-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 11px; border-bottom: 1px solid #e7edf5; }
+.fc-id-cap b { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #475569; }
+.fc-id-ok { display: inline-flex; align-items: center; gap: 4px; color: #0f766e; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.fc-id-frame { position: relative; background: #eef2f7; min-height: 150px; display: grid; place-items: center; }
+.fc-id-frame img { width: 100%; height: 200px; object-fit: cover; display: block; }
+.fc-id-empty { color: #94a3b8; font-size: 11px; padding: 28px 10px; text-align: center; }
+.fc-id-foot { padding: 8px 11px; font-size: 10px; color: #64748b; border-top: 1px solid #e7edf5; }
+.fc-idnote { border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; color: #64748b; padding: 14px; font-size: 12px; }
 .fc-legal { border: 1px solid #cdeae5; border-radius: 13px; background: #f2fbf9; padding: 13px 14px; color: #334155; }
 .fc-legal p { margin: 0 0 9px; } .fc-legal p:last-child { margin: 0; }
 .fc-signature { display: grid; grid-template-columns: 1fr 230px; gap: 20px; align-items: end; padding: 28px 23px 23px; }
@@ -150,5 +203,5 @@ const CSS = `
 .fc-sign small { color: #94a3b8; }
 .fc-footer { padding: 13px 23px 17px; border-top: 1px solid #e4ebf3; color: #94a3b8; font-size: 10px; text-align: center; }
 @media print { .fc-page { background: #fff; padding: 0; } .fc-noprint { display: none !important; } .fc-wrap { padding: 0; } .fc-doc { border: 0; border-radius: 0; box-shadow: none; } .fc-hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; } @page { size: A4; margin: 12mm; } }
-@media (max-width: 560px) { .fc-brand { grid-template-columns: auto 1fr; } .fc-badge { grid-column: 2; text-align: left; } .fc-meta { grid-template-columns: 1fr; } .fc-meta div { border-right: 0; border-bottom: 1px solid #e4ebf3; } .fc-details, .fc-signature { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .fc-brand { grid-template-columns: auto 1fr; } .fc-badge { grid-column: 2; text-align: left; } .fc-meta { grid-template-columns: 1fr; } .fc-meta div { border-right: 0; border-bottom: 1px solid #e4ebf3; } .fc-details, .fc-ids, .fc-signature { grid-template-columns: 1fr; } }
 `

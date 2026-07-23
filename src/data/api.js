@@ -482,6 +482,29 @@ export async function getPublicContract(token) {
   return data
 }
 
+// Identity images (cédula + prueba de vida) for a contract. These live in a
+// PRIVATE bucket and are NEVER on the public contract. The RPC only hands out
+// the storage paths to the buyer, an assigned bank, or an admin; we then mint a
+// short-lived signed URL per image (storage RLS re-checks the caller).
+// Returns { authorized, idUrl, livenessUrl, capturedAt } — idUrl/livenessUrl
+// are null when authorized but no images were captured (e.g. legacy/seed apps).
+export async function getContractIdentity(token) {
+  if (!LIVE || !token) return { authorized: false, idUrl: null, livenessUrl: null }
+  const { data: userRes } = await supabase.auth.getUser()
+  if (!userRes?.user) return { authorized: false, idUrl: null, livenessUrl: null }
+
+  const { data, error } = await supabase.rpc('get_contract_identity', { p_token: token })
+  if (error || !data || !data.authorized) return { authorized: false, idUrl: null, livenessUrl: null }
+
+  const sign = async (path) => {
+    if (!path) return null
+    const { data: s } = await supabase.storage.from('kyc-images').createSignedUrl(path, 300)
+    return s?.signedUrl || null
+  }
+  const [idUrl, livenessUrl] = await Promise.all([sign(data.id_image_path), sign(data.liveness_image_path)])
+  return { authorized: true, idUrl, livenessUrl, capturedAt: data.captured_at || null }
+}
+
 // Customer financing status (latest application for the logged-in buyer)
 export async function getMyFinancing() {
   if (!LIVE) return financingCase
