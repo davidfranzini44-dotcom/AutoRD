@@ -1,5 +1,5 @@
-import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { NavLink, Link, useLocation, useNavigate, Outlet } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
 import {
   MapPin, Heart, Bell, Menu, X, ChevronDown,
   Home, Search, Landmark, User, LogOut, LayoutDashboard, Scale,
@@ -16,6 +16,43 @@ function Logo() {
     <Link to="/" className="logo" aria-label="AutoRD inicio">
       <img src={autordLogo} alt="AutoRD" />
     </Link>
+  )
+}
+
+const DR_CITIES = ['Santo Domingo', 'Santiago', 'La Romana', 'Punta Cana', 'San Cristóbal', 'Puerto Plata', 'La Vega', 'San Pedro de Macorís']
+
+// Header location selector — pick a city to browse inventory there.
+function LocationPill() {
+  const navigate = useNavigate()
+  const ref = useRef(null)
+  const [open, setOpen] = useState(false)
+  const [city, setCity] = useState(() => { try { return localStorage.getItem('autord-city') || 'Santo Domingo' } catch (_) { return 'Santo Domingo' } })
+  useEffect(() => {
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+  const pick = (c) => {
+    setCity(c); setOpen(false)
+    try { localStorage.setItem('autord-city', c) } catch (_) { /* ignore */ }
+    navigate(c === 'Todo el país' ? '/buscar' : `/buscar?ubicacion=${encodeURIComponent(c)}`)
+  }
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button className="loc-pill" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+        <MapPin size={15} /><span>{city}</span><ChevronDown size={14} />
+      </button>
+      {open && (
+        <div role="listbox" aria-label="Elegir ubicación" style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 70, minWidth: 210, background: '#fff', border: '1px solid var(--line)', borderRadius: 12, boxShadow: '0 18px 44px rgba(12,32,51,.18)', padding: 6, maxHeight: 340, overflowY: 'auto' }}>
+          {['Todo el país', ...DR_CITIES].map((c) => (
+            <button key={c} role="option" aria-selected={c === city} onClick={() => pick(c)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '9px 11px', borderRadius: 8, border: 0, cursor: 'pointer', fontSize: 14, background: c === city ? 'var(--surface-2)' : 'transparent', color: c === city ? 'var(--teal-800)' : 'var(--ink)', fontWeight: c === city ? 700 : 500 }}>
+              <MapPin size={13} style={{ opacity: .55 }} /> {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -62,7 +99,7 @@ export default function Layout() {
             ))}
           </nav>
           <div className="header-right">
-            <button className="loc-pill"><MapPin size={15} /><span>Santo Domingo</span><ChevronDown size={14} /></button>
+            <LocationPill />
             <Link to="/comparar" className="icon-label"><Scale size={18} /><span className="hide-mobile">Comparar</span>{cmp > 0 && <span className="dot-badge">{cmp}</span>}</Link>
             <Link to="/favoritos" className="icon-label"><Heart size={18} /><span className="hide-mobile">Favoritos</span></Link>
             <Link to="/alertas" className="icon-label" aria-label="Alertas"><Bell size={18} /><span className="hide-mobile">Alertas</span>{alerts > 0 && <span className="dot-badge">{alerts}</span>}</Link>
