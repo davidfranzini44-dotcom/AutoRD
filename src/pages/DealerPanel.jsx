@@ -361,11 +361,12 @@ export default function DealerPanel({ view = 'resumen' }) {
   const totalRequests = inventory.reduce((s, v) => s + Number(v.requests || 0), 0)
 
   return (
-    <div>
-      <div className="admin-head">
+    <div className="dlrx">
+      <div className="container dlrx-container">
+      <div className="dlrx-head">
         <div>
-          <h1 style={{ fontSize: 22 }}>{title}</h1>
-          <p className="tiny muted">{sub}</p>
+          <h1>{title}</h1>
+          <p className="small muted">{sub}</p>
         </div>
         {view !== 'leads' && (
           <Link to="/dealer/publicar" className="btn btn-primary"><Plus size={17} /> Publicar vehículo</Link>
@@ -437,20 +438,13 @@ export default function DealerPanel({ view = 'resumen' }) {
 
       {view === 'inventario' && (
         <>
-        <div className="dealer-inventory-summary">
-          <div className="dealer-inventory-health">
-            <span>Calidad promedio</span>
-            <strong>{avgListingScore}%</strong>
-            <div className="dealer-health-track"><i style={{ width: `${Math.max(4, avgListingScore)}%` }} /></div>
-          </div>
-          <div className="dealer-inventory-summary-grid">
-            <div><strong>{publishedCount}</strong><span>Publicados</span></div>
-            <div><strong>{reservedCount}</strong><span>Reservados</span></div>
-            <div><strong>{soldCount}</strong><span>Vendidos</span></div>
-            <div><strong>{draftCount}</strong><span>Borradores</span></div>
-            <div><strong>{totalViews.toLocaleString('es-DO')}</strong><span>Vistas</span></div>
-            <div><strong>{totalRequests}</strong><span>Solic. fin.</span></div>
-          </div>
+        <div className="dlrx-kpis">
+          <div className="card dlrx-kpi"><span>Publicados</span><b>{publishedCount}</b><span className="chip green">Visibles</span></div>
+          <div className="card dlrx-kpi"><span>Reservados</span><b>{reservedCount}</b><span className="chip amber">En cierre</span></div>
+          <div className="card dlrx-kpi"><span>Borradores</span><b>{draftCount}</b><span className="chip blue">Completar</span></div>
+          <div className="card dlrx-kpi"><span>Vendidos</span><b>{soldCount}</b><span className="chip green">Mes</span></div>
+          <div className="card dlrx-kpi"><span>Vistas</span><b>{totalViews.toLocaleString('es-DO')}</b><span className="chip blue">30 días</span></div>
+          <div className="card dlrx-kpi"><span>Calidad</span><b>{avgListingScore}%</b><span className="chip green">Promedio</span></div>
         </div>
 
         <div className="card dealer-inventory-shell">
@@ -587,6 +581,7 @@ export default function DealerPanel({ view = 'resumen' }) {
           onChanged={refetch}
         />
       )}
+      </div>
     </div>
   )
 }
