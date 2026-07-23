@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, markKycVerified, listBanks, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, markKycVerified, getFinancingBankOptions, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
 import { kycValidity, fmtKycDate } from '../data/kyc'
 import { useAuth } from '../context/AuthContext'
@@ -107,10 +107,12 @@ export default function Financing() {
 
   useEffect(() => () => clearInterval(pollRef.current), [])
 
-  // Load the real bank list (with DB ids) and the vehicle being financed.
+  // Load the real bank list (with DB ids + financing rules + offered fuels) and
+  // the vehicle being financed. The rules let us cap the term + route only to
+  // banks that can actually finance this car.
   useEffect(() => {
     let alive = true
-    listBanks().then((bs) => {
+    getFinancingBankOptions().then((bs) => {
       if (!alive || !bs?.length) return
       setBankList(bs)
       setSelBanks(bs.map((b) => b.id))
@@ -165,6 +167,48 @@ export default function Financing() {
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
   const back = () => setStep((s) => Math.max(s - 1, 0))
   const toggleBank = (id) => setSelBanks((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id])
+
+  // ---- Financing-rule enforcement (bank rules picked in /banco/tasas) ----
+  // Each bank sets a max term by condition (nuevo/usado) + the fuels it finances.
+  // We cap the customer's term to what banks allow for THIS car and route only to
+  // banks whose rules actually cover it.
+  const isNew = vehicle ? vehicle.condition === 'Nuevo' : true
+  const carFuel = vehicle?.fuel || null
+  // Max term (years) a bank will finance THIS car for; 0 = it won't finance it.
+  const bankMaxTerm = (b) => {
+    if (!b) return 0
+    if (carFuel && b.fuels?.length && !b.fuels.includes(carFuel)) return 0
+    return isNew ? (b.maxTermNew ?? 8) : (b.maxTermUsed ?? 5)
+  }
+  // Highest term any active bank allows for this car → caps the plazo selector.
+  const termCap = bankList.length
+    ? (vehicle ? Math.max(0, ...bankList.map(bankMaxTerm)) : Math.max(8, ...bankList.map((b) => b.maxTermNew ?? 8)))
+    : 8
+  const plazoOptions = (() => {
+    const opts = [4, 5, 6, 7, 8].filter((y) => y <= termCap)
+    return opts.length ? opts : [Math.max(1, termCap)]
+  })()
+  const plazoNote = vehicle && termCap < 8
+    ? `Para un vehículo ${isNew ? 'nuevo' : 'usado'}, el plazo máximo es ${termCap} ${termCap === 1 ? 'año' : 'años'} según los bancos disponibles.`
+    : null
+  const term = Number(form.plazo) || 0
+  // Per-bank eligibility for THIS car at the chosen term (pre-approval: all pass).
+  const eligibility = {}
+  bankList.forEach((b) => {
+    const max = bankMaxTerm(b)
+    const ok = !vehicle || max >= term
+    eligibility[b.id] = {
+      ok, max,
+      reason: ok ? null : (max === 0 ? `No financia ${carFuel}` : `Hasta ${max} ${max === 1 ? 'año' : 'años'} en ${isNew ? 'nuevos' : 'usados'}`),
+    }
+  })
+  const eligibleSel = selBanks.filter((id) => eligibility[id]?.ok)
+
+  // Clamp the chosen term down to what the banks allow for this car's condition.
+  useEffect(() => {
+    if (!vehicle || !bankList.length || termCap < 1) return
+    setForm((f) => (Number(f.plazo) > termCap ? { ...f, plazo: String(termCap) } : f))
+  }, [termCap, vehicle, bankList.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // A fresh KYC just passed: mark it 'ok', record the verified-on date so it can
   // be reused for 12 months, and refresh the profile so the account hub updates.
@@ -224,8 +268,9 @@ export default function Financing() {
   }, [kyc, session]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitToBanks = async () => {
-    // Map selected bank ids (slugs) to real DB uuids for routing.
-    const bankDbIds = selBanks.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
+    // Route only to banks that are BOTH selected and eligible for this car
+    // (term within their max for the car's condition, and they finance its fuel).
+    const bankDbIds = eligibleSel.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
     // Car flow: amount = price − inicial. Pre-approval: the (optional) desired budget.
     const requestedAmount = vehicle
       ? vehicle.price - (parseMoney(form.inicial) || 0)
@@ -341,18 +386,18 @@ export default function Financing() {
         <div className="card card-pad">
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
-            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} vehicle={vehicle} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
+            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} vehicle={vehicle} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} plazoOptions={plazoOptions} plazoNote={plazoNote} />}
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} fromProfile={kycFromProfile} onReverify={reverify} onFile={kycOnFile} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
-            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
-            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id))} phone={form.telefono} showClaim={!authed} />}
+            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} eligibility={eligibility} />}
+            {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id) && eligibility[b.id]?.ok)} phone={form.telefono} showClaim={!authed} />}
           </div>
 
           {/* Step 0 (Datos) has its own in-card controls (one question at a time). */}
           {step > 0 && step < 4 && (
             <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
               <button className="btn btn-outline" onClick={back} disabled={step === 0}><ChevronLeft size={17} /> Atrás</button>
-              <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} selBanks={selBanks} />
+              <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} eligibleCount={eligibleSel.length} />
             </div>
           )}
         </div>
@@ -361,10 +406,10 @@ export default function Financing() {
   )
 }
 
-function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
+function PrimaryNext({ step, next, submitToBanks, kyc, consent, eligibleCount }) {
   if (step === 1) return <button className="btn btn-primary" onClick={next} disabled={kyc !== 'ok'}>Continuar <ChevronRight size={17} /></button>
   if (step === 2) return <button className="btn btn-primary" onClick={next} disabled={!consent}>Firmar y continuar <ChevronRight size={17} /></button>
-  if (step === 3) return <button className="btn btn-primary" onClick={submitToBanks} disabled={selBanks.length === 0}><Send size={16} /> Enviar solicitud a bancos</button>
+  if (step === 3) return <button className="btn btn-primary" onClick={submitToBanks} disabled={eligibleCount === 0}><Send size={16} /> Enviar solicitud a bancos</button>
   return <button className="btn btn-primary" onClick={next}>Continuar <ChevronRight size={17} /></button>
 }
 
@@ -398,7 +443,7 @@ function InicialSlider({ price, value, onChange }) {
 /* ---------------- Step 1: Datos ---------------- */
 /* Pre-approval Datos — one question at a time with smooth transitions.
    Name + cédula come from the Didit KYC step, so we never ask them here. */
-function PreapDatos({ form, set, setMoney, questions, vehicle, onComplete, reused, recap = [], onEdit }) {
+function PreapDatos({ form, set, setMoney, questions, vehicle, onComplete, reused, recap = [], onEdit, plazoOptions = [4, 5, 6, 7], plazoNote = null }) {
   const [i, setI] = useState(0)
   // WhatsApp-login sub-state (only used by a q.type === 'login' step).
   const [loginPhase, setLoginPhase] = useState('enter') // enter | code
@@ -477,9 +522,12 @@ function PreapDatos({ form, set, setMoney, questions, vehicle, onComplete, reuse
               placeholder="000000" inputMode="numeric" maxLength={6} autoFocus />
           )
         ) : q.type === 'plazo' ? (
-          <select className="select preap-input" value={form.plazo} onChange={set('plazo')} autoFocus>
-            <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
-          </select>
+          <>
+            <select className="select preap-input" value={form.plazo} onChange={set('plazo')} autoFocus>
+              {plazoOptions.map((y) => <option key={y} value={y}>{y} {y === 1 ? 'año' : 'años'}</option>)}
+            </select>
+            {plazoNote && <div className="tiny muted" style={{ marginTop: 8 }}><Info size={13} style={{ verticalAlign: -2 }} /> {plazoNote}</div>}
+          </>
         ) : (q.key === 'inicial' && vehicle?.price) ? (
           <InicialSlider price={vehicle.price} value={val} onChange={(raw) => setMoney('inicial')({ target: { value: raw } })} />
         ) : (
@@ -637,7 +685,10 @@ function StepConsent({ consent, setConsent, reused }) {
 }
 
 /* ---------------- Step 4: Enviar ---------------- */
-function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPreapproval, reused }) {
+function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPreapproval, reused, eligibility = {} }) {
+  const elig = (id) => eligibility[id] || { ok: true }
+  const eligibleTotal = banks.filter((b) => elig(b.id).ok).length
+  const selectedEligible = banks.filter((b) => sel.includes(b.id) && elig(b.id).ok).length
   return (
     <>
       <StepHead icon={Send} title={reused ? 'Vincular vehículo a tu pre-aprobación' : (isPreapproval ? 'Enviar pre-aprobación a bancos' : 'Enviar solicitud a bancos')} sub="Elige a qué bancos enviar tu solicitud y quién debe recibir las respuestas." />
@@ -646,16 +697,35 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPr
           <Info size={16} /><span>Tu pre-aprobación ya fue enviada a estos bancos. Vincularemos este vehículo a esa solicitud para que finalicen la oferta.</span>
         </div>
       )}
-      <div className="small strong" style={{ marginBottom: 10 }}>Bancos seleccionados</div>
-      <div className="grid grid-2" style={{ gap: 10 }}>
-        {banks.map((b) => (
-          <div key={b.id} className={`selectable ${sel.includes(b.id) ? 'sel' : ''}`} onClick={() => toggle(b.id)}>
-            <span className="box">{sel.includes(b.id) && <Check size={14} strokeWidth={3} />}</span>
-            <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={20} />
-            <span className="strong small">{b.name}</span>
-          </div>
-        ))}
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <span className="small strong">Bancos seleccionados</span>
+        {vehicle && !reused && (
+          <span className="tiny muted">{eligibleTotal} de {banks.length} pueden financiar este vehículo a {form.plazo} años</span>
+        )}
       </div>
+      <div className="grid grid-2" style={{ gap: 10 }}>
+        {banks.map((b) => {
+          const e = elig(b.id)
+          const on = sel.includes(b.id) && e.ok
+          return (
+            <div key={b.id}
+              className={`selectable ${on ? 'sel' : ''}`}
+              onClick={() => e.ok && toggle(b.id)}
+              aria-disabled={!e.ok}
+              style={e.ok ? undefined : { opacity: 0.55, cursor: 'not-allowed' }}>
+              <span className="box">{on && <Check size={14} strokeWidth={3} />}</span>
+              <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={20} />
+              <span className="strong small grow">{b.name}</span>
+              {!e.ok && <span className="tiny" style={{ color: '#b45309', textAlign: 'right', lineHeight: 1.1 }}>{e.reason}</span>}
+            </div>
+          )
+        })}
+      </div>
+      {vehicle && !reused && eligibleTotal === 0 && (
+        <div className="notice" style={{ marginTop: 10, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
+          <Info size={16} /><span>Ningún banco financia este vehículo al plazo elegido. Reduce el plazo para ver opciones.</span>
+        </div>
+      )}
 
       <div className="small strong" style={{ margin: '18px 0 10px' }}>Enviar respuesta a</div>
       <div className="segmented" style={{ maxWidth: 420 }}>
@@ -674,7 +744,7 @@ function StepEnviar({ banks, sel, toggle, notify, setNotify, form, vehicle, isPr
           : <><div className="kv"><span className="k">Solicitante</span><span className="v">{form.nombre || '—'}</span></div>
             <div className="kv"><span className="k">Inicial disponible</span><span className="v">{form.inicial || '—'}</span></div></>}
         <div className="kv"><span className="k">Plazo preferido</span><span className="v">{form.plazo} años</span></div>
-        <div className="kv"><span className="k">Bancos</span><span className="v">{sel.length} seleccionados</span></div>
+        <div className="kv"><span className="k">Bancos</span><span className="v">{selectedEligible} {selectedEligible === 1 ? 'banco elegible' : 'bancos elegibles'}</span></div>
         <div className="kv"><span className="k">KYC</span><span className="v"><StatusChip status="approved">KYC aprobado</StatusChip></span></div>
       </div>
     </>

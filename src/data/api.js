@@ -211,6 +211,20 @@ export async function listBanks() {
   return (data || []).map((b) => ({ id: b.slug, dbId: b.id, name: b.name, color: b.color, initials: b.initials }))
 }
 
+// Active banks WITH their financing rules (max term by condition) + the fuels
+// they offer rates for — so the customer financing flow can cap the term and
+// route a solicitud only to banks whose rules cover the chosen car. Same shape
+// as listBanks() plus { maxTermNew, maxTermUsed, fuels }.
+export async function getFinancingBankOptions() {
+  if (!LIVE) return demoBanks.map((b) => ({ id: b.id, dbId: null, name: b.name, color: b.color, initials: b.initials, maxTermNew: 8, maxTermUsed: 5, fuels: [] }))
+  const { data, error } = await supabase.rpc('get_financing_bank_options')
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    id: r.slug, dbId: r.bank_id, name: r.name, color: r.color, initials: r.initials,
+    maxTermNew: r.max_term_new, maxTermUsed: r.max_term_used, fuels: r.fuels || [],
+  }))
+}
+
 // ---------------- Dealers (with their published inventory) ----------------
 const initialsOf = (name) => String(name || '').split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
 
