@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronLeft, ChevronRight, BadgeCheck, Scale, Share2, Store,
+  X, Heart, MapPin, ShieldCheck, Gauge, Cog, Fuel, Palette, Calculator, ChevronLeft, ChevronRight, BadgeCheck, Scale, Share2, Store, Maximize2, ChevronDown,
 } from 'lucide-react'
 import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
@@ -32,6 +32,28 @@ function FichaShell({ v, close }) {
   const [cmp, setCmp] = useState(() => isCompared(v.id))
   const [shareMsg, setShareMsg] = useState('')
   const [activePhoto, setActivePhoto] = useState(0)
+  const [lightbox, setLightbox] = useState(false)
+
+  // Swipe-down-to-dismiss (mobile bottom sheet). Drag starts on the grab handle
+  // so it never fights scrolling inside the body.
+  const panelRef = useRef(null)
+  const drag = useRef({ y0: 0, dy: 0, on: false })
+  const onDragStart = (e) => { drag.current = { y0: e.touches[0].clientY, dy: 0, on: true } }
+  const onDragMove = (e) => {
+    if (!drag.current.on || !panelRef.current) return
+    const dy = e.touches[0].clientY - drag.current.y0
+    drag.current.dy = dy
+    if (dy > 0) { panelRef.current.style.transition = 'none'; panelRef.current.style.transform = `translateY(${dy}px)` }
+  }
+  const onDragEnd = () => {
+    if (!drag.current.on || !panelRef.current) return
+    const dy = drag.current.dy
+    drag.current.on = false
+    const panel = panelRef.current
+    panel.style.transition = 'transform .2s ease'
+    if (dy > 110) { panel.style.transform = 'translateY(100%)'; window.setTimeout(close, 170) }
+    else { panel.style.transform = 'translateY(0)' }
+  }
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close() }
@@ -68,10 +90,18 @@ function FichaShell({ v, close }) {
   }
 
   return (
+    <>
     <div className="ficha-overlay" onClick={close}>
-      <aside className="ficha-panel" role="dialog" aria-modal="true" aria-label={`${v.make} ${v.model}`} onClick={(e) => e.stopPropagation()}>
+      <aside ref={panelRef} className="ficha-panel" role="dialog" aria-modal="true" aria-label={`${v.make} ${v.model}`} onClick={(e) => e.stopPropagation()}>
+        <div className="ficha-grab" onTouchStart={onDragStart} onTouchMove={onDragMove} onTouchEnd={onDragEnd}>
+          <span className="ficha-grab-bar" />
+          <span className="ficha-grab-hint"><ChevronDown size={13} /> Desliza para cerrar</span>
+        </div>
         <div className="ficha-photo">
-          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${activePhoto}`} tone={v.tone} photo={currentPhoto} label={`${v.make} ${v.model}`} />
+          <button type="button" className="ficha-photo-btn" onClick={() => setLightbox(true)} aria-label="Ver imagen grande">
+            <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${activePhoto}`} tone={v.tone} photo={currentPhoto} label={`${v.make} ${v.model}`} />
+            <span className="ficha-zoom-hint"><Maximize2 size={14} /></span>
+          </button>
           {canSwitchPhotos && (
             <>
               <button type="button" className="gallery-nav prev" aria-label="Foto anterior" onClick={() => switchPhoto(-1)}><ChevronLeft size={21} /></button>
@@ -176,5 +206,22 @@ function FichaShell({ v, close }) {
         </div>
       </aside>
     </div>
+
+    {lightbox && (
+      <div className="ficha-lightbox" onClick={() => setLightbox(false)}>
+        <button type="button" className="ficha-lightbox-close" onClick={() => setLightbox(false)} aria-label="Cerrar"><X size={22} /></button>
+        <div className="ficha-lightbox-stage" onClick={(e) => e.stopPropagation()}>
+          <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${activePhoto}`} tone={v.tone} photo={currentPhoto} label={`${v.make} ${v.model}`} />
+          {canSwitchPhotos && (
+            <>
+              <button type="button" className="gallery-nav prev" aria-label="Foto anterior" onClick={() => switchPhoto(-1)}><ChevronLeft size={24} /></button>
+              <button type="button" className="gallery-nav next" aria-label="Siguiente foto" onClick={() => switchPhoto(1)}><ChevronRight size={24} /></button>
+              <span className="gallery-count ficha-lightbox-count">{activePhoto + 1} / {galleryPhotos.length}</span>
+            </>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
