@@ -341,7 +341,7 @@ export default function Financing() {
         <div className="card card-pad">
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
-            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
+            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} vehicle={vehicle} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} />}
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} fromProfile={kycFromProfile} onReverify={reverify} onFile={kycOnFile} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
             {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} />}
@@ -368,10 +368,37 @@ function PrimaryNext({ step, next, submitToBanks, kyc, consent, selBanks }) {
   return <button className="btn btn-primary" onClick={next}>Continuar <ChevronRight size={17} /></button>
 }
 
+// Down-payment (inicial) as an optional percentage slider — car flow only.
+// The stored value stays a money string so the rest of the flow is unchanged.
+function InicialSlider({ price, value, onChange }) {
+  const amount = Math.min(parseMoney(value) || 0, price)
+  const pct = price > 0 ? Math.round((amount / price) * 100) : 0
+  const setPct = (p) => onChange(String(Math.round((price * p) / 100)))
+  const financed = Math.max(0, price - amount)
+  const fillPct = (Math.min(pct, 60) / 60) * 100
+  return (
+    <div className="inicial-slider">
+      <div className="inicial-slider-head">
+        <div><span className="inicial-pct">{pct}%</span> <span className="tiny muted">de inicial</span></div>
+        <div className="strong">{fmtRD(amount)}</div>
+      </div>
+      <input type="range" className="inicial-range" min="0" max="60" step="1" value={pct}
+        onChange={(e) => setPct(Number(e.target.value))} aria-label="Porcentaje de inicial"
+        style={{ background: `linear-gradient(90deg, var(--teal-700) ${fillPct}%, var(--line-2, #e2e8f0) ${fillPct}%)` }} autoFocus />
+      <div className="inicial-ticks">
+        {[0, 20, 40, 60].map((t) => (
+          <button type="button" key={t} className={`inicial-tick ${pct === t ? 'on' : ''}`} onClick={() => setPct(t)}>{t}%</button>
+        ))}
+      </div>
+      <div className="tiny muted inicial-financed">A financiar: <strong>{fmtRD(financed)}</strong> · opcional, puedes dejarlo en 0%</div>
+    </div>
+  )
+}
+
 /* ---------------- Step 1: Datos ---------------- */
 /* Pre-approval Datos — one question at a time with smooth transitions.
    Name + cédula come from the Didit KYC step, so we never ask them here. */
-function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap = [], onEdit }) {
+function PreapDatos({ form, set, setMoney, questions, vehicle, onComplete, reused, recap = [], onEdit }) {
   const [i, setI] = useState(0)
   // WhatsApp-login sub-state (only used by a q.type === 'login' step).
   const [loginPhase, setLoginPhase] = useState('enter') // enter | code
@@ -453,6 +480,8 @@ function PreapDatos({ form, set, setMoney, questions, onComplete, reused, recap 
           <select className="select preap-input" value={form.plazo} onChange={set('plazo')} autoFocus>
             <option value="4">4 años</option><option value="5">5 años</option><option value="6">6 años</option><option value="7">7 años</option>
           </select>
+        ) : (q.key === 'inicial' && vehicle?.price) ? (
+          <InicialSlider price={vehicle.price} value={val} onChange={(raw) => setMoney('inicial')({ target: { value: raw } })} />
         ) : (
           <input className="input preap-input" value={val || ''} onChange={onChange} onKeyDown={onKey}
             placeholder={q.placeholder} inputMode={q.type === 'money' || q.type === 'tel' ? 'numeric' : 'text'} autoFocus />

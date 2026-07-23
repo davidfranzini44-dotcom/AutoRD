@@ -2524,6 +2524,22 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 .preap-help { font-size: 13.5px; color: var(--muted); margin-bottom: 18px; }
 .preap-input { font-size: 20px !important; height: 56px; padding: 0 16px; }
 select.preap-input { padding-right: 16px; }
+
+/* Down-payment (inicial) percentage slider */
+.inicial-slider { padding-top: 2px; }
+.inicial-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.inicial-pct { font-size: 30px; font-weight: 800; color: var(--teal-800); letter-spacing: -.02em; }
+.inicial-slider-head .strong { font-size: 18px; }
+.inicial-range { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 999px; outline: none; cursor: pointer; }
+.inicial-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 3px solid var(--teal-700); box-shadow: 0 1px 4px rgba(15,23,42,.25); cursor: grab; }
+.inicial-range::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 3px solid var(--teal-700); box-shadow: 0 1px 4px rgba(15,23,42,.25); cursor: grab; }
+.inicial-range:focus-visible { outline: 2px solid rgba(15,118,110,.35); outline-offset: 4px; }
+.inicial-ticks { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.inicial-tick { flex: 1; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink-2); font-size: 13px; font-weight: 700; cursor: pointer; transition: .12s ease; }
+.inicial-tick:hover { border-color: var(--teal-700); }
+.inicial-tick.on { background: var(--teal-700); border-color: var(--teal-700); color: #fff; }
+.inicial-financed { margin-top: 14px; }
+.inicial-financed strong { color: var(--ink); }
 .preap-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 26px; }
 @media (max-width: 640px) {
   .preap-q { font-size: 19px; }
