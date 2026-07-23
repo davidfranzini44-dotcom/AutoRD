@@ -251,7 +251,7 @@ export default function PostVehicle() {
                     <option value="DOP">RD$</option>
                     <option value="USD">US$</option>
                   </select>
-                  <input className="input" type="number" inputMode="numeric" value={f.price} onChange={set('price')} placeholder={f.currency === 'USD' ? '22000' : '1250000'} style={{ flex: 1, minWidth: 0 }} />
+                  <input className="input" type="text" inputMode="numeric" value={f.price ? Number(f.price).toLocaleString('en-US') : ''} onChange={(e) => setF({ ...f, price: e.target.value.replace(/[^\d]/g, '') })} placeholder={f.currency === 'USD' ? '22,000' : '1,250,000'} style={{ flex: 1, minWidth: 0 }} />
                 </div>
               </Field>
               <Field label="Kilometraje (km)"><input className="input" type="number" inputMode="numeric" value={f.mileage} onChange={set('mileage')} placeholder="42000" /></Field>

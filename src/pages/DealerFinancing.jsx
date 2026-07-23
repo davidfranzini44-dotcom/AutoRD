@@ -58,14 +58,14 @@ export default function DealerFinancing() {
         </div>
       </div>
 
-      <div className="row wrap gap-6" style={{ marginBottom: 16 }}>
-        <button className={`chip ${filter === '' ? 'chip-teal' : ''}`} style={{ cursor: 'pointer', border: filter === '' ? 'none' : '1px solid var(--line-2, #e2e8f0)', background: filter === '' ? undefined : 'transparent' }} onClick={() => setFilter('')}>Todas ({apps.length})</button>
+      <div className="fin-tabs-strip" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: 8, marginBottom: 16, paddingBottom: 4, scrollbarWidth: 'none' }}>
+        <button className={`chip ${filter === '' ? 'chip-teal' : ''}`} style={{ cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', height: 34, padding: '0 14px', border: filter === '' ? 'none' : '1px solid var(--line-2, #e2e8f0)', background: filter === '' ? undefined : 'transparent' }} onClick={() => setFilter('')}>Todas ({apps.length})</button>
         {FIN_STAGES.map((s) => {
           const n = countFor(s.key); if (!n) return null
           const t = TONE[s.tone] || TONE.blue
           const on = filter === s.key
           return (
-            <button key={s.key} className="chip" style={{ cursor: 'pointer', background: on ? t.bg : 'transparent', color: on ? t.fg : 'var(--muted)', border: on ? 'none' : '1px solid var(--line-2, #e2e8f0)' }} onClick={() => setFilter(on ? '' : s.key)}>
+            <button key={s.key} className="chip" style={{ cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', height: 34, padding: '0 14px', background: on ? t.bg : 'transparent', color: on ? t.fg : 'var(--muted)', border: on ? 'none' : '1px solid var(--line-2, #e2e8f0)' }} onClick={() => setFilter(on ? '' : s.key)}>
               {s.label} ({n})
             </button>
           )
