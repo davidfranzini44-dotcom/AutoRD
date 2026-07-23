@@ -76,10 +76,10 @@ export default function DealerFinancing() {
         {shown.map((a) => (
           <div className="card card-pad" key={a.id}>
             <div className="row between center wrap gap-10" style={{ marginBottom: 10 }}>
-              <div className="row center gap-10" style={{ minWidth: 0 }}>
+              <div role="button" tabIndex={0} className="row center gap-10 dl-customer-open" onClick={() => setActive(a)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(a) } }} style={{ minWidth: 0, cursor: 'pointer' }}>
                 <div className="dash-top-photo fin-thumb" style={{ width: 60, height: 44 }}><CarImage make={a.vehicle.make} model={a.vehicle.model} bodyType={a.vehicle.bodyType} seed={a.vehicle.id || a.id} tone={a.vehicle.tone} photo={a.vehicle.photo} /></div>
                 <div style={{ minWidth: 0 }}>
-                  <div className="strong">{a.customer}</div>
+                  <div className="strong" style={{ textDecoration: 'underline', textDecorationColor: 'var(--line, #d9e5e7)', textUnderlineOffset: 3 }}>{a.customer}</div>
                   <div className="tiny muted">{a.id} · {a.vehicle.name}</div>
                 </div>
               </div>
@@ -142,6 +142,11 @@ function AppDrawer({ app, onClose }) {
           <div className="row center gap-10">
             <div className="dash-top-photo fin-thumb" style={{ width: 72, height: 52 }}><CarImage make={app.vehicle.make} model={app.vehicle.model} bodyType={app.vehicle.bodyType} seed={app.vehicle.id || app.id} tone={app.vehicle.tone} photo={app.vehicle.photo} /></div>
             <div><div className="strong small">{app.vehicle.name}</div>{app.vehicle.price ? <div className="tiny muted">{fmtMoney(app.vehicle.price, app.vehicle.currency)}</div> : null}</div>
+          </div>
+
+          <div className="card" style={{ padding: 12 }}>
+            <Row k="Teléfono" v={app.phone || '—'} />
+            <Row k="Identidad (KYC)" v={app.status === 'kyc_pendiente' ? 'Pendiente' : 'Verificada'} />
           </div>
 
           <div className="card" style={{ padding: 12 }}>
