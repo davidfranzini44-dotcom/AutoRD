@@ -50,11 +50,12 @@ export default function DealerFinancing() {
   const countFor = (key) => apps.filter((a) => a.status === key).length
 
   return (
-    <div>
-      <div className="admin-head">
+    <div className="dlrx">
+      <div className="container dlrx-container">
+      <div className="dlrx-head">
         <div>
-          <h1 style={{ fontSize: 22 }}>Financiamiento</h1>
-          <p className="tiny muted">Solicitudes de financiamiento de tus vehículos</p>
+          <h1>Financiamiento</h1>
+          <p className="small muted">Solicitudes por vehículo, bancos, KYC, documentos y ofertas.</p>
         </div>
       </div>
 
@@ -113,6 +114,7 @@ export default function DealerFinancing() {
       </div>
 
       {active && <AppDrawer app={active} onClose={() => setActive(null)} />}
+      </div>
     </div>
   )
 }
