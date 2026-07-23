@@ -62,10 +62,11 @@ export function AuthProvider({ children }) {
     setSession(null); setProfile(null)
   }, [])
 
-  // Dealer team permissions: owners have full access; employees are gated by
-  // their per-area toggles. Admins bypass everything.
+  // Dealer/bank team permissions: owners have full access; employees are gated
+  // by their per-area toggles. Admins bypass everything.
   const dealerRole = profile?.dealer_role || null
-  const isOwner = dealerRole === 'owner'
+  const bankRole = profile?.bank_role || null
+  const isOwner = dealerRole === 'owner' || bankRole === 'owner'
   const permissions = (profile && typeof profile.permissions === 'object' && profile.permissions) || {}
   const can = (perm) => {
     if (!profile) return false
@@ -81,6 +82,7 @@ export function AuthProvider({ children }) {
     profile,
     role: profile?.role || null,
     dealerRole,
+    bankRole,
     isOwner,
     permissions,
     can,

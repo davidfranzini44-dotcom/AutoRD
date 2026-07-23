@@ -22,10 +22,11 @@ const DEALER_NAV = [
   { to: '/dealer/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 const BANK_NAV = [
-  { to: '/banco', label: 'Bandeja de solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true },
-  { to: '/banco/tasas', label: 'Tasas por plazo', bottomLabel: 'Tasas', icon: Percent },
-  { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle },
-  { to: '/banco/reportes', label: 'Reportes', icon: BarChart3 },
+  { to: '/banco', label: 'Bandeja de solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true, perm: 'solicitudes' },
+  { to: '/banco/tasas', label: 'Tasas por plazo', bottomLabel: 'Tasas', icon: Percent, perm: 'tasas' },
+  { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
+  { to: '/banco/reportes', label: 'Reportes', icon: BarChart3, perm: 'reportes' },
+  { to: '/banco/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 
 // Operational console shell (sidebar) for dealer + bank portals.
@@ -46,12 +47,15 @@ export default function ConsoleLayout() {
   }, [profile?.dealer_id])
 
   const isBank = loc.pathname.startsWith('/banco')
-  const nav = isBank ? BANK_NAV : DEALER_NAV.filter((n) => !n.perm || (can ? can(n.perm) : false))
+  const permitted = (n) => !n.perm || (can ? can(n.perm) : false)
+  const bankNav = BANK_NAV.filter(permitted)
+  const nav = isBank ? bankNav : DEALER_NAV.filter(permitted)
   const dealerBottomNav = DEALER_NAV
     .filter((n) => ['/dealer', '/dealer/inventario', '/dealer/leads', '/dealer/financiamiento'].includes(n.to))
-    .filter((n) => !n.perm || (can ? can(n.perm) : false))
-  const bottomNav = isBank ? BANK_NAV : dealerBottomNav
-  const requiredPerm = !isBank ? DEALER_NAV.find((n) => n.to === loc.pathname)?.perm : null
+    .filter(permitted)
+  const bankBottomNav = bankNav.filter((n) => ['/banco', '/banco/tasas', '/banco/whatsapp', '/banco/reportes'].includes(n.to))
+  const bottomNav = isBank ? bankBottomNav : dealerBottomNav
+  const requiredPerm = (isBank ? BANK_NAV : DEALER_NAV).find((n) => n.to === loc.pathname)?.perm
   const blocked = requiredPerm && can && !can(requiredPerm)
   const RoleIcon = isBank ? Landmark : Store
   const orgName = isBank ? bank.name : (dealer?.name || 'Portal de dealer')

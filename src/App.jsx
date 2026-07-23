@@ -30,6 +30,7 @@ import PostVehicle from './pages/PostVehicle'
 import BankPanel from './pages/BankPanel'
 import BankReports from './pages/BankReports'
 import BankRates from './pages/BankRates'
+import BankTeam from './pages/BankTeam'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppInbox from './components/WhatsAppInbox'
 
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="/banco" element={<BankPanel />} />
         <Route path="/banco/tasas" element={<BankRates />} />
         <Route path="/banco/reportes" element={<BankReports />} />
+        <Route path="/banco/equipo" element={<BankTeam />} />
         <Route path="/banco/whatsapp" element={<WhatsAppInbox />} />
       </Route>
 

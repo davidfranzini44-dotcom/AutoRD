@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications } from '../data/api'
+import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell, Landmark, UserPlus, Copy, Check } from 'lucide-react'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank } from '../data/api'
 
 const TYPE_META = {
   otp:           { label: 'OTP', icon: KeyRound },
@@ -151,6 +151,9 @@ export default function AdminPanel() {
           {msg && <div className="notice" style={{ marginTop: 14 }}><Info size={16} /><span>{msg}</span></div>}
         </div>
 
+        {/* Enroll a partner bank + its first owner account */}
+        <EnrollBankCard />
+
         {/* History of sent WhatsApp messages */}
         <div className="card card-pad" style={{ marginTop: 14 }}>
           <div className="row between center" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
@@ -198,5 +201,81 @@ export default function AdminPanel() {
         </p>
       </div>
     </main>
+  )
+}
+
+// Platform admin: enroll a partner bank (creates the bank + seeds its rate card
+// + rules) and its first OWNER account, which can then self-manage its analysts.
+function EnrollBankCard() {
+  const [f, setF] = useState({ bankName: '', slug: '', color: '#0f766e', ownerName: '', ownerEmail: '' })
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const [done, setDone] = useState(null) // { email, tempPassword, slug }
+  const [copied, setCopied] = useState(false)
+  const set = (k) => (e) => setF((s) => ({ ...s, [k]: e.target.value }))
+
+  const submit = async () => {
+    setErr('')
+    if (!f.bankName.trim()) { setErr('Ingresa el nombre del banco'); return }
+    if (!/^\S+@\S+\.\S+$/.test(f.ownerEmail.trim())) { setErr('Correo del administrador inválido'); return }
+    setSaving(true)
+    try {
+      const res = await enrollBank({
+        bankName: f.bankName.trim(), slug: f.slug.trim() || undefined,
+        color: f.color, ownerName: f.ownerName.trim() || undefined, ownerEmail: f.ownerEmail.trim(),
+      })
+      setDone({ email: f.ownerEmail.trim(), tempPassword: res.tempPassword, slug: res.slug })
+    } catch (e) {
+      setErr(e?.message === 'email_invalido' ? 'Correo inválido' : (e?.message || 'No se pudo enrolar el banco'))
+    } finally { setSaving(false) }
+  }
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(`Correo: ${done.email}\nContraseña temporal: ${done.tempPassword}`); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch (_) { /* ignore */ }
+  }
+  const reset = () => { setDone(null); setF({ bankName: '', slug: '', color: '#0f766e', ownerName: '', ownerEmail: '' }) }
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 14 }}>
+      <div className="row center gap-8" style={{ marginBottom: 4 }}>
+        <div className="verify-ic" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Landmark size={18} /></div>
+        <h2 style={{ fontSize: 16 }}>Enrolar banco</h2>
+      </div>
+      <p className="muted small" style={{ marginBottom: 14 }}>Crea un banco socio con su tarjeta de tasas por defecto y la cuenta de administrador. Ese administrador podrá crear a sus analistas desde el portal del banco.</p>
+
+      {done ? (
+        <div className="col gap-12">
+          <div className="notice" style={{ borderColor: 'var(--green-bd)', background: 'var(--green-bg)' }}>
+            <KeyRound size={16} /><span>Banco creado (<strong>{done.slug}</strong>). Comparte estas credenciales con el administrador — la contraseña <strong>no se volverá a mostrar</strong>.</span>
+          </div>
+          <div className="card" style={{ padding: 12 }}>
+            <div className="row between center" style={{ marginBottom: 6 }}><span className="tiny muted">Correo</span><span className="small strong">{done.email}</span></div>
+            <div className="row between center"><span className="tiny muted">Contraseña temporal</span><span className="small strong" style={{ fontFamily: 'monospace' }}>{done.tempPassword}</span></div>
+          </div>
+          <div className="row gap-8">
+            <button className="btn btn-outline grow" onClick={copy}>{copied ? <><Check size={15} /> Copiado</> : <><Copy size={15} /> Copiar credenciales</>}</button>
+            <button className="btn btn-primary" onClick={reset}>Enrolar otro</button>
+          </div>
+        </div>
+      ) : (
+        <div className="col gap-12">
+          <div className="row gap-10 wrap">
+            <label className="col gap-4 grow" style={{ minWidth: 180 }}><span className="tiny strong">Nombre del banco</span>
+              <input className="input" value={f.bankName} onChange={set('bankName')} placeholder="Ej: Banco Vimenca" /></label>
+            <label className="col gap-4" style={{ minWidth: 120 }}><span className="tiny strong">Slug (opcional)</span>
+              <input className="input" value={f.slug} onChange={set('slug')} placeholder="banco-vimenca" /></label>
+          </div>
+          <div className="row gap-10 wrap center">
+            <label className="col gap-4"><span className="tiny strong">Color</span>
+              <input type="color" value={f.color} onChange={set('color')} style={{ width: 52, height: 38, border: '1px solid var(--line)', borderRadius: 8, background: '#fff', cursor: 'pointer' }} /></label>
+            <label className="col gap-4 grow" style={{ minWidth: 160 }}><span className="tiny strong">Nombre del administrador</span>
+              <input className="input" value={f.ownerName} onChange={set('ownerName')} placeholder="Ej: Carlos Gómez" /></label>
+          </div>
+          <label className="col gap-4"><span className="tiny strong">Correo del administrador</span>
+            <input className="input" type="email" value={f.ownerEmail} onChange={set('ownerEmail')} placeholder="admin@bancovimenca.com" /></label>
+          {err && <div className="tiny" style={{ color: '#dc2626' }}>{err}</div>}
+          <button className="btn btn-primary" disabled={saving} onClick={submit}>{saving ? <><Loader2 size={16} className="spin" /> Creando…</> : <><UserPlus size={16} /> Crear banco y administrador</>}</button>
+        </div>
+      )}
+    </div>
   )
 }
