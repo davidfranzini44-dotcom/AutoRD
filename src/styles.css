@@ -2540,6 +2540,24 @@ select.preap-input { padding-right: 16px; }
 .inicial-tick.on { background: var(--teal-700); border-color: var(--teal-700); color: #fff; }
 .inicial-financed { margin-top: 14px; }
 .inicial-financed strong { color: var(--ink); }
+
+/* Bank rate card — tasas per term year */
+.rate-card { margin-top: 4px; }
+.rate-row { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line-2); }
+.rate-row:last-child { border-bottom: 0; }
+.rate-head { padding-top: 0; border-bottom: 2px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.rate-head .rate-preview-col { text-align: right; }
+.rate-term { font-weight: 700; color: var(--ink); }
+.rate-input-wrap { position: relative; max-width: 160px; }
+.rate-input { height: 42px; padding-right: 30px; font-size: 15px; font-weight: 700; }
+.rate-pct { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; pointer-events: none; }
+.rate-preview { text-align: right; color: var(--ink-2); font-size: 13px; font-weight: 650; white-space: nowrap; }
+.rate-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 4px; }
+@media (max-width: 480px) {
+  .rate-row { grid-template-columns: 58px 1fr auto; gap: 8px; }
+  .rate-input-wrap { max-width: 110px; }
+  .rate-preview, .rate-head .rate-preview-col { font-size: 11px; }
+}
 .preap-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 26px; }
 @media (max-width: 640px) {
   .preap-q { font-size: 19px; }

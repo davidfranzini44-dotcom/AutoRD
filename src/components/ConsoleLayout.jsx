@@ -2,7 +2,7 @@ import { NavLink, Link, useLocation, Outlet } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, Boxes, Users, PlusCircle, Inbox, FileCheck2, BarChart3,
-  ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle, Users2, Lock,
+  ArrowLeft, LogOut, Menu, X, Landmark, Store, MessageCircle, Users2, Lock, Percent,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import BankLogo from './BankLogo'
@@ -22,6 +22,7 @@ const DEALER_NAV = [
 ]
 const BANK_NAV = [
   { to: '/banco', label: 'Bandeja de solicitudes', icon: Inbox, end: true },
+  { to: '/banco/tasas', label: 'Tasas por plazo', icon: Percent },
   { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/banco/reportes', label: 'Reportes', icon: BarChart3 },
 ]

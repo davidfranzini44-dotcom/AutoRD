@@ -972,6 +972,21 @@ export async function submitBankResponse(responseId, body) {
   return { ok: true }
 }
 
+// ---------------- Bank rate card (tasas per term year) ----------------
+// The signed-in bank's own APR per loan term. Returns a { [year]: apr } map.
+export async function getMyBankRates() {
+  if (!LIVE) return {}
+  const { data, error } = await supabase.rpc('get_my_bank_term_rates')
+  if (error || !Array.isArray(data)) return {}
+  return Object.fromEntries(data.map((r) => [r.term_years, Number(r.apr)]))
+}
+
+export async function saveBankRate(term, apr) {
+  if (!LIVE) return { ok: true }
+  const { error } = await supabase.rpc('set_bank_term_rate', { p_term: Number(term), p_apr: Number(apr) })
+  return { ok: !error, error: error?.message }
+}
+
 // ---------------- WhatsApp OTP (claim) ----------------
 // Sends a code to the buyer's WhatsApp (from the operator's linked number via
 // the Baileys worker) and verifies it, stamping the verified phone on the profile.
