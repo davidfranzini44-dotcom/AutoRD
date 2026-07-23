@@ -425,6 +425,9 @@
 
 .dl-stage {
   min-height: 476px;
+  max-height: 74vh;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 13px;
   background: var(--surface-2, #f8fbfb);
@@ -446,6 +449,10 @@
 }
 
 .dl-stage-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
   display: grid;
   gap: 8px;
   padding: 9px;
@@ -847,6 +854,7 @@
   }
   .dl-stage {
     min-height: 0;
+    max-height: none;
   }
   .dl-drawer-overlay {
     align-items: flex-end;
