@@ -167,11 +167,12 @@ export default function PostVehicle() {
   }
 
   return (
-    <div style={{ maxWidth: 720 }}>
-      <div className="admin-head">
+    <div className="dlrx">
+      <div className="container dlrx-container" style={{ maxWidth: 760 }}>
+      <div className="dlrx-head">
         <div>
-          <p className="tiny" style={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)' }}>Inventario · paso {step} de 4</p>
-          <h1 style={{ fontSize: 22 }}>{STEP_TITLES[step]}</h1>
+          <p className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--muted)' }}>Inventario · paso {step} de 4</p>
+          <h1>{STEP_TITLES[step]}</h1>
         </div>
         <Link to="/dealer/inventario" className="btn btn-ghost btn-sm"><X size={15} /> Cerrar</Link>
       </div>
@@ -376,6 +377,7 @@ export default function PostVehicle() {
             ? <button className="btn btn-primary" disabled={!canContinue} onClick={() => setStep((s) => s + 1)}>Continuar <ChevronRight size={16} /></button>
             : <button className="btn btn-primary" disabled={busy} onClick={publish}><Plus size={16} /> {busy ? 'Publicando…' : 'Publicar vehículo'}</button>}
         </div>
+      </div>
       </div>
     </div>
   )
