@@ -22,8 +22,8 @@ const DEALER_NAV = [
   { to: '/dealer/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 const BANK_NAV = [
-  { to: '/banco', label: 'Bandeja de solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true, perm: 'solicitudes' },
-  { to: '/banco/tasas', label: 'Tasas por plazo', bottomLabel: 'Tasas', icon: Percent, perm: 'tasas' },
+  { to: '/banco', label: 'Solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true, perm: 'solicitudes' },
+  { to: '/banco/tasas', label: 'Tasas y reglas', bottomLabel: 'Tasas', icon: Percent, perm: 'tasas' },
   { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
   { to: '/banco/reportes', label: 'Reportes', icon: BarChart3, perm: 'reportes' },
   { to: '/banco/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
