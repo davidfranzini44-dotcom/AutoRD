@@ -48,10 +48,13 @@ function extImage(url: string, contentType: string | null): { ext: string; type:
 
 // Best-effort: fetch the authoritative decision, locate the ID + liveness
 // images, and copy them into the private bucket keyed by the buyer's profile id.
-async function captureIdentityImages(admin: any, apiKey: string, sessionId: string, profileId: string) {
-  const r = await fetch(`${DIDIT_BASE}/session/${sessionId}/decision/`, { headers: { 'x-api-key': apiKey } })
-  if (!r.ok) return
-  const d: any = await r.json().catch(() => ({}))
+async function captureIdentityImages(admin: any, apiKey: string, sessionId: string, profileId: string, decision?: any) {
+  let d: any = decision
+  if (!d) {
+    const r = await fetch(`${DIDIT_BASE}/session/${sessionId}/decision/`, { headers: { 'x-api-key': apiKey } })
+    if (!r.ok) return
+    d = await r.json().catch(() => ({}))
+  }
 
   // Didit v2 groups results in plural arrays (id_verifications, liveness_checks,
   // face_matches). Fall back to the singular object shape just in case.
@@ -89,6 +92,61 @@ async function captureIdentityImages(admin: any, apiKey: string, sessionId: stri
   }
 }
 
+// ---- DR cédula grace ----------------------------------------------------
+// Dominican cédulas kept circulating past their printed expiry while the JCE
+// rolled out renewals, so an EXPIRED-but-otherwise-valid cédula should still
+// pass KYC — but only until this cutoff, after which normal rules resume.
+const CEDULA_GRACE_UNTIL_MS = Date.UTC(2027, 0, 1) // 2027-01-01T00:00:00Z
+const cedulaGraceActive = () => Date.now() < CEDULA_GRACE_UNTIL_MS
+const EXPIRY_RE = /expir|vencid|caducid/ // expired / vencida / caducidad
+
+// Gather warning "reason" strings from a Didit decision (schema varies by
+// workflow version), lowercased.
+function collectWarnings(d: any): string[] {
+  const out: string[] = []
+  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
+  const pushFrom = (arr: any) => {
+    if (!Array.isArray(arr)) return
+    for (const w of arr) {
+      if (typeof w === 'string') out.push(w)
+      else if (w && typeof w === 'object') out.push(String(w.risk ?? w.code ?? w.type ?? w.name ?? w.description ?? w.message ?? ''))
+    }
+  }
+  pushFrom(d?.warnings)
+  pushFrom(d?.decision?.warnings)
+  pushFrom((first(d?.id_verifications) ?? d?.id_verification)?.warnings)
+  return out.map((s) => s.toLowerCase()).filter(Boolean)
+}
+
+// A biometric check (liveness / face match) counts as passed when it's absent
+// or its status reads approved/passed and not failed.
+function checkPassed(v: any): boolean {
+  const o = Array.isArray(v) ? v[0] : v
+  if (!o) return true
+  const st = String(o.status ?? o.decision ?? o.result ?? '').toLowerCase()
+  if (!st) return true
+  return /approv|pass|success|match|clear|ok/.test(st) && !/declin|fail|reject|no.?match|not.?/.test(st)
+}
+
+// The document's printed expiration date, if present and parseable, is in the past.
+function documentExpired(d: any): boolean {
+  const idv = (Array.isArray(d?.id_verifications) ? d.id_verifications[0] : d?.id_verifications) ?? d?.id_verification ?? {}
+  const raw = idv.date_of_expiration ?? idv.expiration_date ?? idv.expiry_date ?? idv.expires_at ?? idv.document_expiry
+  if (!raw) return false
+  const t = Date.parse(String(raw))
+  return Number.isFinite(t) && t < Date.now()
+}
+
+// True when the ONLY problem with an otherwise-clean verification is an expired
+// document: biometrics passed, no non-expiry warnings, and expiry is flagged.
+function expiredCedulaOnly(d: any): boolean {
+  if (!d) return false
+  const warns = collectWarnings(d)
+  if (warns.some((w) => !EXPIRY_RE.test(w))) return false // another issue exists
+  if (!checkPassed(d?.liveness_checks ?? d?.liveness) || !checkPassed(d?.face_matches ?? d?.face_match)) return false
+  return warns.some((w) => EXPIRY_RE.test(w)) || documentExpired(d)
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method', { status: 405 })
   const raw = await req.text()
@@ -105,17 +163,37 @@ Deno.serve(async (req) => {
   const status: string = evt.status ?? evt.decision?.status ?? 'Unknown'
   const sessionId: string = evt.session_id ?? evt.session?.session_id
   const vendorData: string | undefined = evt.vendor_data ?? evt.session?.vendor_data
-  const approved = status === 'Approved'
-  const declined = status === 'Declined'
+  let approved = status === 'Approved'
+  let declined = status === 'Declined'
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
+  // Fetch the authoritative decision when we may need it — to capture images on
+  // approval, or to evaluate the expired-cédula grace on a non-approval.
+  const apiKey = Deno.env.get('DIDIT_API_KEY')
+  let decision: any = null
+  if (sessionId && apiKey && (approved || cedulaGraceActive())) {
+    try {
+      const r = await fetch(`${DIDIT_BASE}/session/${sessionId}/decision/`, { headers: { 'x-api-key': apiKey } })
+      if (r.ok) decision = await r.json().catch(() => null)
+    } catch (_) { /* non-fatal */ }
+  }
+
+  // DR cédula grace: accept an otherwise-clean verification whose ONLY problem is
+  // an expired document, until 2027-01-01 (biometrics must have passed).
+  let graced = false
+  if (!approved && cedulaGraceActive() && expiredCedulaOnly(decision)) {
+    approved = true
+    declined = false
+    graced = true
+  }
+
   if (sessionId) {
     await admin.from('kyc_verifications').update({
-      didit_status: status,
+      didit_status: graced ? `${status} (cédula vencida · gracia)` : status,
       cedula_validated: approved,
       liveness_validated: approved,
       status: approved ? 'aprobado' : declined ? 'rechazado' : 'pendiente',
@@ -132,9 +210,8 @@ Deno.serve(async (req) => {
       .neq('kyc_status', 'aprobado')
   }
 
-  // On approval, best-effort capture the cédula + liveness images. Wrapped so a
-  // Didit hiccup never turns a successful verification into a failed webhook.
-  const apiKey = Deno.env.get('DIDIT_API_KEY')
+  // On approval (including graced), best-effort capture the cédula + liveness
+  // images. Wrapped so a Didit hiccup never turns a success into a failed webhook.
   if (approved && sessionId && apiKey) {
     // Resolve the owning profile id (vendor_data carries the user id at session creation).
     let profileId = vendorData
@@ -143,7 +220,7 @@ Deno.serve(async (req) => {
       profileId = data?.profile_id
     }
     if (profileId) {
-      try { await captureIdentityImages(admin, apiKey, sessionId, profileId) } catch (_) { /* non-fatal */ }
+      try { await captureIdentityImages(admin, apiKey, sessionId, profileId, decision) } catch (_) { /* non-fatal */ }
     }
   }
 
