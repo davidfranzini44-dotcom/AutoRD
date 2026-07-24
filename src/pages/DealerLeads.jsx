@@ -8,6 +8,7 @@ import { getDealerLeads, updateLead, ibMessages, LIVE } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import { LEAD_STAGES, SALESPEOPLE, buildLeads, kycLink } from '../data/dealerDemo'
 import './DealerLeads.css'
 
@@ -199,7 +200,7 @@ export default function DealerLeads() {
           <p>Leads ordenados por intención, KYC, financiamiento y tiempo sin respuesta.</p>
         </div>
         <div className="dl-head-actions">
-          <Link to="/dealer/whatsapp" className="btn btn-primary"><MessageCircle size={16} /> Abrir WhatsApp</Link>
+          <Link to="/dealer/whatsapp" className="btn btn-primary"><WhatsAppIcon size={16} /> Abrir WhatsApp</Link>
           <button className="btn btn-outline" data-testid="manual-lead-open" onClick={() => setManualOpen(true)}><Plus size={16} /> Crear lead manual</button>
         </div>
       </div>
@@ -451,7 +452,7 @@ function LeadDrawer({ lead, onClose, onChange, setLeads }) {
 
         <div className="dl-drawer-body">
           <div className="dl-drawer-actions">
-            <a href={action.href} target="_blank" rel="noreferrer" className="btn btn-primary btn-block"><MessageCircle size={16} /> {action.cta}</a>
+            <a href={action.href} target="_blank" rel="noreferrer" className="btn btn-primary btn-block"><WhatsAppIcon size={16} /> {action.cta}</a>
             <a href={`tel:${digits(lead.phone)}`} className="btn btn-outline btn-block"><Phone size={16} /> Llamar</a>
           </div>
 

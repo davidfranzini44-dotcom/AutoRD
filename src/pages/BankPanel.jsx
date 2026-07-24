@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
 import CarImage from '../components/CarImage'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import useBankIdentity from '../hooks/useBankIdentity'
 import { estimateMonthly } from '../data/finance'
 import {
@@ -414,7 +415,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 4 }}>
             <div><h3 style={{ fontSize: 15, margin: 0 }}>Actividad y comunicación</h3><div className="tiny muted">Historial de banco, dealer y cliente</div></div>
-            {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><MessageSquare size={14} /> WhatsApp</a>}
+            {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={15} /> WhatsApp</a>}
           </div>
           <div className="bankx-timeline" style={{ marginTop: 12 }}>
             {[...a.timeline].reverse().map((e, i) => (

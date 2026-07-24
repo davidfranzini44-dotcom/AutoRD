@@ -297,16 +297,16 @@ export default function VehicleDetail() {
             <div className="card card-pad">
               <div className="small strong" style={{ marginBottom: 10 }}>Concesionario</div>
               <div className="row center gap-12">
-                <DealerLogo dealer={{ name: v.dealer, initials: v.dealer.split(' ').map((w) => w[0]).slice(0, 2).join(''), logoUrl: v.dealerLogoUrl }} style={{ width: 44, height: 44, borderRadius: 10 }} />
-                <div className="grow">
-                  <div className="row center gap-6">
-                    <span className="strong">{v.dealer}</span>
-                    {v.dealerVerified && <BadgeCheck size={16} color="var(--teal-700)" />}
+                <DealerLogo dealer={{ name: v.dealer, initials: v.dealer.split(' ').map((w) => w[0]).slice(0, 2).join(''), logoUrl: v.dealerLogoUrl }} style={{ width: 44, height: 44, borderRadius: 10, flex: 'none' }} />
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="row center gap-6" style={{ minWidth: 0 }}>
+                    <span className="strong ellipsis">{v.dealer}</span>
+                    {v.dealerVerified && <BadgeCheck size={16} color="var(--teal-700)" style={{ flex: 'none' }} />}
                   </div>
                   <div className="tiny muted">{v.dealerVerified ? 'Concesionario verificado' : 'Vendedor particular'}</div>
                 </div>
               </div>
-              <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel={`Contactar a ${v.dealer}`} />
+              <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel="Contactar por WhatsApp" />
             </div>
 
             {/* Vehicle location (precise coords inherited from the dealer's branch) */}
@@ -326,7 +326,7 @@ export default function VehicleDetail() {
         {/* Similar */}
         <div style={{ marginTop: 28 }}>
           <div className="section-title"><h2>Vehículos similares</h2></div>
-          <div className="grid grid-4">
+          <div className="grid grid-4 similar-grid">
             {similar.map((s) => <SimilarCard key={s.id} v={s} />)}
           </div>
         </div>

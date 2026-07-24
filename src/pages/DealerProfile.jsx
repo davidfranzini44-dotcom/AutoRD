@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeft, MapPin, BadgeCheck, Navigation, Phone, Car, Clock, MessageCircle, Star, CalendarDays } from 'lucide-react'
+import { ChevronLeft, MapPin, BadgeCheck, Navigation, Phone, Car, Clock, Star, CalendarDays } from 'lucide-react'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import VehicleCard from '../components/VehicleCard'
 import DealerLogo from '../components/DealerLogo'
 import { getDealerBySlug } from '../data/api'
@@ -83,7 +84,7 @@ export default function DealerProfile() {
               <div className="col gap-8" style={{ alignItems: 'stretch', minWidth: 160, paddingBottom: 2 }}>
                 {waLink && (
                   <a className="btn" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={waLink} target="_blank" rel="noreferrer">
-                    <MessageCircle size={16} /> WhatsApp
+                    <WhatsAppIcon size={16} /> WhatsApp
                   </a>
                 )}
                 <a className="btn btn-outline" href={directionsUrl(primaryCoords)} target="_blank" rel="noreferrer"><Navigation size={16} /> Cómo llegar</a>

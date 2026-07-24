@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight, MessageCircle } from 'lucide-react'
+import { MapPin, BadgeCheck, ChevronLeft, SlidersHorizontal, LocateFixed, Loader2, Navigation, ChevronRight } from 'lucide-react'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import CarImage from '../components/CarImage'
 import DealerLogo from '../components/DealerLogo'
 import DealersMap from '../components/DealersMap'
@@ -197,7 +198,7 @@ function DealerRow({ d, active, onSelect, onOpenCar, showMatches, userLoc }) {
         <Link to={`/dealers/${d.slug}`} className="btn btn-outline btn-sm" onClick={(e) => e.stopPropagation()}>Ver dealer <ChevronRight size={14} /></Link>
         {wa && (
           <a className="btn btn-sm" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
-            <MessageCircle size={14} /> WhatsApp
+            <WhatsAppIcon size={15} /> WhatsApp
           </a>
         )}
         <a className="btn btn-outline btn-sm" href={directionsUrl(dealerCoords(d), userLoc)} target="_blank" rel="noreferrer" onClick={(e) => { e.stopPropagation(); onSelect() }}>

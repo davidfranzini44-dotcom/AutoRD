@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   MessageCircle, QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, RefreshCw,
 } from 'lucide-react'
+import WhatsAppIcon from './WhatsAppIcon'
 import { ibStatus, ibLink, ibPair, ibDisconnect, ibConversations, ibMessages, ibSend } from '../data/api'
 
 const STATUS = {
@@ -69,7 +70,7 @@ export default function WhatsAppInbox() {
     <div className="wa">
       <div className="wa-head">
         <div className="row center gap-10">
-          <div className="wa-head-ic"><MessageCircle size={20} /></div>
+          <div className="wa-head-ic"><WhatsAppIcon size={24} /></div>
           <div><h1 style={{ fontSize: 20, margin: 0 }}>WhatsApp</h1><p className="tiny muted" style={{ margin: 0 }}>Chatea con tus clientes desde tu número vinculado.</p></div>
         </div>
         <span className={`chip ${meta.cls}`}>{meta.label}</span>

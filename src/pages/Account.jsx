@@ -5,6 +5,7 @@ import {
   ChevronRight, LogOut, User, Landmark, Clock, Bell,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import { getMyFinancing, myUnreadCount } from '../data/api'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
@@ -164,7 +165,7 @@ export default function Account() {
           {/* WhatsApp */}
           <HubRow
             to="/financiamiento"
-            icon={<MessageCircle size={20} />}
+            icon={<WhatsAppIcon size={20} />}
             tone="green"
             title="WhatsApp"
             sub={phone ? `+${String(phone).replace(/^\+/, '')}` : 'No has agregado un número'}

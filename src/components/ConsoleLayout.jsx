@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import BankLogo from './BankLogo'
 import DealerLogo from './DealerLogo'
+import WhatsAppIcon from './WhatsAppIcon'
 import useBankIdentity from '../hooks/useBankIdentity'
 import { getMyDealer } from '../data/api'
 import './ConsoleLayout.css'
@@ -17,14 +18,14 @@ const DEALER_NAV = [
   { to: '/dealer/leads', label: 'Leads', icon: Users, perm: 'financiamiento' },
   { to: '/dealer/financiamiento', label: 'Financiamiento', bottomLabel: 'Financ.', icon: Landmark, perm: 'financiamiento' },
   { to: '/dealer/publicar', label: 'Publicar vehículo', icon: PlusCircle, perm: 'inventario' },
-  { to: '/dealer/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
+  { to: '/dealer/whatsapp', label: 'WhatsApp', icon: WhatsAppIcon, perm: 'whatsapp' },
   { to: '/dealer/perfil', label: 'Perfil del dealer', icon: Store, perm: 'perfil' },
   { to: '/dealer/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]
 const BANK_NAV = [
   { to: '/banco', label: 'Solicitudes', bottomLabel: 'Solicitudes', icon: Inbox, end: true, perm: 'solicitudes' },
   { to: '/banco/tasas', label: 'Tasas y reglas', bottomLabel: 'Tasas', icon: Percent, perm: 'tasas' },
-  { to: '/banco/whatsapp', label: 'WhatsApp', icon: MessageCircle, perm: 'whatsapp' },
+  { to: '/banco/whatsapp', label: 'WhatsApp', icon: WhatsAppIcon, perm: 'whatsapp' },
   { to: '/banco/reportes', label: 'Reportes', icon: BarChart3, perm: 'reportes' },
   { to: '/banco/equipo', label: 'Equipo', icon: Users2, perm: 'equipo' },
 ]

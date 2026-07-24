@@ -209,7 +209,7 @@ function FichaShell({ v, close }) {
 
     {lightbox && (
       <div className="ficha-lightbox" onClick={() => setLightbox(false)}>
-        <button type="button" className="ficha-lightbox-close" onClick={() => setLightbox(false)} aria-label="Cerrar"><X size={22} /></button>
+        <button type="button" className="ficha-lightbox-close" onClick={() => { setLightbox(false); close() }} aria-label="Cerrar"><X size={22} /></button>
         <div className="ficha-lightbox-stage" onClick={(e) => e.stopPropagation()}>
           <CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={`${v.id}-${activePhoto}`} tone={v.tone} photo={currentPhoto} label={`${v.make} ${v.model}`} />
           {canSwitchPhotos && (

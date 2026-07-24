@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext'
 import { fmtMoney, fmtRD } from '../data/demo'
 import DealerLogo from '../components/DealerLogo'
 import CarImage from '../components/CarImage'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import { buildFinancing, buildActivity, dashboardStats, listingScore } from '../data/dealerDemo'
 
 const ACT_IC = { lead: Users, financing: Landmark, offer: BadgeCheck, message: MessageCircle, view: Eye, sale: CheckCircle2 }
@@ -84,7 +85,7 @@ export default function DealerDashboard() {
           </div>
           <div className="row gap-8 wrap">
             <Link to="/dealer/publicar" className="btn btn-primary"><Plus size={16} /> Publicar vehículo</Link>
-            <Link to="/dealer/whatsapp" className="btn btn-outline"><MessageCircle size={16} /> WhatsApp</Link>
+            <Link to="/dealer/whatsapp" className="btn btn-outline"><WhatsAppIcon size={16} /> WhatsApp</Link>
           </div>
         </div>
 

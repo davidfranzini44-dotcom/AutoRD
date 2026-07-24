@@ -6,6 +6,7 @@ import { getDealerData } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 import { buildFinancing, FIN_STAGES, finStage, kycLink } from '../data/dealerDemo'
 
 const ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
@@ -106,7 +107,7 @@ export default function DealerFinancing() {
               {a.status === 'kyc_pendiente' && <a className="btn btn-navy btn-sm" href={waLink(a.phone, kycAppMsg(a))} target="_blank" rel="noreferrer"><ShieldCheck size={14} /> Solicitar KYC</a>}
               {a.missing.length > 0 && a.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-sm" href={waLink(a.phone, docMsg(a))} target="_blank" rel="noreferrer"><FileText size={14} /> Solicitar documentos</a>}
               <a className="btn btn-outline btn-sm" href={waLink(a.phone, offerMsg(a))} target="_blank" rel="noreferrer"><Send size={14} /> Enviar oferta</a>
-              <a className="btn btn-sm" href={waLink(a.phone, `Hola ${a.customer}, le contactamos por su financiamiento del ${a.vehicle.name}.`)} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', border: 'none' }}><MessageCircle size={14} /> WhatsApp</a>
+              <a className="btn btn-sm" href={waLink(a.phone, `Hola ${a.customer}, le contactamos por su financiamiento del ${a.vehicle.name}.`)} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', border: 'none' }}><WhatsAppIcon size={15} /> WhatsApp</a>
             </div>
           </div>
         ))}

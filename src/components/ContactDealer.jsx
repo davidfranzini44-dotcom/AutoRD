@@ -1,5 +1,5 @@
-import { MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import WhatsAppIcon from './WhatsAppIcon'
 import { fmtRD } from '../data/demo'
 import { trackEvent } from '../data/api'
 
@@ -28,7 +28,7 @@ export default function ContactDealer({ vehicle, triggerClass = 'btn btn-outline
       <a className={triggerClass} href={href} target="_blank" rel="noreferrer"
         onClick={() => trackEvent(vehicle.id, 'contact')}
         style={{ ...style, background: '#25D366', borderColor: '#25D366', color: '#fff' }}>
-        <MessageCircle size={block ? 16 : 15} /> {label}
+        <WhatsAppIcon size={block ? 17 : 16} /> {label}
       </a>
     )
   }
@@ -36,7 +36,7 @@ export default function ContactDealer({ vehicle, triggerClass = 'btn btn-outline
   if (vehicle?.dealerSlug) {
     return (
       <Link className={triggerClass} to={`/dealers/${vehicle.dealerSlug}`} style={style}>
-        <MessageCircle size={block ? 16 : 15} /> {label}
+        <WhatsAppIcon size={block ? 17 : 16} /> {label}
       </Link>
     )
   }

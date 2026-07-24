@@ -2464,6 +2464,10 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 @media (max-width: 560px) {
   .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
   .featured-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  /* Vehículos similares: 2 per row on mobile (overrides the .grid-4 collapse above) */
+  .similar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .similar-grid .vtitle { font-size: 13.5px; line-height: 1.2; }
+  .similar-grid .vprice { font-size: 15px; }
   /* Selección AutoRD: half-width cards — right-size overlays + body so nothing crowds/overflows */
   .featured-home-grid .vcard-body { padding: 10px 11px 12px; }
   .featured-home-grid .vtitle { font-size: 13.5px; line-height: 1.2; }
