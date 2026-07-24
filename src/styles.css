@@ -4149,7 +4149,8 @@ select.preap-input { padding-right: 16px; }
 .bankx-search input:focus { border-color: var(--bank-accent, #0f766e); background: #fff; }
 
 .bankx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
-.bankx-head h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
+.bankx-head h1 { margin: 0; font-size: 24px; letter-spacing: 0; line-height: 1.2; }
+.bankx-head p { margin: 2px 0 0; }
 .bankx-brand-logo { min-width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; padding: 0 9px; background: #fff; border: 1px solid #dbe4ee; flex: none; }
 .bankx-brand-logo img, .bankx-brand-logo .bank-logo-img { max-height: 30px; width: auto; }
 .bankx-brand-logo .bank-mark { width: 30px; height: 30px; }
