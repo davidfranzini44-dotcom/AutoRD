@@ -45,6 +45,7 @@ export default function BankPanel() {
   const [raw, setRaw] = useState([])
   const [selId, setSelId] = useState(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [expOpen, setExpOpen] = useState(false) // full expediente pop-up
   const [showFilters, setShowFilters] = useState(false)
   const [q, setQ] = useState('')
   const [dealerF, setDealerF] = useState('')
@@ -67,6 +68,14 @@ export default function BankPanel() {
     }).catch(() => {})
     return () => { alive = false }
   }, [profile?.bank_id])
+
+  // Close the expediente pop-up with Escape.
+  useEffect(() => {
+    if (!expOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setExpOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [expOpen])
 
   const apps = useMemo(() => raw.map((a) => {
     const o = overrides[a.id]
@@ -241,7 +250,7 @@ export default function BankPanel() {
                 {list.map((a) => {
                   const sc = appScore(a)
                   return (
-                    <button key={a.id} className={`bankx-crow ${a.id === selId ? 'selected' : ''}`} onClick={() => setSelId(a.id)}>
+                    <button key={a.id} className={`bankx-crow ${a.id === selId ? 'selected' : ''}`} onClick={() => { setSelId(a.id); setExpOpen(true) }}>
                       <div className="nowrap"><b>{a.customer}</b><div className="tiny muted">{a.maskedCedula} · {a.kyc === 'aprobado' ? 'KYC aprobado' : 'KYC pendiente'}{a.hoursWaiting != null ? ` · ${a.hoursWaiting} h` : ''}</div></div>
                       <div className="nowrap">{a.vehicle || 'Pre-aprobación sin vehículo'}{a.down ? <div className="tiny muted">Inicial {fmtRD(a.down)}</div> : null}</div>
                       <div className="nowrap muted small">{a.dealer || 'Directo AutoRD'}</div>
@@ -268,11 +277,25 @@ export default function BankPanel() {
               </div>
             </aside>
           </div>
-
-          {sel
-            ? <Expediente key={sel.id} a={sel} onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
-            : <div className="card pad muted small" style={{ textAlign: 'center', padding: 28 }}>Selecciona una solicitud para revisarla.</div>}
         </div>
+
+        {/* Full expediente — opens as a pop-up on row click */}
+        {expOpen && sel && (
+          <div className="bankx-expmodal-overlay" onClick={() => setExpOpen(false)}>
+            <div className="bankx-expmodal" onClick={(e) => e.stopPropagation()}>
+              <div className="bankx-expmodal-head">
+                <div>
+                  <div className="tiny muted">Expediente · {sel.id}</div>
+                  <div className="strong">{sel.customer}</div>
+                </div>
+                <button className="icon-btn" onClick={() => setExpOpen(false)} aria-label="Cerrar"><X size={18} /></button>
+              </div>
+              <div className="bankx-expmodal-body">
+                <Expediente key={sel.id} a={sel} onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )

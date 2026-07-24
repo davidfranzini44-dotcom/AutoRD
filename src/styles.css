@@ -4546,3 +4546,15 @@ select.preap-input { padding-right: 16px; }
   .bankx-expmini-grid { grid-template-columns: 1fr 1fr; }
   .bankx-exptitle h2 { font-size: 23px; }
 }
+
+/* Expediente pop-up (opens on row click) */
+.bankx-expmodal-overlay { position: fixed; inset: 0; z-index: 80; background: rgba(9, 15, 25, .55); display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; animation: bankxFade .16s ease; }
+@keyframes bankxFade { from { opacity: 0; } to { opacity: 1; } }
+.bankx-expmodal { width: min(1200px, 100%); margin: auto; background: #f5f8fb; border: 1px solid #dbe4ee; border-radius: 18px; box-shadow: 0 30px 90px rgba(9, 15, 25, .42); display: flex; flex-direction: column; max-height: calc(100vh - 48px); overflow: hidden; }
+.bankx-expmodal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; background: #fff; border-bottom: 1px solid #dbe4ee; flex: none; }
+.bankx-expmodal-body { padding: 18px; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 700px) {
+  .bankx-expmodal-overlay { padding: 0; }
+  .bankx-expmodal { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; border: 0; }
+  .bankx-expmodal-body { padding: 14px; }
+}
