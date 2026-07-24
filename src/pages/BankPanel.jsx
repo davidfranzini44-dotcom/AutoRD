@@ -430,7 +430,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
 
       {/* Decision panel */}
       <div className="bankx-decpanel">
-        <div style={{ gridColumn: 'span 2' }}><DecisionForm a={a} bank={bank} /></div>
+        <div className="bankx-dec-wide"><DecisionForm a={a} bank={bank} /></div>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Notas internas</h3><span className="pill">Banco</span></div>
           <div className="tiny muted" style={{ marginBottom: 8 }}>Solo visibles para el banco. No se comparten con el cliente ni el dealer.</div>
