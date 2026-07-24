@@ -9,6 +9,7 @@ import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
+  getOrCreateFinancingToken,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -316,6 +317,30 @@ const fmtDay = (d) => {
   return Number.isFinite(dt.getTime()) ? dt.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : String(d)
 }
 
+// Generate (or reuse) the client's secure /f/:token link and copy it. The client
+// must still verify (last-4 cédula + WhatsApp OTP) before any detail is shown.
+function ClientLinkButton({ applicationId }) {
+  const [state, setState] = useState('idle') // idle | busy | copied | error
+  async function go() {
+    if (!applicationId) return
+    setState('busy')
+    try {
+      const token = await getOrCreateFinancingToken(applicationId)
+      if (!token) { setState('error'); return }
+      const link = `${window.location.origin}/f/${token}`
+      try { await navigator.clipboard.writeText(link) } catch { /* clipboard may be blocked */ }
+      setState('copied')
+      window.setTimeout(() => setState('idle'), 2500)
+    } catch { setState('error') }
+  }
+  return (
+    <button className="btn btn-outline btn-sm" onClick={go} disabled={state === 'busy'} title="Copiar enlace seguro para el cliente">
+      {state === 'busy' ? <Loader2 size={14} className="spin" /> : state === 'copied' ? <CheckCircle2 size={14} /> : <ExternalLink size={14} />}
+      {state === 'copied' ? 'Enlace copiado' : state === 'error' ? 'Error' : 'Enlace del cliente'}
+    </button>
+  )
+}
+
 // This client's past applications + THIS bank's own past decisions. Privacy-scoped
 // server-side (get_client_history_for_bank never returns another bank's response).
 function ClientHistoryBank({ buyerId, currentAppId }) {
@@ -479,7 +504,10 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 4 }}>
             <div><h3 style={{ fontSize: 15, margin: 0 }}>Actividad y comunicación</h3><div className="tiny muted">Historial de banco, dealer y cliente</div></div>
-            {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={15} /> WhatsApp</a>}
+            <div className="row center gap-6">
+              <ClientLinkButton applicationId={a.applicationId} />
+              {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={15} /> WhatsApp</a>}
+            </div>
           </div>
           <div className="bankx-timeline" style={{ marginTop: 12 }}>
             {[...a.timeline].reverse().map((e, i) => (

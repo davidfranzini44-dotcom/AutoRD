@@ -33,6 +33,7 @@ import BankRates from './pages/BankRates'
 import BankTeam from './pages/BankTeam'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppInbox from './components/WhatsAppInbox'
+import FinancingPublic from './pages/FinancingPublic'
 
 export default function App() {
   return (
@@ -86,6 +87,9 @@ export default function App() {
 
       {/* ---------- Public sealed contract (no app chrome) ---------- */}
       <Route path="/contrato/:token" element={<Contrato />} />
+
+      {/* ---------- Client financing portal via secure link (no app chrome) ---------- */}
+      <Route path="/f/:token" element={<FinancingPublic />} />
     </Routes>
   )
 }

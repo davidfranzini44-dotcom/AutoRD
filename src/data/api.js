@@ -597,6 +597,69 @@ export async function getMyFinancing() {
   }
 }
 
+// ---------------- Client financing portal (secure public token /f/:token) ----------------
+// All of these are anon-callable RPCs (the /f page is unauthenticated). The full
+// financing detail is revealed by get_financing_by_token ONLY after both the
+// last-4 cédula AND the WhatsApp OTP have been verified for the token server-side.
+const DEMO_PORTAL_PREVIEW = {
+  found: true, expired: false, cedulaVerified: false, otpVerified: false, cedulaLocked: false,
+  hasCedulaOnFile: true, customerFirstName: 'Wendy', phoneHint: '4821', status: 'preaprobada',
+  bankName: 'BHD', bankSlug: 'bhd', bankColor: '#12805c', bankInitials: 'BHD',
+  dealerName: 'Auto América', vehicle: 'Toyota Grand Highlander 2024',
+}
+const DEMO_PORTAL_FULL = {
+  authorized: true, applicationId: 'demo', code: 'AP-2024', isPreapproval: false,
+  kycStatus: 'aprobado', consentSigned: true, requestedAmount: 2350000, down: 470000, term: 7,
+  customerName: 'Wendy Fernández',
+  vehicle: { id: 'demo', slug: 'toyota-grand-highlander-2024', make: 'Toyota', model: 'Grand Highlander', year: 2024, price: 2820000, dealer: 'Auto América' },
+  responses: [
+    { bankName: 'BHD', bankSlug: 'bhd', bankColor: '#12805c', bankInitials: 'BHD', status: 'preaprobada', apr: 9.25, term: 7, monthly: 38920, down: 470000, approvedAmount: 2350000, validUntil: null, notes: 'Sujeto a validación de documentos.' },
+  ],
+}
+
+export async function getFinancingPreview(token) {
+  if (!LIVE) return DEMO_PORTAL_PREVIEW
+  const { data, error } = await supabase.rpc('get_financing_public_preview', { p_token: token })
+  if (error) return { found: false }
+  return data || { found: false }
+}
+
+export async function verifyFinancingCedula(token, last4) {
+  if (!LIVE) return { ok: true }
+  const { data, error } = await supabase.rpc('verify_financing_cedula', { p_token: token, p_last4: last4 })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
+export async function startFinancingOtp(token) {
+  if (!LIVE) return { ok: true, phoneHint: DEMO_PORTAL_PREVIEW.phoneHint }
+  const { data, error } = await supabase.rpc('start_financing_otp', { p_token: token })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
+export async function verifyFinancingOtp(token, code) {
+  if (!LIVE) return { ok: true }
+  const { data, error } = await supabase.rpc('verify_financing_otp', { p_token: token, p_code: code })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
+export async function getFinancingByToken(token) {
+  if (!LIVE) return DEMO_PORTAL_FULL
+  const { data, error } = await supabase.rpc('get_financing_by_token', { p_token: token })
+  if (error) return { authorized: false, reason: 'error' }
+  return data || { authorized: false }
+}
+
+// Bank/dealer/buyer/admin: mint (or reuse) the client's secure link for an app.
+export async function getOrCreateFinancingToken(applicationId) {
+  if (!LIVE) return 'demo-token'
+  const { data, error } = await supabase.rpc('get_or_create_financing_token', { p_application_id: applicationId })
+  if (error) return null
+  return data
+}
+
 // ---------------- Supporting documents ----------------
 const DEMO_DOCS = [
   {

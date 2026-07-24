@@ -147,6 +147,19 @@ function expiredCedulaOnly(d: any): boolean {
   return warns.some((w) => EXPIRY_RE.test(w)) || documentExpired(d)
 }
 
+// Pull the last 4 digits of the verified cédula out of the Didit decision, so the
+// client-portal (/f/:token) last-4 gate has something to match against. Field
+// names vary by workflow; we try the usual ones and keep only digits.
+function extractCedulaLast4(decision: any): string | null {
+  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
+  const idv = first(decision?.id_verifications) ?? decision?.id_verification ?? decision?.document ?? {}
+  const raw = idv?.personal_number ?? idv?.document_number ?? idv?.national_number
+    ?? idv?.id_number ?? idv?.number ?? decision?.personal_number
+  if (!raw) return null
+  const digits = String(raw).replace(/[^0-9]/g, '')
+  return digits.length >= 4 ? digits.slice(-4) : null
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method', { status: 405 })
   const raw = await req.text()
@@ -221,6 +234,11 @@ Deno.serve(async (req) => {
     }
     if (profileId) {
       try { await captureIdentityImages(admin, apiKey, sessionId, profileId, decision) } catch (_) { /* non-fatal */ }
+      // Store the cédula's last-4 (hashed server-side) for the client-portal gate.
+      try {
+        const last4 = extractCedulaLast4(decision)
+        if (last4) await admin.rpc('set_application_cedula', { p_buyer_id: profileId, p_last4: last4 })
+      } catch (_) { /* non-fatal */ }
     }
   }
 
