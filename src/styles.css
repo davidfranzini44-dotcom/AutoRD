@@ -2462,7 +2462,8 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   .console-main { padding: 16px; }
 }
 @media (max-width: 560px) {
-  .grid-4, .grid-3, .grid-2, .featured-home-grid { grid-template-columns: 1fr; }
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .featured-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .buscar-head-actions {
     display: grid;
     grid-template-columns: 1fr;
