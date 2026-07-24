@@ -15,9 +15,16 @@ import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
 import CarImage from '../components/CarImage'
 import useBankIdentity from '../hooks/useBankIdentity'
+import { estimateMonthly } from '../data/finance'
 import {
   REVIEWERS, DOC_TYPES, DOC_STATUS, TONE, enrichApp, bankStats,
 } from '../data/bankDemo'
+
+// Simple internal readiness score (0–100) derived from KYC / consent / docs / SLA.
+const appScore = (a) => (a.kyc === 'aprobado' ? 40 : 0) + (a.consent ? 30 : 0) + (a.status !== 'docs' ? 20 : 0) + ((a.hoursWaiting || 0) < 24 ? 10 : 0)
+const digits = (p) => String(p || '').replace(/[^\d]/g, '')
+const waMsg = (a) => `Hola ${a.customer}, te contactamos por tu solicitud de financiamiento ${a.id}${a.vehicle ? ` del ${a.vehicle}` : ''}.`
+const dash = (v) => (v == null || v === '' ? '—' : v)
 
 const FILTERS = [
   { id: 'todas', label: 'Todas', tone: '' }, { id: 'nueva', label: 'Nuevas', tone: 'blue' },
@@ -212,64 +219,59 @@ export default function BankPanel() {
           </div>
         )}
 
-        {/* Work: list + detail */}
-        <div className="bankx-work">
-          <section className="card bankx-list">
-            <div className="bankx-toolbar">
-              <div className="bankx-pills">
-                {FILTERS.map((f) => (
-                  <button key={f.id} className={`pill ${filter === f.id ? 'active' : f.tone}`} onClick={() => setFilter(f.id)}>
-                    {f.label} {filterCount(f.id)}
-                  </button>
-                ))}
+        {/* Full-width credit workspace: queue on top, expediente below */}
+        <div className="bankx-cw">
+          <div className="bankx-qboard">
+            <section className="card bankx-list">
+              <div className="bankx-toolbar">
+                <div style={{ marginBottom: 10 }}>
+                  <div className="strong">Solicitudes activas</div>
+                  <p className="tiny muted">Selecciona un cliente y revisa el expediente completo debajo.</p>
+                </div>
+                <div className="bankx-pills">
+                  {FILTERS.map((f) => (
+                    <button key={f.id} className={`pill ${filter === f.id ? 'active' : f.tone}`} onClick={() => setFilter(f.id)}>
+                      {f.label} {filterCount(f.id)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            {/* Desktop rows */}
-            <div className="bankx-rows">
-              <div className="bankx-row head">
-                <span>Cliente</span><span>Vehículo</span><span>Dealer</span><span className="money">Monto</span><span>Estado</span>
+              <div className="bankx-ctable">
+                <div className="bankx-crow head"><span>Cliente</span><span>Vehículo</span><span>Dealer</span><span className="money">Monto</span><span>Estado</span><span>Riesgo</span></div>
+                {list.map((a) => {
+                  const sc = appScore(a)
+                  return (
+                    <button key={a.id} className={`bankx-crow ${a.id === selId ? 'selected' : ''}`} onClick={() => setSelId(a.id)}>
+                      <div className="nowrap"><b>{a.customer}</b><div className="tiny muted">{a.maskedCedula} · {a.kyc === 'aprobado' ? 'KYC aprobado' : 'KYC pendiente'}{a.hoursWaiting != null ? ` · ${a.hoursWaiting} h` : ''}</div></div>
+                      <div className="nowrap">{a.vehicle || 'Pre-aprobación sin vehículo'}{a.down ? <div className="tiny muted">Inicial {fmtRD(a.down)}</div> : null}</div>
+                      <div className="nowrap muted small">{a.dealer || 'Directo AutoRD'}</div>
+                      <div className="money"><b>{a.amount ? fmtRD(a.amount) : '—'}</b>{a.income ? <div className="tiny muted">Ingreso {fmtRD(a.income)}</div> : null}</div>
+                      <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
+                      <span className={`bankx-risk ${sc >= 70 ? '' : sc >= 50 ? 'amber' : 'red'}`}>{sc}</span>
+                    </button>
+                  )
+                })}
+                {list.length === 0 && <div className="muted small" style={{ textAlign: 'center', padding: 28 }}>Sin solicitudes con estos filtros.</div>}
               </div>
-              {list.map((a) => (
-                <button key={a.id} className={`bankx-row ${a.id === selId ? 'selected' : ''}`} onClick={() => openApp(a.id)}>
-                  <div className="nowrap"><b>{a.customer}</b><div className="tiny muted">{a.maskedCedula} · {a.kyc === 'aprobado' ? 'KYC aprobado' : 'KYC pendiente'}</div></div>
-                  <div className="nowrap">{a.vehicle || 'Pre-aprobación sin vehículo'}{a.down ? <div className="tiny muted">Inicial {fmtRD(a.down)}</div> : null}</div>
-                  <div className="nowrap muted small">{a.dealer || 'Directo AutoRD'}</div>
-                  <div className="money"><b>{a.amount ? fmtRD(a.amount) : '—'}</b>{a.income ? <div className="tiny muted">Ingreso {fmtRD(a.income)}</div> : null}</div>
-                  <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
-                </button>
-              ))}
-              {list.length === 0 && <div className="muted small" style={{ textAlign: 'center', padding: 28 }}>Sin solicitudes con estos filtros.</div>}
-            </div>
+            </section>
 
-            {/* Mobile cards */}
-            <div className="bankx-cards">
-              {list.map((a) => (
-                <button key={a.id} className="bankx-card" onClick={() => openApp(a.id)}>
-                  <div className="split"><b className="small">{a.customer}</b><span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span></div>
-                  <div className="tiny muted" style={{ marginTop: 3 }}>{a.vehicle || 'Pre-aprobación'} · {a.dealer || 'Directo AutoRD'}</div>
-                  <div className="bankx-kv-grid" style={{ marginTop: 10 }}>
-                    <div className="bankx-kv"><span>Monto</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
-                    <div className="bankx-kv"><span>Ingreso</span><b>{a.income ? fmtRD(a.income) : '—'}</b></div>
-                  </div>
-                  <div className="bankx-check-row" style={{ marginTop: 10 }}>
-                    <span className={`bankx-check-ic ${a.kyc === 'aprobado' && a.consent ? 'ok' : 'warn'}`}>{a.kyc === 'aprobado' && a.consent ? <CheckCircle2 size={15} /> : <AlertTriangle size={15} />}</span>
-                    <div><b className="small">{a.kyc === 'aprobado' && a.consent ? 'KYC + consentimiento' : 'Requisitos pendientes'}</b><div className="tiny muted">{a.kyc === 'aprobado' && a.consent ? 'Completo para evaluar' : 'Falta KYC o consentimiento'}</div></div>
-                  </div>
-                  <span className="btn btn-primary btn-sm bankx-card-cta">Abrir expediente</span>
-                </button>
-              ))}
-              {list.length === 0 && <div className="card pad muted small" style={{ textAlign: 'center' }}>Sin solicitudes con estos filtros.</div>}
-            </div>
-          </section>
+            <aside className="bankx-qsummary">
+              <span className="pill">Próxima mejor acción</span>
+              <div><strong>{readyApps}</strong><div className="small" style={{ color: 'rgba(255,255,255,.78)' }}>clientes listos para decisión, ordenados por SLA y completitud.</div></div>
+              <div className="bankx-kv-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className="bankx-expmini"><span>Sin analista</span><b>{unassigned}</b></div>
+                <div className="bankx-expmini"><span>Docs</span><b>{stats.docs}</b></div>
+              </div>
+              <div className="bankx-qactions">
+                <button className="btn" onClick={() => { setReviewerF(''); setShowFilters(true) }}>Rebalancear</button>
+                <button className="btn btn-primary" onClick={() => sel && assignReviewer(sel.id, REVIEWERS[0])} disabled={!sel}>Asignar a mí</button>
+              </div>
+            </aside>
+          </div>
 
-          {/* Detail — sticky panel (desktop) / full-screen sheet (mobile) */}
-          <aside className={`bankx-detail ${sheetOpen ? 'sheet-open' : ''}`}>
-            {sel ? (
-              <ApplicationDetail key={sel.id} a={sel} onBack={() => setSheetOpen(false)}
-                onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
-            ) : <div className="card pad muted small">Selecciona una solicitud para revisarla.</div>}
-          </aside>
+          {sel
+            ? <Expediente key={sel.id} a={sel} onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
+            : <div className="card pad muted small" style={{ textAlign: 'center', padding: 28 }}>Selecciona una solicitud para revisarla.</div>}
         </div>
       </div>
     </main>
@@ -278,6 +280,149 @@ export default function BankPanel() {
 
 function FilterToggle({ on, onClick, children }) {
   return <button type="button" className="chip" onClick={onClick} style={{ cursor: 'pointer', background: on ? 'var(--teal-50)' : 'transparent', color: on ? 'var(--teal-700)' : 'var(--muted)', border: on ? '1px solid var(--teal-100)' : '1px solid var(--line)' }}>{on ? <CheckCircle2 size={13} /> : <Plus size={13} />} {children}</button>
+}
+
+// Full-width expediente for the selected application (below the queue). Reuses
+// the existing DocWorkflow (document request/review) and DecisionForm (submit).
+function Expediente({ a, onAssign, onAddNote, bank }) {
+  const [docs, setDocs] = useState([])
+  const [docStatus, setDocStatus] = useState({})
+  const [noteInput, setNoteInput] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    const appId = a.applicationId || (a.status === 'docs' ? a.id : null)
+    if (!appId) { setDocs([]); return () => { alive = false } }
+    getApplicationDocuments(appId).then((rows) => { if (alive) setDocs(rows) }).catch(() => { if (alive) setDocs([]) })
+    return () => { alive = false }
+  }, [a.applicationId, a.id, a.status])
+
+  const sc = appScore(a)
+  const cuota = a.amount ? estimateMonthly(a.amount, 9.5, (Number(a.term) || 7) * 12) : null
+  const ratio = cuota && a.income ? Math.round((cuota / a.income) * 100) : null
+  const precioVenta = (Number(a.amount) || 0) + (Number(a.down) || 0)
+  const contractHref = a.contractToken ? `/contrato/${a.contractToken}` : null
+
+  const readiness = [
+    { key: 'kyc', ok: a.kyc === 'aprobado', title: 'KYC DIDIT aprobado', sub: a.kyc === 'aprobado' ? 'Cédula + prueba de vida' : 'Identidad sin verificar', href: contractHref, cta: 'Ver' },
+    { key: 'consent', ok: !!a.consent, title: 'Consentimiento firmado', sub: a.consent ? 'Banco autorizado para evaluar' : 'Aún no firmado', href: contractHref, cta: 'Contrato' },
+    { key: 'docs', ok: a.status !== 'docs', warn: a.status === 'docs', title: 'Estados de cuenta', sub: a.status === 'docs' ? 'Pendientes del cliente' : 'Sin pendientes' },
+  ]
+  const okCount = readiness.filter((r) => r.ok).length
+
+  return (
+    <section className="bankx-exp">
+      {/* Hero + Resumen para decidir */}
+      <div className="bankx-exphero">
+        <div className="bankx-exphero-main">
+          <div className="bankx-exptitle">
+            <div>
+              <span className="pill">Solicitud {a.id}</span>
+              <h2>{a.customer}</h2>
+              <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
+            </div>
+            <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
+          </div>
+          <div className="bankx-expmini-grid">
+            <div className="bankx-expmini"><span>Monto</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
+            <div className="bankx-expmini"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
+            <div className="bankx-expmini"><span>Ingreso</span><b>{a.income ? fmtRD(a.income) : '—'}</b></div>
+            <div className="bankx-expmini"><span>Score interno</span><b>{sc}/100</b></div>
+          </div>
+        </div>
+
+        <aside className="card pad">
+          <div className="row between center">
+            <div><div className="strong">Resumen para decidir</div><div className="tiny muted">Todo lo crítico antes de aprobar</div></div>
+            <span className={`pill ${okCount === 3 ? 'green' : 'amber'}`}>{okCount}/3 ok</span>
+          </div>
+          <div className="bankx-readiness" style={{ marginTop: 12 }}>
+            {readiness.map((r) => (
+              <div className="bankx-readiness-row" key={r.key}>
+                <span className={`bankx-check-ic ${r.ok ? 'ok' : r.warn ? 'warn' : 'bad'}`}>{r.ok ? <CheckCircle2 size={16} /> : r.warn ? <AlertTriangle size={16} /> : <XCircle size={16} />}</span>
+                <div className="grow" style={{ minWidth: 0 }}><b className="small">{r.title}</b><div className="tiny muted">{r.sub}</div></div>
+                {r.href && <a className="btn btn-outline btn-sm" href={r.href} target="_blank" rel="noreferrer">{r.cta}</a>}
+              </div>
+            ))}
+          </div>
+          <label className="row center gap-6 tiny" style={{ marginTop: 12 }}><UserCheck size={14} className="muted" />
+            <select className="input" style={{ height: 34, fontSize: 12, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
+              <option value="">Sin analista asignado</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </label>
+        </aside>
+      </div>
+
+      {/* Cliente / Vehículo / Capacidad */}
+      <div className="bankx-expgrid">
+        <section className="card pad">
+          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
+          <div className="bankx-infoline"><span>Cédula</span><b className="mono-num">{a.maskedCedula}</b></div>
+          <div className="bankx-infoline"><span>Teléfono</span><b>{dash(a.phone)}</b></div>
+          <div className="bankx-infoline"><span>Email</span><b>{dash(a.email)}</b></div>
+          <div className="bankx-infoline"><span>Dirección</span><b>{dash(a.city)}</b></div>
+          <div className="bankx-infoline"><span>Ocupación</span><b>{dash(a.employment)}</b></div>
+        </section>
+        <section className="card pad">
+          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
+          {a.isPreapproval ? (
+            <div className="tiny muted">Pre-aprobación sin vehículo — el cliente elige el carro después.</div>
+          ) : (<>
+            <div className="bankx-infoline"><span>Modelo</span><b>{dash(a.vehicle)}</b></div>
+            <div className="bankx-infoline"><span>Precio venta</span><b>{precioVenta ? fmtRD(precioVenta) : '—'}</b></div>
+            <div className="bankx-infoline"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
+            <div className="bankx-infoline"><span>Monto a financiar</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
+            <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}</b></div>
+          </>)}
+        </section>
+        <section className="card pad">
+          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Capacidad</h3><span className={`pill ${ratio == null ? '' : ratio <= 35 ? 'green' : 'amber'}`}>{ratio == null ? 'Sin datos' : ratio <= 35 ? 'Apto' : 'Revisar'}</span></div>
+          <div className="bankx-infoline"><span>Ingreso mensual</span><b>{a.income ? fmtRD(a.income) : '—'}</b></div>
+          <div className="bankx-infoline"><span>Cuota estimada</span><b>{cuota ? `${fmtRD(Math.round(cuota))}/mes` : '—'}</b></div>
+          <div className="bankx-infoline"><span>Relación cuota/ingreso</span><b>{ratio != null ? `${ratio}%` : '—'}</b></div>
+          <div className="bankx-infoline"><span>Plazo solicitado</span><b>{a.term ? `${a.term} años` : '—'}</b></div>
+          <div className="bankx-infoline"><span>Tasa sugerida</span><b>9.25%</b></div>
+        </section>
+      </div>
+
+      {/* Documentos + Actividad */}
+      <div className="bankx-docgrid">
+        <DocWorkflow app={a} docs={docs} setDocs={setDocs} docStatus={docStatus} setDocStatus={setDocStatus} />
+        <section className="card pad">
+          <div className="row between center" style={{ marginBottom: 4 }}>
+            <div><h3 style={{ fontSize: 15, margin: 0 }}>Actividad y comunicación</h3><div className="tiny muted">Historial de banco, dealer y cliente</div></div>
+            {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><MessageSquare size={14} /> WhatsApp</a>}
+          </div>
+          <div className="bankx-timeline" style={{ marginTop: 12 }}>
+            {[...a.timeline].reverse().map((e, i) => (
+              <div className="bankx-tlitem" key={i}>
+                <span className={`bankx-tldot ${/pendiente|solicit/i.test(e.name) ? 'amber' : ''}`} />
+                <div><b className="small">{e.name}</b><div className="tiny muted">{e.when} · {e.actor}{e.note ? ` · ${e.note}` : ''}</div></div>
+              </div>
+            ))}
+            {a.timeline.length === 0 && <div className="tiny muted">Sin actividad todavía.</div>}
+          </div>
+        </section>
+      </div>
+
+      {/* Decision panel */}
+      <div className="bankx-decpanel">
+        <div style={{ gridColumn: 'span 2' }}><DecisionForm a={a} bank={bank} /></div>
+        <section className="card pad">
+          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Notas internas</h3><span className="pill">Banco</span></div>
+          <div className="tiny muted" style={{ marginBottom: 8 }}>Solo visibles para el banco. No se comparten con el cliente ni el dealer.</div>
+          <div className="row gap-6">
+            <input className="input" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Nueva nota…" style={{ height: 36 }} />
+            <button className="btn btn-outline btn-sm" disabled={!noteInput.trim()} onClick={() => { onAddNote({ text: noteInput.trim(), by: a.reviewer?.name || 'Analista', when: 'Ahora' }); setNoteInput('') }}><Plus size={14} /></button>
+          </div>
+          <div className="col gap-6" style={{ marginTop: 10 }}>
+            {(a.notes || []).length === 0 && <div className="bankx-notebox tiny muted">Sin notas todavía.</div>}
+            {(a.notes || []).map((n, i) => (<div className="bankx-notebox" key={i}><b className="small">{n.by}</b><div className="small muted">{n.text}</div><div className="tiny muted">{n.when}</div></div>))}
+          </div>
+        </section>
+      </div>
+    </section>
+  )
 }
 
 function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
