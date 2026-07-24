@@ -119,7 +119,7 @@ export default function BankPanel() {
   ]
 
   return (
-    <main className="page bankx">
+    <main className="page bankx" style={{ '--bank-accent': bank.color || '#0f766e' }}>
       {/* Sticky top search + actions bar */}
       <div className="bankx-topbar">
         <div className="bankx-search">

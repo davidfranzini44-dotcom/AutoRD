@@ -81,7 +81,7 @@ export default function BankRates() {
   )
 
   return (
-    <div className="bankx">
+    <div className="bankx" style={{ '--bank-accent': bank.color || '#0f766e' }}>
       <div className="container bankx-container">
         <div className="bankx-head">
           <div className="row center gap-10">
