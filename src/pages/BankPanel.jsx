@@ -8,7 +8,7 @@ import {
 import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
-  requestApplicationDocuments, submitBankResponse,
+  requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -308,6 +308,58 @@ function FilterToggle({ on, onClick, children }) {
 
 // Full-width expediente for the selected application (below the queue). Reuses
 // the existing DocWorkflow (document request/review) and DecisionForm (submit).
+// Format a date-only ('YYYY-MM-DD') or timestamp for display, tz-safe for dates.
+const fmtDay = (d) => {
+  if (!d) return '—'
+  const s = String(d).length === 10 ? `${d}T12:00:00` : d
+  const dt = new Date(s)
+  return Number.isFinite(dt.getTime()) ? dt.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : String(d)
+}
+
+// This client's past applications + THIS bank's own past decisions. Privacy-scoped
+// server-side (get_client_history_for_bank never returns another bank's response).
+function ClientHistoryBank({ buyerId, currentAppId }) {
+  const [rows, setRows] = useState(null)
+  useEffect(() => {
+    let alive = true
+    if (!buyerId) { setRows([]); return () => { alive = false } }
+    getClientHistoryForBank(buyerId).then((r) => { if (alive) setRows(r) }).catch(() => { if (alive) setRows([]) })
+    return () => { alive = false }
+  }, [buyerId])
+  const past = (rows || []).filter((r) => r.applicationId !== currentAppId)
+  return (
+    <section className="card pad">
+      <div className="row between center" style={{ marginBottom: 4 }}>
+        <div><h3 style={{ fontSize: 15, margin: 0 }}>Historial del cliente</h3><div className="tiny muted">Solicitudes previas con tu banco y tu decisión de entonces</div></div>
+        <span className="pill">{past.length} previa{past.length === 1 ? '' : 's'}</span>
+      </div>
+      {rows == null ? (
+        <div className="tiny muted" style={{ marginTop: 10 }}>Cargando…</div>
+      ) : past.length === 0 ? (
+        <div className="tiny muted" style={{ marginTop: 10 }}>Primera solicitud de este cliente con tu banco.</div>
+      ) : (
+        <div className="col gap-8" style={{ marginTop: 10 }}>
+          {past.map((r) => (
+            <div className="bankx-notebox" key={r.applicationId}>
+              <div className="row between center">
+                <b className="small">{r.code} · {r.isPreapproval ? 'Pre-aprobación' : (r.vehicle || 'Con vehículo')}</b>
+                <span className={statusPill(r.status)}>{bankStatusMeta[r.status]?.label || r.statusLabel}</span>
+              </div>
+              <div className="tiny muted" style={{ marginTop: 4 }}>
+                {fmtDay(r.createdAt)}
+                {r.approvedAmount ? ` · aprobado ${fmtRD(r.approvedAmount)}` : ''}
+                {r.apr ? ` · ${r.apr}%` : ''}
+                {r.validUntil ? ` · vigencia hasta ${fmtDay(r.validUntil)}${r.expired ? ' (vencida)' : ''}` : ''}
+                {` · KYC ${r.kyc === 'aprobado' ? 'ok' : 'pend.'}`}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function Expediente({ a, onAssign, onAddNote, bank }) {
   const [docs, setDocs] = useState([])
   const [docStatus, setDocStatus] = useState({})
@@ -344,6 +396,18 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
               <span className="pill">Solicitud {a.id}</span>
               <h2>{a.customer}</h2>
               <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
+              {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval)) && (
+                <div className="row wrap gap-6" style={{ marginTop: 8 }}>
+                  {a.validUntil && (
+                    <span className="pill" style={{ background: a.expired ? 'rgba(220,38,38,.14)' : 'rgba(22,128,92,.14)', color: a.expired ? '#dc2626' : '#12805c' }}>
+                      {a.expired ? 'Vigencia vencida' : 'Vigencia'} · hasta {fmtDay(a.validUntil)}
+                    </span>
+                  )}
+                  {a.vehicleLinkedAt && !a.isPreapproval && (
+                    <span className="pill" style={{ background: 'rgba(37,99,235,.14)', color: '#2563eb' }}>Cliente eligió vehículo · {fmtDay(a.vehicleLinkedAt)}</span>
+                  )}
+                </div>
+              )}
             </div>
             <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
           </div>
@@ -428,6 +492,9 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
           </div>
         </section>
       </div>
+
+      {/* Client history (this bank's own past decisions for the client) */}
+      <ClientHistoryBank buyerId={a.buyerId} currentAppId={a.applicationId} />
 
       {/* Decision panel */}
       <div className="bankx-decpanel">
@@ -720,6 +787,7 @@ function DecisionForm({ a, bank }) {
       await submitBankResponse(a.responseId, {
         status: statusMap[decision], apr: num(rate), term: Number(term) || null,
         monthly: num(monthly), down: num(down), approvedAmount: num(amount), notes,
+        validUntil: expires || null,
       })
     } catch (_) { /* demo/offline: still confirm */ }
     setSent(true)

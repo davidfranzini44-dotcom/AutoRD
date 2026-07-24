@@ -86,9 +86,13 @@ export default function VehicleDetail() {
     setActive((i) => (i + delta + galleryCount) % galleryCount)
   }
 
-  // Reuse an existing pre-approval instead of restarting KYC.
-  const canUsePre = preApp && (!preApp.approvedAmount || v.price <= preApp.approvedAmount)
-  const overBudget = preApp && preApp.approvedAmount && v.price > preApp.approvedAmount
+  // Reuse an existing pre-approval instead of restarting KYC — unless it lapsed.
+  const preBest = (preApp?.responses || [])
+    .filter((r) => r.approvedAmount && r.approvedAmount > 0)
+    .slice().sort((a, b) => (b.approvedAmount || 0) - (a.approvedAmount || 0))[0] || null
+  const preExpired = !!preBest?.expired
+  const canUsePre = preApp && !preExpired && (!preApp.approvedAmount || v.price <= preApp.approvedAmount)
+  const overBudget = preApp && !preExpired && preApp.approvedAmount && v.price > preApp.approvedAmount
   const usePreapproval = async () => {
     if (!preApp) return
     setAttaching(true)
@@ -239,6 +243,11 @@ export default function VehicleDetail() {
                   {overBudget && (
                     <div className="notice" style={{ marginTop: 14 }}>
                       <Info size={16} /><span>Este vehículo ({fmtRD(v.price)}) supera tu pre-aprobación de {fmtRD(preApp.approvedAmount)}. Puedes solicitar financiamiento igualmente.</span>
+                    </div>
+                  )}
+                  {preApp && preExpired && (
+                    <div className="notice" style={{ marginTop: 14, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
+                      <Info size={16} /><span>Tu pre-aprobación venció. Solicita una nueva para confirmar tu monto y tasa actuales.</span>
                     </div>
                   )}
                   <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => trackEvent(v.id, 'financing')}>

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck,
+  MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck, BadgeCheck,
 } from 'lucide-react'
-import { getDealerData } from '../data/api'
+import { getDealerData, getClientHistoryForDealer } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
@@ -37,14 +37,19 @@ const offerMsg = (a) => a.best
 export default function DealerFinancing() {
   const { profile } = useAuth() || {}
   const [inventory, setInventory] = useState([])
+  const [leads, setLeads] = useState([])
   const [filter, setFilter] = useState('')
   const [active, setActive] = useState(null)
 
   useEffect(() => {
     let alive = true
-    getDealerData(profile?.dealer_id).then((d) => { if (alive) setInventory(d.inventory || []) }).catch(() => {})
+    getDealerData(profile?.dealer_id).then((d) => { if (alive) { setInventory(d.inventory || []); setLeads(d.leads || []) } }).catch(() => {})
     return () => { alive = false }
   }, [profile?.dealer_id])
+
+  // Real leads whose buyer arrives with an active bank pre-approval for this car —
+  // the fast path: identity already verified, budget already blessed by a bank.
+  const preApproved = leads.filter((l) => l.preApproval)
 
   const apps = useMemo(() => buildFinancing(inventory), [inventory])
   const shown = filter ? apps.filter((a) => a.status === filter) : apps
@@ -73,6 +78,14 @@ export default function DealerFinancing() {
           )
         })}
       </div>
+
+      {preApproved.length > 0 && filter === '' && (
+        <div className="col gap-8" style={{ marginBottom: 16 }}>
+          <div className="row center gap-8"><Landmark size={16} color="var(--teal-700)" /><h2 style={{ fontSize: 15, margin: 0 }}>Clientes pre-aprobados · cierre rápido</h2></div>
+          <p className="tiny muted" style={{ margin: '-2px 0 2px' }}>Identidad verificada y presupuesto aprobado por un banco. Solo falta coordinar la firma.</p>
+          {preApproved.map((l, i) => <PreApprovedCard key={l.buyerId || i} lead={l} />)}
+        </div>
+      )}
 
       <div className="col gap-12">
         {shown.map((a) => (
@@ -125,6 +138,82 @@ function Metric({ label, value, accent }) {
     <div>
       <div className="tiny muted">{label}</div>
       <div className="strong small" style={accent ? { color: 'var(--teal-700)' } : undefined}>{value}</div>
+    </div>
+  )
+}
+
+const fmtDay = (d) => {
+  if (!d) return null
+  const s = String(d).length === 10 ? `${d}T12:00:00` : d
+  const dt = new Date(s)
+  return Number.isFinite(dt.getTime()) ? dt.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : null
+}
+const OUTCOME = {
+  aprobado: { label: 'Aprobado', bg: '#dcfce7', fg: '#166534' },
+  condicional: { label: 'Aprobado condicional', bg: '#dcfce7', fg: '#166534' },
+  preaprobado: { label: 'Pre-aprobado', bg: '#e0f2fe', fg: '#0369a1' },
+  docs: { label: 'Pidió documentos', bg: '#fef3c7', fg: '#b45309' },
+  evaluando: { label: 'En evaluación', bg: '#dbeafe', fg: '#1d4ed8' },
+  rechazado: { label: 'No aprobado', bg: '#fee2e2', fg: '#b91c1c' },
+  sin_respuesta: { label: 'Sin respuesta', bg: '#f1f5f9', fg: '#64748b' },
+}
+
+// A real, pre-approved lead: fast-track badge + past outcomes (no credit detail).
+function PreApprovedCard({ lead }) {
+  const [showHist, setShowHist] = useState(false)
+  const pa = lead.preApproval || {}
+  const until = fmtDay(pa.validUntil)
+  return (
+    <div className="card card-pad" style={{ borderLeft: '3px solid var(--teal-600, #0f9d8f)' }}>
+      <div className="row between center wrap gap-10">
+        <div style={{ minWidth: 0 }}>
+          <div className="strong">{lead.customer}</div>
+          <div className="tiny muted">{lead.vehicle}</div>
+        </div>
+        <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}>
+          <BadgeCheck size={13} /> {pa.approvedAmount ? `Pre-aprobado hasta ${fmtMoney(pa.approvedAmount, 'DOP')}` : 'Pre-aprobado'}
+        </span>
+      </div>
+      <div className="row wrap gap-16" style={{ margin: '10px 0' }}>
+        <Metric label="Banco" value={pa.bankName || '—'} />
+        <Metric label="KYC" value={lead.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'} />
+        <Metric label="Vigencia" value={until ? `Válido hasta ${until}` : 'Sin fecha de vencimiento'} />
+      </div>
+      <div className="row wrap gap-8">
+        <button className="btn btn-outline btn-sm" onClick={() => setShowHist((v) => !v)}>
+          <FileText size={14} /> {showHist ? 'Ocultar historial' : 'Ver historial del cliente'}
+        </button>
+      </div>
+      {showHist && <ClientHistoryDealer buyerId={lead.buyerId} />}
+    </div>
+  )
+}
+
+// Outcomes-only history for the dealer — never income, cédula, or credit detail.
+function ClientHistoryDealer({ buyerId }) {
+  const [rows, setRows] = useState(null)
+  useEffect(() => {
+    let alive = true
+    if (!buyerId) { setRows([]); return () => { alive = false } }
+    getClientHistoryForDealer(buyerId).then((r) => { if (alive) setRows(r) }).catch(() => { if (alive) setRows([]) })
+    return () => { alive = false }
+  }, [buyerId])
+  if (rows == null) return <div className="tiny muted" style={{ marginTop: 10 }}>Cargando historial…</div>
+  if (rows.length === 0) return <div className="tiny muted" style={{ marginTop: 10 }}>Sin solicitudes previas con tu concesionario.</div>
+  return (
+    <div className="col gap-6" style={{ marginTop: 10 }}>
+      {rows.map((r) => {
+        const o = OUTCOME[r.outcome] || OUTCOME.sin_respuesta
+        return (
+          <div className="row between center" key={r.applicationId} style={{ borderTop: '1px solid var(--line-2, #eef2f4)', paddingTop: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="small strong">{r.vehicle || 'Pre-aprobación'}</div>
+              <div className="tiny muted">{fmtDay(r.createdAt)} · KYC {r.kyc === 'aprobado' ? 'ok' : 'pend.'}</div>
+            </div>
+            <span className="chip" style={{ background: o.bg, color: o.fg }}>{o.label}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -562,9 +562,11 @@ export async function getMyFinancing() {
   if (!app) return null
   const isPre = !app.vehicle_id
   const responses = (app.responses || []).map((r) => ({
-    bankId: r.bank?.slug, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
+    bankId: r.bank?.slug, bankName: r.bank?.name, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
     apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
     approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+    validUntil: r.valid_until || null,
+    expired: isValidityExpired(r.valid_until),
   }))
   const hasOffer = responses.some((r) => r.status === 'offer')
   const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
@@ -774,9 +776,22 @@ export async function attachVehicleToApplication(applicationId, { vehicleDbId, d
     vehicle_id: vehicleDbId || null,
     dealer_id: dealerDbId || null,
     requested_amount: requestedAmount != null ? Number(requestedAmount) : null,
+    vehicle_linked_at: new Date().toISOString(),
   }).eq('id', applicationId)
   if (error) throw error
+  // Tell the routed banks the pre-approved buyer picked a car, so they can
+  // confirm a final offer. Fire-and-forget; never blocks the attach.
+  supabase.rpc('notify_vehicle_linked', { p_application_id: applicationId }).catch(() => {})
   return { ok: true }
+}
+
+// A dated bank response (pre-approval / offer) is expired when its bank-set
+// valid_until is strictly before today. No date set => open-ended (never expires).
+export function isValidityExpired(validUntil) {
+  if (!validUntil) return false
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(validUntil + 'T00:00:00')
+  return Number.isFinite(d.getTime()) && d < today
 }
 
 // ---------------- Dealer panel ----------------
@@ -785,18 +800,30 @@ export async function getDealerData(dealerDbId) {
   const [{ data: inv }, { data: leads }] = await Promise.all([
     supabase.from('vehicles').select(VEHICLE_SELECT).eq('dealer_id', dealerDbId),
     supabase.from('financing_applications')
-      .select('*, vehicle:vehicles(make, model, year), responses:application_banks(status)')
+      .select('*, vehicle:vehicles(make, model, year), responses:application_banks(status, approved_amount, valid_until, bank:banks(name))')
       .eq('dealer_id', dealerDbId).order('created_at', { ascending: false }),
   ])
   return {
     inventory: (inv || []).map(mapVehicle),
-    leads: (leads || []).map((a) => ({
-      customer: a.buyer_name,
-      vehicle: a.vehicle ? `${a.vehicle.make} ${a.vehicle.model} ${a.vehicle.year}` : '—',
-      amount: Number(a.requested_amount),
-      kyc: a.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente',
-      bank: mapBankStatus((a.responses || [])[0]?.status), salesperson: a.salesperson || 'Sin asignar',
-    })),
+    leads: (leads || []).map((a) => {
+      const resp = a.responses || []
+      // The buyer's active pre-approval / offer for THIS car → fast-track for the dealer.
+      const pre = resp.find((r) => ['preaprobada', 'oferta', 'condicional'].includes(r.status)
+        && !isValidityExpired(r.valid_until))
+      return {
+        buyerId: a.buyer_id,
+        customer: a.buyer_name,
+        vehicle: a.vehicle ? `${a.vehicle.make} ${a.vehicle.model} ${a.vehicle.year}` : '—',
+        amount: Number(a.requested_amount),
+        kyc: a.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente',
+        bank: mapBankStatus(resp[0]?.status), salesperson: a.salesperson || 'Sin asignar',
+        preApproval: pre ? {
+          bankName: pre.bank?.name || 'Banco',
+          approvedAmount: pre.approved_amount != null ? Number(pre.approved_amount) : null,
+          validUntil: pre.valid_until || null,
+        } : null,
+      }
+    }),
   }
 }
 
@@ -994,11 +1021,56 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       down: r.app?.down_payment != null ? Number(r.app.down_payment) : null, term: r.app?.term_years,
       income: fin?.income, employment: fin?.employment_type,
       approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+      validUntil: r.valid_until || null,
+      expired: isValidityExpired(r.valid_until),
+      vehicleLinkedAt: r.app?.vehicle_linked_at || null,
+      buyerId: r.app?.buyer_id || null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
       contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
     }
   })
+}
+
+// ---------------- Client credit history (privacy-scoped RPCs) ----------------
+// Bank: only THIS bank's own past decisions for the client. Never another bank's.
+export async function getClientHistoryForBank(buyerId) {
+  if (!LIVE || !buyerId) return []
+  const { data, error } = await supabase.rpc('get_client_history_for_bank', { p_buyer_id: buyerId })
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    applicationId: r.application_id,
+    code: r.code,
+    createdAt: r.created_at,
+    vehicle: r.vehicle_label,
+    isPreapproval: r.is_preapproval,
+    requestedAmount: r.requested_amount != null ? Number(r.requested_amount) : null,
+    status: mapBankStatus(r.status),
+    statusLabel: bankStatusLabel(r.status),
+    apr: r.apr,
+    term: r.term_years,
+    approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+    validUntil: r.valid_until || null,
+    expired: isValidityExpired(r.valid_until),
+    respondedAt: r.responded_at,
+    kyc: r.kyc_status,
+    vehicleLinkedAt: r.vehicle_linked_at,
+  }))
+}
+
+// Dealer: outcomes only — no income, cédula, apr or any credit detail.
+export async function getClientHistoryForDealer(buyerId) {
+  if (!LIVE || !buyerId) return []
+  const { data, error } = await supabase.rpc('get_client_history_for_dealer', { p_buyer_id: buyerId })
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    applicationId: r.application_id,
+    code: r.code,
+    createdAt: r.created_at,
+    vehicle: r.vehicle_label,
+    outcome: r.outcome,
+    kyc: r.kyc_status,
+  }))
 }
 
 export async function submitBankResponse(responseId, body) {
@@ -1007,6 +1079,7 @@ export async function submitBankResponse(responseId, body) {
     status: body.status, apr: body.apr, term_years: body.term,
     monthly: body.monthly, down_required: body.down, notes: body.notes,
     approved_amount: body.approvedAmount != null ? Number(body.approvedAmount) : null,
+    valid_until: body.validUntil || null,
     responded_at: new Date().toISOString(),
   }).eq('id', responseId)
   if (error) throw error
