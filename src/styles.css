@@ -2464,6 +2464,26 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 @media (max-width: 560px) {
   .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
   .featured-home-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  /* Selección AutoRD: half-width cards — right-size overlays + body so nothing crowds/overflows */
+  .featured-home-grid .vcard-body { padding: 10px 11px 12px; }
+  .featured-home-grid .vtitle { font-size: 13.5px; line-height: 1.2; }
+  .featured-home-grid .vspecs { font-size: 11px; }
+  .featured-home-grid .vloc { font-size: 11px; margin-top: 6px; }
+  .featured-home-grid .vprice { font-size: 15.5px; margin-top: 5px; }
+  .featured-home-grid .badge-corner {
+    top: 8px; left: 8px; min-height: 0;
+    font-size: 9.5px; gap: 3px; padding: 3px 6px; border-radius: 6px;
+    white-space: normal; line-height: 1.1;
+    max-width: calc(100% - 50px);
+  }
+  .featured-home-grid .badge-corner svg { width: 10px; height: 10px; }
+  .featured-home-grid .fav-btn { top: 8px; right: 8px; width: 30px; height: 30px; }
+  .featured-home-grid .fav-btn svg { width: 15px; height: 15px; }
+  .featured-home-grid .compare-float { display: none; }
+  .featured-home-grid .verified-shield { width: 22px; height: 22px; right: 8px; bottom: 8px; }
+  .featured-home-grid .verified-shield svg { width: 12px; height: 12px; }
+  .featured-home-grid .price-signal { font-size: 10px; padding: 3px 6px; min-height: 20px; margin-top: 6px; }
+  .featured-home-grid .chip { height: auto; min-height: 24px; padding: 4px 8px; font-size: 10.5px; gap: 4px; line-height: 1.15; }
   .buscar-head-actions {
     display: grid;
     grid-template-columns: 1fr;
