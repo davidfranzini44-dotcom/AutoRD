@@ -100,22 +100,36 @@ const CEDULA_GRACE_UNTIL_MS = Date.UTC(2027, 0, 1) // 2027-01-01T00:00:00Z
 const cedulaGraceActive = () => Date.now() < CEDULA_GRACE_UNTIL_MS
 const EXPIRY_RE = /expir|vencid|caducid/ // expired / vencida / caducidad
 
-// Gather warning "reason" strings from a Didit decision (schema varies by
-// workflow version), lowercased.
-function collectWarnings(d: any): string[] {
-  const out: string[] = []
+// Gather warnings from a Didit decision (schema varies by workflow version) as
+// { text, blocking } pairs.
+//
+// Severity matters: Didit marks real problems with log_type 'error' and emits
+// advisory notes as 'information' (e.g. UNPARSED_ADDRESS when the address on the
+// cédula can't be geolocated, or POSSIBLE_DUPLICATED_USER when the person simply
+// retried the flow). Those advisory notes must NOT cancel the expired-cédula
+// grace — treating every warning as blocking is what wrongly declined real
+// applicants whose ONLY error was DOCUMENT_EXPIRED.
+type Warn = { text: string; blocking: boolean }
+const NON_BLOCKING_SEVERITY = /^(information|info|notice)$/
+function collectWarnings(d: any): Warn[] {
+  const out: Warn[] = []
   const first = (v: any) => (Array.isArray(v) ? v[0] : v)
   const pushFrom = (arr: any) => {
     if (!Array.isArray(arr)) return
     for (const w of arr) {
-      if (typeof w === 'string') out.push(w)
-      else if (w && typeof w === 'object') out.push(String(w.risk ?? w.code ?? w.type ?? w.name ?? w.description ?? w.message ?? ''))
+      if (typeof w === 'string') {
+        out.push({ text: w.toLowerCase(), blocking: true })
+      } else if (w && typeof w === 'object') {
+        const text = String(w.risk ?? w.code ?? w.type ?? w.name ?? w.description ?? w.message ?? '').toLowerCase()
+        const sev = String(w.log_type ?? w.severity ?? w.level ?? 'error').toLowerCase()
+        if (text) out.push({ text, blocking: !NON_BLOCKING_SEVERITY.test(sev) })
+      }
     }
   }
   pushFrom(d?.warnings)
   pushFrom(d?.decision?.warnings)
   pushFrom((first(d?.id_verifications) ?? d?.id_verification)?.warnings)
-  return out.map((s) => s.toLowerCase()).filter(Boolean)
+  return out
 }
 
 // A biometric check (liveness / face match) counts as passed when it's absent
@@ -137,14 +151,16 @@ function documentExpired(d: any): boolean {
   return Number.isFinite(t) && t < Date.now()
 }
 
-// True when the ONLY problem with an otherwise-clean verification is an expired
-// document: biometrics passed, no non-expiry warnings, and expiry is flagged.
+// True when the ONLY blocking problem with an otherwise-clean verification is an
+// expired document: biometrics passed, every error-severity warning is the
+// expiry itself, and expiry is actually flagged. Advisory (information) warnings
+// are ignored — they are notes, not reasons to decline.
 function expiredCedulaOnly(d: any): boolean {
   if (!d) return false
-  const warns = collectWarnings(d)
-  if (warns.some((w) => !EXPIRY_RE.test(w))) return false // another issue exists
+  const blocking = collectWarnings(d).filter((w) => w.blocking)
+  if (blocking.some((w) => !EXPIRY_RE.test(w.text))) return false // a real, non-expiry problem
   if (!checkPassed(d?.liveness_checks ?? d?.liveness) || !checkPassed(d?.face_matches ?? d?.face_match)) return false
-  return warns.some((w) => EXPIRY_RE.test(w)) || documentExpired(d)
+  return blocking.some((w) => EXPIRY_RE.test(w.text)) || documentExpired(d)
 }
 
 // Pull the last 4 digits of the verified cédula out of the Didit decision, so the
@@ -194,6 +210,10 @@ Deno.serve(async (req) => {
       if (r.ok) decision = await r.json().catch(() => null)
     } catch (_) { /* non-fatal */ }
   }
+  // The webhook payload already embeds the decision — fall back to it so the
+  // expired-cédula grace still applies when the API key is missing or the
+  // fetch fails, instead of silently declining a valid applicant.
+  if (!decision && evt?.decision && typeof evt.decision === 'object') decision = evt.decision
 
   // DR cédula grace: accept an otherwise-clean verification whose ONLY problem is
   // an expired document, until 2027-01-01 (biometrics must have passed).
