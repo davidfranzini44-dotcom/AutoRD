@@ -2,15 +2,16 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ShieldCheck, Landmark, Loader2, Lock, Car, CheckCircle2, Clock, AlertTriangle,
-  ChevronRight, FileText, Info, ArrowRight,
+  ChevronRight, FileText, Info, ArrowRight, Upload, UserPlus,
 } from 'lucide-react'
 import BankLogo from '../components/BankLogo'
 import WhatsAppIcon from '../components/WhatsAppIcon'
+import { useAuth } from '../context/AuthContext'
 import { fmtRD } from '../data/demo'
 import { estimateMonthly } from '../data/finance'
 import {
   getFinancingPreview, verifyFinancingCedula, startFinancingOtp, verifyFinancingOtp, getFinancingByToken,
-  acceptFinancingOffer,
+  acceptFinancingOffer, activateFinancingAccount, getApplicationDocuments, uploadApplicationDocument,
 } from '../data/api'
 
 const STATUS = {
@@ -217,10 +218,22 @@ function OtpStep({ preview, token, onOk }) {
 
 /* ---------------- Read-only portal (after verification) ---------------- */
 function Portal({ full, token, onReload }) {
+  const { user } = useAuth() || {}
   const [accepting, setAccepting] = useState(null)
   const [acceptErr, setAcceptErr] = useState('')
+  const [activated, setActivated] = useState(false)
+  const [activating, setActivating] = useState(false)
+  const [activateErr, setActivateErr] = useState('')
+  const accountReady = activated || !!user
   const accepted = !!full.clientAcceptedAt
   const selectedSlug = full.selectedBankSlug
+  async function activate() {
+    setActivating(true); setActivateErr('')
+    const r = await activateFinancingAccount(token)
+    setActivating(false)
+    if (r && r.ok) setActivated(true)
+    else setActivateErr('No pudimos activar tu cuenta. Puedes seguir usando este enlace.')
+  }
   async function accept(bankSlug) {
     setAccepting(bankSlug); setAcceptErr('')
     const r = await acceptFinancingOffer(token, bankSlug)
@@ -368,12 +381,30 @@ function Portal({ full, token, onReload }) {
         </Section>
       )}
 
-      {/* Documents (read-only in this phase) */}
-      {kind === 'docs' && (
-        <Section title="Documentos">
-          <div className="cfp-doc"><span className="cfp-doc-ic warn"><AlertTriangle size={14} /></span><div><div className="small strong">El banco solicitó documentos</div><div className="tiny muted">Envíalos por WhatsApp para avanzar. La carga desde aquí llega muy pronto.</div></div></div>
-        </Section>
-      )}
+      {/* Documents — upload once the account is active */}
+      <DocsSection applicationId={full.applicationId} accountReady={accountReady} kind={kind} onActivate={activate} activating={activating} />
+
+      {/* Lightweight account activation */}
+      {!accountReady ? (
+        <div className="cfp-account">
+          <div className="row center gap-10">
+            <div className="cfp-step-ic" style={{ margin: 0, width: 38, height: 38, background: '#e6f5f1', color: '#0f766e' }}><UserPlus size={18} /></div>
+            <div className="grow">
+              <div className="strong small">Activa tu cuenta AutoRD</div>
+              <div className="tiny muted">Para subir documentos y entrar con tu WhatsApp la próxima vez — sin contraseñas.</div>
+            </div>
+          </div>
+          {activateErr && <div className="cfp-err" style={{ marginTop: 8 }}>{activateErr}</div>}
+          <button className="btn btn-navy btn-block btn-sm" style={{ marginTop: 10 }} disabled={activating} onClick={activate}>
+            {activating ? <><Loader2 size={15} className="spin" /> Activando…</> : <><UserPlus size={15} /> Activar mi cuenta</>}
+          </button>
+        </div>
+      ) : activated ? (
+        <div className="cfp-account ready">
+          <CheckCircle2 size={18} />
+          <div><div className="strong small">Tu cuenta AutoRD ya está lista</div><div className="tiny">La próxima vez puedes entrar con tu WhatsApp — sin contraseña.</div></div>
+        </div>
+      ) : null}
 
       <div className="cfp-foot">
         <ShieldCheck size={13} /> Verificado por AutoRD · Solicitud {full.code}
@@ -455,6 +486,87 @@ function CalcSection({ ceiling, apr, defTerm, defPrice }) {
   )
 }
 
+const DOC_STATUS = {
+  solicitado: { label: 'Falta subir', cls: 'warn', canUpload: true },
+  rechazado: { label: 'Reenviar', cls: 'warn', canUpload: true },
+  subido: { label: 'Documento recibido', cls: 'ok', canUpload: false },
+  en_revision: { label: 'Banco revisando', cls: 'info', canUpload: false },
+  aprobado: { label: 'Aprobado', cls: 'ok', canUpload: false },
+}
+
+// Smart document checklist — upload the exact docs the bank asked for. Needs an
+// active account (RLS scopes uploads to the application owner).
+function DocsSection({ applicationId, accountReady, kind, onActivate, activating }) {
+  const [docs, setDocs] = useState(null)
+  const [uploadingId, setUploadingId] = useState(null)
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    let alive = true
+    if (!accountReady || !applicationId) { setDocs(null); return () => { alive = false } }
+    getApplicationDocuments(applicationId).then((r) => { if (alive) setDocs(r) }).catch(() => { if (alive) setDocs([]) })
+    return () => { alive = false }
+  }, [accountReady, applicationId])
+
+  async function upload(doc, file) {
+    if (!file) return
+    setUploadingId(doc.id); setErr('')
+    try {
+      await uploadApplicationDocument(doc, file)
+      const rows = await getApplicationDocuments(applicationId)
+      setDocs(rows)
+    } catch { setErr('No pudimos subir el archivo. Intenta de nuevo.') }
+    setUploadingId(null)
+  }
+
+  // Locked (no account yet): only nudge when the bank actually asked for docs.
+  if (!accountReady) {
+    if (kind !== 'docs') return null
+    return (
+      <Section title="Documentos">
+        <div className="cfp-doc"><span className="cfp-doc-ic warn"><AlertTriangle size={14} /></span>
+          <div><div className="small strong">El banco solicitó documentos</div>
+            <div className="tiny muted">Activa tu cuenta para subirlos de forma segura.</div></div>
+        </div>
+        <button className="btn btn-outline btn-block btn-sm" style={{ marginTop: 10 }} disabled={activating} onClick={onActivate}>
+          {activating ? <><Loader2 size={14} className="spin" /> Activando…</> : 'Activar cuenta para subir'}
+        </button>
+      </Section>
+    )
+  }
+
+  if (docs == null) return <Section title="Documentos"><div className="tiny muted">Cargando…</div></Section>
+  if (docs.length === 0) {
+    if (kind !== 'docs') return null
+    return <Section title="Documentos"><div className="tiny muted">No hay documentos pendientes por ahora.</div></Section>
+  }
+
+  return (
+    <Section title="Documentos">
+      {err && <div className="cfp-err" style={{ marginBottom: 8 }}>{err}</div>}
+      <div className="col gap-8">
+        {docs.map((d) => {
+          const st = DOC_STATUS[d.status] || DOC_STATUS.solicitado
+          return (
+            <div className="cfp-doc" key={d.id}>
+              <span className={`cfp-doc-ic ${st.cls}`}>{st.cls === 'ok' ? <CheckCircle2 size={14} /> : st.cls === 'info' ? <Clock size={14} /> : <FileText size={14} />}</span>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="small strong">{d.type}</div>
+                <div className="tiny muted">{d.bankName ? `${d.bankName} · ` : ''}{st.label}{d.notes ? ` · ${d.notes}` : ''}</div>
+              </div>
+              {st.canUpload && (
+                <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', flex: 'none' }}>
+                  {uploadingId === d.id ? <Loader2 size={13} className="spin" /> : <Upload size={13} />} {uploadingId === d.id ? '' : 'Subir'}
+                  <input type="file" hidden onChange={(e) => upload(d, e.target.files?.[0])} accept="image/*,application/pdf" />
+                </label>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </Section>
+  )
+}
+
 function PortalStyles() {
   return (
     <style>{`
@@ -514,9 +626,14 @@ function PortalStyles() {
       .cfp-act-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; }
       .cfp-act-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: none; background: #cbd5e1; }
       .cfp-act-dot.accepted { background: #16a34a; } .cfp-act-dot.verified { background: #0f766e; } .cfp-act-dot.bank_decision { background: #2563eb; }
-      .cfp-doc { display: flex; align-items: flex-start; gap: 10px; }
+      .cfp-doc { display: flex; align-items: center; gap: 10px; }
       .cfp-doc-ic { width: 26px; height: 26px; border-radius: 8px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
       .cfp-doc-ic.warn { background: #fef3c7; color: #b45309; }
+      .cfp-doc-ic.ok { background: #dcfce7; color: #166534; }
+      .cfp-doc-ic.info { background: #dbeafe; color: #1d4ed8; }
+      .cfp-account { background: #fff; border: 1px solid var(--line,#e2e8f0); border-radius: 14px; padding: 14px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,41,63,.05)); }
+      .cfp-account.ready { display: flex; align-items: flex-start; gap: 10px; background: #eef6f3; border-color: #bfe3d8; color: #0f766e; }
+      .cfp-account.ready .tiny { color: #0f766e; opacity: .85; margin-top: 2px; }
       .cfp-foot { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; color: var(--muted,#64748b); padding: 8px 0 4px; }
     `}</style>
   )

@@ -661,6 +661,17 @@ export async function acceptFinancingOffer(token, bankSlug) {
   return data
 }
 
+// Activate a lightweight client account from the verified portal token, then
+// sign the browser in so uploads / "entra con WhatsApp la próxima vez" work.
+export async function activateFinancingAccount(token) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { data, error } = await supabase.functions.invoke('financing-activate', { body: { token } })
+  if (error || !data?.ok) return { ok: false, error: data?.error || error?.message || 'error' }
+  const { error: signErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
+  if (signErr) return { ok: false, error: signErr.message }
+  return { ok: true, linked: data.linked }
+}
+
 // Bank/dealer/buyer/admin: mint (or reuse) the client's secure link for an app.
 export async function getOrCreateFinancingToken(applicationId) {
   if (!LIVE) return 'demo-token'
