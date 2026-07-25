@@ -7,6 +7,7 @@ import CarImage from './CarImage'
 import ContactDealer from './ContactDealer'
 import DealerLogo from './DealerLogo'
 import PriceSignal from './PriceSignal'
+import PreapprovalCta from './PreapprovalCta'
 import { fmtMoney } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
@@ -194,7 +195,7 @@ function FichaShell({ v, close }) {
         </div>
 
         <div className="ficha-actions">
-          <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg ficha-action-primary" onClick={close}>Solicitar financiamiento</Link>
+          <PreapprovalCta vehicle={v} onNavigate={close} compact />
           <button className={`btn ${cmp ? 'btn-navy' : 'btn-outline'} btn-block ficha-action-secondary`} onClick={() => setCmp(toggleCompare(v.id).on)}>
             <Scale size={16} /> {cmp ? 'Quitar de comparar' : 'Comparar vehiculo'}
           </button>

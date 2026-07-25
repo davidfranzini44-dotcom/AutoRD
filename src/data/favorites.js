@@ -2,7 +2,7 @@
 // is logged in we also persist to the Supabase `favorites` table (via slug RPCs)
 // so their saved cars follow the account across devices. On login we merge the
 // two; on logout we clear the local cache (the DB copy is safe).
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, fireAndForget } from '../lib/supabase'
 
 const KEY = 'autord_favs'
 let userId = null
@@ -25,7 +25,7 @@ export async function hydrateFavorites(uid) {
     const local = read()
     const dbSet = new Set(dbSlugs)
     // Push local-only saves up to the account, then show the union.
-    for (const slug of local) if (!dbSet.has(slug)) supabase.rpc('toggle_favorite', { p_slug: slug }).catch(() => {})
+    for (const slug of local) if (!dbSet.has(slug)) fireAndForget(supabase.rpc('toggle_favorite', { p_slug: slug }))
     write([...new Set([...dbSlugs, ...local])])
   } catch { /* keep local */ }
 }
@@ -46,7 +46,7 @@ export function toggleFavorite(id) {
   const on = !ids.includes(id)
   write(on ? [...ids, id] : ids.filter((x) => x !== id))
   if (isSupabaseConfigured) {
-    currentUserId().then((uid) => { if (uid) supabase.rpc('toggle_favorite', { p_slug: id }).catch(() => {}) })
+    currentUserId().then((uid) => { if (uid) fireAndForget(supabase.rpc('toggle_favorite', { p_slug: id })) })
   }
   return on
 }

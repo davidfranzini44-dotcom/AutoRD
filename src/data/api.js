@@ -3,7 +3,7 @@
 // If Supabase is configured -> live queries.
 // Otherwise -> local demo data (keeps the app fully runnable).
 // ============================================================
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, fireAndForget } from '../lib/supabase'
 import {
   vehicles as demoVehicles, banks as demoBanks, financingCase,
   dealerInventory, dealerLeads, bankApplications, bankStatusMeta,
@@ -180,7 +180,7 @@ export async function getVehicleBySlug(slug) {
 // ---------------- Lead tracking (views / share / contact / financing) ----------------
 export function trackEvent(slug, kind) {
   if (!LIVE || !slug) return
-  try { supabase.rpc('track_event', { p_slug: slug, p_kind: kind }).catch(() => {}) } catch { /* ignore */ }
+  try { fireAndForget(supabase.rpc('track_event', { p_slug: slug, p_kind: kind })) } catch { /* ignore */ }
 }
 export async function getDealerLeadCounts() {
   if (!LIVE) return {}
@@ -568,11 +568,18 @@ export async function getMyFinancing() {
     validUntil: r.valid_until || null,
     expired: isValidityExpired(r.valid_until),
     selected: !!r.selected,
+    rawStatus: r.status,
   }))
   const hasOffer = responses.some((r) => r.status === 'offer')
   const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
   // Best (highest) pre-approved ceiling across banks — powers "shop within budget".
-  const approvedAmounts = responses.map((r) => r.approvedAmount).filter((n) => n != null && n > 0)
+  // Only an ACTIVE, unexpired approval counts: a response still pending docs or
+  // under evaluation is not a budget the buyer can shop with. Must match
+  // express_preapproval_interest()'s definition server-side.
+  const ACTIVE_APPROVAL = ['preaprobada', 'oferta', 'condicional']
+  const approvedAmounts = responses
+    .filter((r) => ACTIVE_APPROVAL.includes(r.rawStatus) && !r.expired)
+    .map((r) => r.approvedAmount).filter((n) => n != null && n > 0)
   const approvedAmount = approvedAmounts.length ? Math.max(...approvedAmounts) : null
   const timeline = [
     { key: 'kyc', name: 'KYC aprobado', sub: 'Identidad verificada', state: app.kyc_status === 'aprobado' ? 'done' : 'current' },
@@ -673,6 +680,48 @@ export async function activateFinancingAccount(token) {
   const { error: signErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
   if (signErr) return { ok: false, error: signErr.message }
   return { ok: true, linked: data.linked }
+}
+
+// ---------------- Pre-approval interest in specific vehicles ----------------
+// A car-agnostic pre-approval lets the buyer flag several in-budget cars. Each
+// dealer is notified that this buyer is ALREADY approved to buy their car.
+// Committing to one car (attach) converts that interest and archives the rest.
+export async function expressPreapprovalInterest(vehicleDbId) {
+  if (!LIVE) return { ok: true, demo: true }
+  const { data, error } = await supabase.rpc('express_preapproval_interest', { p_vehicle_id: vehicleDbId })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
+// Which vehicles the signed-in buyer has already flagged (vehicleDbId -> status).
+export async function getMyPreapprovalInterests() {
+  if (!LIVE) return {}
+  const { data, error } = await supabase.rpc('get_my_preapproval_interests')
+  if (error || !Array.isArray(data)) return {}
+  const map = {}
+  data.forEach((r) => { map[r.vehicle_id] = r.status })
+  return map
+}
+
+// Dealer: pre-approved buyers interested in this dealer's cars (active only).
+export async function getDealerPreapprovalInterests() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('get_dealer_preapproval_interests')
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    id: r.interest_id,
+    applicationId: r.application_id,
+    status: r.status,
+    createdAt: r.created_at,
+    customer: r.customer,
+    phone: r.customer_phone,
+    vehicleId: r.vehicle_id,
+    vehicle: r.vehicle_label,
+    price: r.vehicle_price != null ? Number(r.vehicle_price) : null,
+    approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+    validUntil: r.valid_until || null,
+    kyc: r.kyc_status,
+  }))
 }
 
 // Authenticated buyer accepts an offer from /mi-financiamiento (gated on ownership).
@@ -875,7 +924,7 @@ export async function attachVehicleToApplication(applicationId, { vehicleDbId, d
   if (error) throw error
   // Tell the routed banks the pre-approved buyer picked a car, so they can
   // confirm a final offer. Fire-and-forget; never blocks the attach.
-  supabase.rpc('notify_vehicle_linked', { p_application_id: applicationId }).catch(() => {})
+  fireAndForget(supabase.rpc('notify_vehicle_linked', { p_application_id: applicationId }))
   return { ok: true }
 }
 
@@ -1198,7 +1247,7 @@ export async function submitBankResponse(responseId, body) {
   if (error) throw error
   // Fire-and-forget: WhatsApp ping + in-app notification for the buyer & dealer.
   supabase.functions.invoke('wa-notify', { body: { response_id: responseId, event: 'bank_response' } }).catch(() => {})
-  supabase.rpc('notify_bank_response', { p_response_id: responseId }).catch(() => {})
+  fireAndForget(supabase.rpc('notify_bank_response', { p_response_id: responseId }))
   return { ok: true }
 }
 

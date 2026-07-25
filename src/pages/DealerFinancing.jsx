@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck, BadgeCheck,
 } from 'lucide-react'
-import { getDealerData, getClientHistoryForDealer } from '../data/api'
+import { getDealerData, getClientHistoryForDealer, getDealerPreapprovalInterests } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
@@ -41,9 +41,12 @@ export default function DealerFinancing() {
   const [filter, setFilter] = useState('')
   const [active, setActive] = useState(null)
 
+  const [interests, setInterests] = useState([])
+
   useEffect(() => {
     let alive = true
     getDealerData(profile?.dealer_id).then((d) => { if (alive) { setInventory(d.inventory || []); setLeads(d.leads || []) } }).catch(() => {})
+    getDealerPreapprovalInterests().then((r) => { if (alive) setInterests(r) }).catch(() => {})
     return () => { alive = false }
   }, [profile?.dealer_id])
 
@@ -78,6 +81,37 @@ export default function DealerFinancing() {
           )
         })}
       </div>
+
+      {interests.length > 0 && filter === '' && (
+        <div className="col gap-8" style={{ marginBottom: 16 }}>
+          <div className="row center gap-8"><BadgeCheck size={16} color="var(--teal-700)" /><h2 style={{ fontSize: 15, margin: 0 }}>Interesados con pre-aprobación</h2></div>
+          <p className="tiny muted" style={{ margin: '-2px 0 2px' }}>Ya tienen financiamiento aprobado y pueden comprar estos vehículos ahora mismo.</p>
+          {interests.map((it) => (
+            <div className="card card-pad" key={it.id} style={{ borderLeft: '3px solid var(--teal-600, #0f9d8f)' }}>
+              <div className="row between center wrap gap-10">
+                <div style={{ minWidth: 0 }}>
+                  <div className="strong">{it.customer || 'Cliente'}</div>
+                  <div className="tiny muted">Interesado en {it.vehicle}{it.price ? ` · ${fmtMoney(it.price, 'DOP')}` : ''}</div>
+                </div>
+                <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}>
+                  <BadgeCheck size={13} /> {it.approvedAmount ? `Aprobado hasta ${fmtMoney(it.approvedAmount, 'DOP')}` : 'Pre-aprobado'}
+                </span>
+              </div>
+              <div className="row wrap gap-16" style={{ margin: '10px 0' }}>
+                <Metric label="KYC" value={it.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'} />
+                <Metric label="Vigencia" value={it.validUntil ? `Hasta ${fmtDay(it.validUntil)}` : 'Sin vencimiento'} />
+                <Metric label="Mostró interés" value={fmtDay(it.createdAt) || '—'} />
+              </div>
+              {it.phone && (
+                <a className="btn btn-sm" style={{ background: '#25D366', color: '#fff', border: 'none' }} target="_blank" rel="noreferrer"
+                  href={waLink(it.phone, `Hola ${it.customer || ''}, vi que estás interesado en el ${it.vehicle} y ya tienes tu financiamiento pre-aprobado. ¿Coordinamos una cita para verlo?`)}>
+                  <WhatsAppIcon size={15} /> Contactar ahora
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {preApproved.length > 0 && filter === '' && (
         <div className="col gap-8" style={{ marginBottom: 16 }}>

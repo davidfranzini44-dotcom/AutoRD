@@ -1,7 +1,7 @@
 // Saved search alerts. localStorage is the instant, sync cache the UI reads; for
 // logged-in buyers we also persist to Supabase (saved_searches) so alerts follow
 // the account across devices. Mirrors src/data/favorites.js.
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, fireAndForget } from '../lib/supabase'
 
 const KEY = 'autord_saved_searches'
 const MAX = 24
@@ -41,7 +41,7 @@ export async function hydrateSavedSearches(uid) {
     // Push any local-only alerts up to the account.
     for (const item of read()) {
       if (!dbQueries.has(item.query)) {
-        supabase.rpc('save_search', { p_query: item.query, p_title: item.title, p_filters: item.filters || [], p_count: item.count || 0 }).catch(() => {})
+        fireAndForget(supabase.rpc('save_search', { p_query: item.query, p_title: item.title, p_filters: item.filters || [], p_count: item.count || 0 }))
       }
     }
     // Show DB rows first (source of truth), then any local-only ones.
@@ -63,7 +63,7 @@ export function saveSearchAlert({ title, query, count = 0, filters = [] }) {
   const existing = items.find((item) => item.query === q)
   const persist = () => {
     if (isSupabaseConfigured) {
-      currentUserId().then((uid) => { if (uid) supabase.rpc('save_search', { p_query: q, p_title: title || 'Búsqueda guardada', p_filters: filters, p_count: count }).catch(() => {}) })
+      currentUserId().then((uid) => { if (uid) fireAndForget(supabase.rpc('save_search', { p_query: q, p_title: title || 'Búsqueda guardada', p_filters: filters, p_count: count })) })
     }
   }
   if (existing) {
@@ -85,7 +85,7 @@ export function removeSearchAlert(id) {
   const item = read().find((i) => i.id === id)
   write(read().filter((i) => i.id !== id))
   if (item && isSupabaseConfigured) {
-    currentUserId().then((uid) => { if (uid) supabase.rpc('delete_saved_search_by_query', { p_query: item.query }).catch(() => {}) })
+    currentUserId().then((uid) => { if (uid) fireAndForget(supabase.rpc('delete_saved_search_by_query', { p_query: item.query })) })
   }
 }
 
@@ -93,6 +93,6 @@ export function clearSearchAlerts() {
   const items = read()
   write([])
   if (isSupabaseConfigured) {
-    currentUserId().then((uid) => { if (uid) items.forEach((i) => supabase.rpc('delete_saved_search_by_query', { p_query: i.query }).catch(() => {})) })
+    currentUserId().then((uid) => { if (uid) items.forEach((i) => fireAndForget(supabase.rpc('delete_saved_search_by_query', { p_query: i.query }))) })
   }
 }

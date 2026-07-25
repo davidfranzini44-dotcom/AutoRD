@@ -22,3 +22,13 @@ export const supabase = isSupabaseConfigured
       auth: { persistSession: true, autoRefreshToken: true },
     })
   : null
+
+// Fire-and-forget a Supabase query/RPC.
+//
+// IMPORTANT: a PostgrestFilterBuilder is a *thenable*, not a Promise — it has
+// .then() but NO .catch(). Writing `supabase.rpc(...).catch(() => {})` therefore
+// throws "catch is not a function" AFTER the statement has been sent, which
+// aborts the caller mid-function (e.g. a navigation that should follow never
+// runs, or a notification RPC is silently skipped). Promise.resolve() adopts the
+// thenable and gives us a real Promise we can safely catch on.
+export const fireAndForget = (query) => { Promise.resolve(query).catch(() => {}) }

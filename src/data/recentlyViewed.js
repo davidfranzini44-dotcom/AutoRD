@@ -1,7 +1,7 @@
 // Recently-viewed vehicles. localStorage is the instant, sync cache the UI reads;
 // for logged-in buyers we also persist to Supabase (via slug RPCs) so history
 // follows the account across devices. Mirrors src/data/favorites.js.
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { supabase, isSupabaseConfigured, fireAndForget } from '../lib/supabase'
 
 const KEY = 'autord_recently_viewed'
 const MAX = 24
@@ -45,7 +45,7 @@ export function recordRecentlyViewed(vehicleOrId) {
   const next = [id, ...read().filter((item) => item !== id)].slice(0, MAX)
   write(next)
   if (isSupabaseConfigured) {
-    currentUserId().then((uid) => { if (uid) supabase.rpc('record_view', { p_slug: id }).catch(() => {}) })
+    currentUserId().then((uid) => { if (uid) fireAndForget(supabase.rpc('record_view', { p_slug: id })) })
   }
   return next
 }

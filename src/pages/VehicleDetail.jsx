@@ -11,6 +11,7 @@ import MiniMap from '../components/MiniMap'
 import PriceSignal from '../components/PriceSignal'
 import { directionsUrl } from '../data/geo'
 import { getVehicleBySlug, listVehicles, fmtRD, getMyFinancing, attachVehicleToApplication, trackEvent } from '../data/api'
+import PreapprovalCta from '../components/PreapprovalCta'
 import { fmtMoney } from '../data/demo'
 import { estimateMonthly, BANK_RATES, carDefaultMonthly } from '../data/finance'
 import { isCompared, toggleCompare } from '../data/compare'
@@ -228,36 +229,28 @@ export default function VehicleDetail() {
                 </div>
               </div>
 
-              {preApp && canUsePre ? (
-                <>
-                  <div className="chip chip-teal" style={{ marginTop: 14, height: 'auto', padding: '8px 12px', display: 'inline-flex' }}>
-                    <Landmark size={14} /> Estás pre-aprobado{preApp.approvedAmount ? ` hasta ${fmtRD(preApp.approvedAmount)}` : ''}
-                  </div>
-                  <button className="btn btn-primary btn-block btn-lg" style={{ marginTop: 10 }} disabled={attaching} onClick={usePreapproval}>
-                    {attaching ? <><Loader2 size={18} className="spin" /> Vinculando…</> : 'Usar mi pre-aprobación'}
-                  </button>
-                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-outline btn-block" style={{ marginTop: 8 }}>Empezar una nueva solicitud</Link>
-                </>
-              ) : (
-                <>
-                  {overBudget && (
-                    <div className="notice" style={{ marginTop: 14 }}>
-                      <Info size={16} /><span>Este vehículo ({fmtRD(v.price)}) supera tu pre-aprobación de {fmtRD(preApp.approvedAmount)}. Puedes solicitar financiamiento igualmente.</span>
-                    </div>
-                  )}
-                  {preApp && preExpired && (
-                    <div className="notice" style={{ marginTop: 14, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
-                      <Info size={16} /><span>Tu pre-aprobación venció. Solicita una nueva para confirmar tu monto y tasa actuales.</span>
-                    </div>
-                  )}
-                  <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-block btn-lg" style={{ marginTop: 14 }} onClick={() => trackEvent(v.id, 'financing')}>
-                    Solicitar financiamiento
-                  </Link>
-                  <button className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={() => setCalcOpen((o) => !o)}>
-                    {calcOpen ? 'Ocultar cálculo de cuota' : 'Ver cálculo de cuota'}
-                  </button>
-                </>
+              {preApp && preExpired && (
+                <div className="notice" style={{ marginTop: 14, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
+                  <Info size={16} /><span>Tu pre-aprobación venció. Solicita una nueva para confirmar tu monto y tasa actuales.</span>
+                </div>
               )}
+
+              {/* Pre-approval aware CTA: flags interest (and notifies the dealer)
+                  when the buyer is already approved for this car. */}
+              <div style={{ marginTop: 14 }}>
+                <PreapprovalCta vehicle={v} onNavigate={() => trackEvent(v.id, 'financing')} />
+              </div>
+
+              {/* Committing to THIS car — converts the interest and archives the rest. */}
+              {preApp && canUsePre && (
+                <button className="btn btn-navy btn-block" style={{ marginTop: 8 }} disabled={attaching} onClick={usePreapproval}>
+                  {attaching ? <><Loader2 size={18} className="spin" /> Vinculando…</> : 'Elegir este carro y usar mi pre-aprobación'}
+                </button>
+              )}
+
+              <button className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={() => setCalcOpen((o) => !o)}>
+                {calcOpen ? 'Ocultar cálculo de cuota' : 'Ver cálculo de cuota'}
+              </button>
 
               {calcOpen && (
                 <div className="card" style={{ marginTop: 12, padding: 14, background: 'var(--surface-2)', boxShadow: 'none' }}>
@@ -347,7 +340,13 @@ export default function VehicleDetail() {
           <div className="tiny muted">Desde</div>
           <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{money(v.monthly)}/mes</div>
         </div>
-        <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }} onClick={() => trackEvent(v.id, 'financing')}>Solicitar financiamiento</Link>
+        {preApp && canUsePre ? (
+          <button className="btn btn-primary" style={{ flex: 1.4 }} disabled={attaching} onClick={usePreapproval}>
+            {attaching ? <><Loader2 size={16} className="spin" /> Vinculando…</> : 'Usar mi pre-aprobación'}
+          </button>
+        ) : (
+          <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary" style={{ flex: 1.4 }} onClick={() => trackEvent(v.id, 'financing')}>Solicitar financiamiento</Link>
+        )}
       </div>
     </main>
   )
