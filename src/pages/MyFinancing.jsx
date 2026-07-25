@@ -182,7 +182,7 @@ export default function MyFinancing() {
             <div className="card card-pad" id="ofertas">
               <div className="section-title"><h2 style={{ fontSize: 18 }}>Respuestas de bancos</h2></div>
               <div className="col gap-12">
-                {c.responses.map((r) => <BankResponse key={r.bankId} r={r} appId={c.id} accepted={!!c.clientAcceptedAt} selectedSlug={c.selectedBankSlug} onAccepted={reloadFinancing} />)}
+                {c.responses.map((r) => <BankResponse key={r.bankId} r={r} appId={c.id} contractToken={c.contractToken} accepted={!!c.clientAcceptedAt} selectedSlug={c.selectedBankSlug} onAccepted={reloadFinancing} />)}
               </div>
               <div className="notice" style={{ marginTop: 16 }}>
                 <Info size={16} /><span>Cada banco realiza su propia evaluación de crédito de forma externa. AutoRD solo transmite tu solicitud y consentimiento y te muestra las respuestas.</span>
@@ -308,7 +308,7 @@ function DocumentRow({ doc, busy, onUpload }) {
   )
 }
 
-function BankResponse({ r, appId, accepted, selectedSlug, onAccepted }) {
+function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccepted }) {
   const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
   const [open, setOpen] = useState(false)
@@ -364,6 +364,11 @@ function BankResponse({ r, appId, accepted, selectedSlug, onAccepted }) {
             <button className="btn btn-outline btn-sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
               {open ? 'Ocultar detalle' : 'Ver detalle'}
             </button>
+            {contractToken && (
+              <a className="btn btn-outline btn-sm" href={`/contrato/${contractToken}?banco=${r.bankId}`} target="_blank" rel="noreferrer">
+                <FileSignature size={14} /> Contrato {b.name}
+              </a>
+            )}
           </div>
           {acceptErr && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{acceptErr}</div>}
           {accepted && isSelected && <div className="tiny muted" style={{ marginTop: 8 }}>El banco y el dealer fueron notificados. Te contactarán para completar seguro, firma y entrega.</div>}

@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { getPublicContract, getContractIdentity } from '../data/api'
 import { fmtRD } from '../data/demo'
+import BankLogo from '../components/BankLogo'
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }) : '—')
 
+const BANK_STATUS_LABEL = {
+  preaprobada: 'Pre-aprobada', oferta: 'Aprobada', condicional: 'Aprobada con condiciones',
+  pendiente_docs: 'Documentos solicitados', en_evaluacion: 'En evaluación',
+  rechazada: 'No aprobada', pendiente: 'En revisión',
+}
+
 export default function Contrato() {
   const { token = '' } = useParams()
+  const [params] = useSearchParams()
+  const bankSlug = (params.get('banco') || '').trim()
   const [state, setState] = useState('loading') // loading | ok | notfound
   const [c, setC] = useState(null)
   // Identity images: null while loading, then { authorized, idUrl, livenessUrl }.
@@ -39,29 +48,73 @@ export default function Contrato() {
   )
 
   const banks = Array.isArray(c.banks) ? c.banks : []
-  const banksText = banks.length ? banks.join(', ') : 'los bancos seleccionados'
+  const details = Array.isArray(c.bank_details) ? c.bank_details : []
+  // Each bank gets its OWN consent contract (?banco=<slug>): its brand, its
+  // terms, and consent language naming only that bank.
+  const bank = bankSlug ? details.find((b) => b.slug === bankSlug) : null
+  const banksText = bank ? bank.name : (banks.length ? banks.join(', ') : 'los bancos seleccionados')
 
   return (
     <main className="fc-page">
       <style>{CSS}</style>
       <div className="fc-wrap">
         <div className="fc-noprint fc-bar">
-          <b>Contrato de consentimiento · {c.code}</b>
+          <b>Contrato de consentimiento · {c.code}{bank ? ` · ${bank.name}` : ''}</b>
           <button onClick={() => window.print()} className="fc-print">Imprimir / Guardar PDF</button>
         </div>
 
+        {/* One consent per bank — pick which bank's contract to read. */}
+        {details.length > 0 && (
+          <div className="fc-noprint fc-bankpick">
+            <span className="fc-bankpick-label">Contrato por banco:</span>
+            <div className="fc-bankpick-row">
+              {details.map((b) => (
+                <Link key={b.slug} to={`/contrato/${token}?banco=${b.slug}`}
+                  className={`fc-bankpick-chip ${bank?.slug === b.slug ? 'on' : ''}`}
+                  style={bank?.slug === b.slug ? { borderColor: b.color, color: b.color } : undefined}>
+                  <BankLogo slug={b.slug} name={b.name} initials={b.initials} color={b.color} size={18} />
+                  {b.name}
+                </Link>
+              ))}
+              {bank && <Link to={`/contrato/${token}`} className="fc-bankpick-chip">Ver general</Link>}
+            </div>
+          </div>
+        )}
+
         <article className="fc-doc">
-          <header className="fc-hero">
+          <header className="fc-hero" style={bank ? { background: `linear-gradient(135deg, ${bank.color}, #0c2033)` } : undefined}>
             <div className="fc-status"><span>CONTRATO DE CONSENTIMIENTO</span><span>{c.code}</span></div>
             <div className="fc-brand">
               <div className="fc-logo"><span className="a1">Auto</span><span className="a2">RD</span></div>
               <div className="fc-org">
-                <h1>AutoRD</h1>
-                <p>Marketplace y gestión de financiamiento de vehículos · República Dominicana</p>
+                <h1>AutoRD{bank ? ` · ${bank.name}` : ''}</h1>
+                <p>{bank
+                  ? `Consentimiento para evaluación de crédito con ${bank.name} · República Dominicana`
+                  : 'Marketplace y gestión de financiamiento de vehículos · República Dominicana'}</p>
               </div>
-              <div className="fc-badge">Verificación<br /><b>DIDIT</b></div>
+              {bank
+                ? <div className="fc-banklogo"><BankLogo slug={bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={44} /></div>
+                : <div className="fc-badge">Verificación<br /><b>DIDIT</b></div>}
             </div>
           </header>
+
+          {/* The terms THIS bank offered (only on a bank-specific contract). */}
+          {bank && (
+            <section className="fc-section">
+              <h2>Condiciones ofrecidas por {bank.name}</h2>
+              <div className="fc-details">
+                <div className="fc-detail"><span>Estado</span><b>{BANK_STATUS_LABEL[bank.status] || bank.status}</b></div>
+                {bank.approvedAmount ? <div className="fc-detail"><span>Monto aprobado</span><b>{fmtRD(bank.approvedAmount)}</b></div> : null}
+                <div className="fc-detail"><span>Tasa anual</span><b>{bank.apr ? `${bank.apr}%` : '—'}</b></div>
+                <div className="fc-detail"><span>Plazo</span><b>{bank.term ? `${bank.term} años` : '—'}</b></div>
+                <div className="fc-detail"><span>Cuota estimada</span><b>{bank.monthly ? `${fmtRD(bank.monthly)}/mes` : '—'}</b></div>
+                <div className="fc-detail"><span>Inicial requerido</span><b>{bank.down ? fmtRD(bank.down) : '—'}</b></div>
+                <div className="fc-detail"><span>Vigencia</span><b>{bank.validUntil ? `Hasta ${new Date(`${bank.validUntil}T12:00:00`).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Sin vencimiento'}</b></div>
+                <div className="fc-detail"><span>Respondido</span><b>{bank.respondedAt ? fmtDate(bank.respondedAt) : 'Pendiente'}</b></div>
+              </div>
+              {bank.notes ? <p style={{ marginTop: 10 }}><b>Condiciones del banco.</b> {bank.notes}</p> : null}
+            </section>
+          )}
 
           <section className="fc-meta">
             <div><span>Fecha</span><b>{fmtDate(c.consent_at || c.created_at)}</b></div>
@@ -162,6 +215,13 @@ const CSS = `
 .fc-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #334155; font-size: 14px; }
 .fc-print { border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 9px 15px; font-weight: 800; font-size: 13px; cursor: pointer; }
 .fc-doc { overflow: hidden; border: 1px solid #dfe7f0; border-radius: 22px; background: #fff; box-shadow: 0 12px 36px rgba(15,23,42,.08); color: #172033; font: 12px/1.55 system-ui, -apple-system, Segoe UI, Arial, sans-serif; }
+.fc-bankpick { margin-bottom: 12px; }
+.fc-bankpick-label { display: block; font-size: 11.5px; color: #64748b; margin-bottom: 6px; }
+.fc-bankpick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.fc-bankpick-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px;
+  border: 1px solid #d9e2ec; background: #fff; color: #334155; text-decoration: none; font-size: 12.5px; font-weight: 600; }
+.fc-bankpick-chip.on { border-width: 2px; font-weight: 800; }
+.fc-banklogo { background: #fff; border-radius: 12px; padding: 7px; display: inline-flex; }
 .fc-hero { padding: 25px 27px 23px; background: linear-gradient(135deg, #0f766e, #0c2033); color: #fff; }
 .fc-status { display: flex; justify-content: space-between; gap: 10px; font-size: 10px; font-weight: 900; letter-spacing: .11em; }
 .fc-status span { display: inline-flex; border: 1px solid #ffffff42; border-radius: 999px; padding: 5px 9px; }

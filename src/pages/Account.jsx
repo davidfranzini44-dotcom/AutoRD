@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Heart, FileText, ShieldCheck, ShieldAlert, MessageCircle,
-  ChevronRight, LogOut, User, Landmark, Clock, Bell,
+  ChevronRight, LogOut, User, Landmark, Clock, Bell, Loader2,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import WhatsAppIcon from '../components/WhatsAppIcon'
-import { getMyFinancing, myUnreadCount } from '../data/api'
+import { getMyFinancing, myUnreadCount, sendPhoneOtp, verifyPhoneOtp } from '../data/api'
 import { fmtRD } from '../data/demo'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
@@ -17,7 +17,7 @@ import { kycValidity, fmtKycDate } from '../data/kyc'
 // identity and WhatsApp contact. Read-only summary that links out to the
 // dedicated pages — the account itself lives in Supabase Auth + `profiles`.
 export default function Account() {
-  const { user, profile, signOut } = useAuth() || {}
+  const { user, profile, signOut, refreshProfile } = useAuth() || {}
   const [favs, setFavs] = useState(favoriteCount())
   const [alerts, setAlerts] = useState(savedSearchCount())
   const [viewed, setViewed] = useState(recentlyViewedCount())
@@ -153,7 +153,7 @@ export default function Account() {
 
           {/* Identity (KYC) — valid for 12 months, then re-verify */}
           <HubRow
-            to="/financiamiento"
+            to="/verificar"
             icon={kyc.valid ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
             tone={kyc.valid ? 'green' : 'amber'}
             title="Identidad"
@@ -165,14 +165,8 @@ export default function Account() {
             badge={kyc.valid ? 'Vigente' : kyc.verified ? 'Vencida' : null}
           />
 
-          {/* WhatsApp */}
-          <HubRow
-            to="/financiamiento"
-            icon={<WhatsAppIcon size={20} />}
-            tone="green"
-            title="WhatsApp"
-            sub={phone ? `+${String(phone).replace(/^\+/, '')}` : 'No has agregado un número'}
-          />
+          {/* WhatsApp — add / verify the number right here (no dead-end link) */}
+          <WhatsAppRow phone={phone} verifiedAt={profile?.phone_verified_at} onSaved={refreshProfile} />
         </div>
 
         {/* Discover */}
@@ -200,18 +194,101 @@ const TONE = {
   amber: { bg: 'var(--amber-bg)', fg: 'var(--amber)' },
 }
 
+// Add / verify the WhatsApp number in place — the row used to link to the
+// financing wizard, which was a dead end for someone just managing their number.
+function WhatsAppRow({ phone, verifiedAt, onSaved }) {
+  const t = TONE.green
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState(phone ? String(phone).replace(/^\+?1?/, '') : '')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState('phone') // phone | code | done
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const digits = value.replace(/[^0-9]/g, '')
+
+  async function send() {
+    if (digits.length < 10) { setErr('Escribe tu número de 10 dígitos.'); return }
+    setBusy(true); setErr('')
+    const r = await sendPhoneOtp(`1${digits}`, 'claim')
+    setBusy(false)
+    if (r?.ok !== false) setStep('code')
+    else setErr(r.error === 'gateway_offline' ? 'WhatsApp no está disponible ahora mismo.' : 'No pudimos enviar el código.')
+  }
+  async function verify() {
+    if (code.length !== 6) return
+    setBusy(true); setErr('')
+    const r = await verifyPhoneOtp(`1${digits}`, code)
+    setBusy(false)
+    if (r?.verified || r?.ok) { setStep('done'); onSaved?.() }
+    else setErr('Código incorrecto o vencido.')
+  }
+
+  return (
+    <div className="card card-pad">
+      <button type="button" className="hubrow-btn" onClick={() => setOpen((o) => !o)}>
+        <div className="hubrow-main">
+          <div className="verify-ic hubrow-ic" style={{ background: t.bg, color: t.fg }}><WhatsAppIcon size={20} /></div>
+          <div className="hubrow-text">
+            <div className="strong">WhatsApp</div>
+            <div className="tiny muted hubrow-sub">
+              {phone ? `+1 ${String(phone).replace(/^\+?1?/, '')}` : 'No has agregado un número'}
+              {phone && verifiedAt ? ' · verificado' : ''}
+            </div>
+          </div>
+        </div>
+        <div className="hubrow-end">
+          {phone && verifiedAt && <span className="chip chip-teal">Verificado</span>}
+          <ChevronRight size={18} className="muted" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }} />
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-2)' }}>
+          {step === 'done' ? (
+            <div className="tiny" style={{ color: 'var(--green)' }}>Número verificado. Te avisaremos por WhatsApp sobre tu financiamiento.</div>
+          ) : step === 'code' ? (
+            <>
+              <div className="tiny muted" style={{ marginBottom: 8 }}>Escribe el código que enviamos a +1 {digits}.</div>
+              <div className="row gap-8 wrap">
+                <input className="input" inputMode="numeric" maxLength={6} placeholder="000000" value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))} style={{ maxWidth: 140, letterSpacing: '.2em', textAlign: 'center' }} />
+                <button className="btn btn-primary btn-sm" disabled={busy || code.length !== 6} onClick={verify}>
+                  {busy ? <Loader2 size={14} className="spin" /> : 'Verificar'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setStep('phone')}>Cambiar número</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="tiny muted" style={{ marginBottom: 8 }}>Verifica tu WhatsApp para recibir avisos de tu financiamiento.</div>
+              <div className="row gap-8 wrap">
+                <input className="input" inputMode="tel" placeholder="809 555 0100" value={value}
+                  onChange={(e) => setValue(e.target.value.replace(/[^0-9\s-]/g, ''))} style={{ maxWidth: 180 }} />
+                <button className="btn btn-primary btn-sm" disabled={busy || digits.length < 10} onClick={send}>
+                  {busy ? <Loader2 size={14} className="spin" /> : 'Enviar código'}
+                </button>
+              </div>
+            </>
+          )}
+          {err && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{err}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function HubRow({ to, icon, tone = 'teal', title, sub, badge }) {
   const t = TONE[tone] || TONE.teal
   return (
-    <Link to={to} className="card card-pad row between center" style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div className="row center gap-12" style={{ minWidth: 0 }}>
-        <div className="verify-ic" style={{ width: 44, height: 44, borderRadius: 12, background: t.bg, color: t.fg, flex: 'none' }}>{icon}</div>
-        <div style={{ minWidth: 0 }}>
+    <Link to={to} className="card card-pad hubrow-btn" style={{ textDecoration: 'none', color: 'inherit' }}>
+      <div className="hubrow-main">
+        <div className="verify-ic hubrow-ic" style={{ background: t.bg, color: t.fg }}>{icon}</div>
+        <div className="hubrow-text">
           <div className="strong">{title}</div>
-          <div className="tiny muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>
+          <div className="tiny muted hubrow-sub">{sub}</div>
         </div>
       </div>
-      <div className="row center gap-8" style={{ flex: 'none' }}>
+      <div className="hubrow-end">
         {badge && <span className="chip chip-teal">{badge}</span>}
         <ChevronRight size={18} className="muted" />
       </div>

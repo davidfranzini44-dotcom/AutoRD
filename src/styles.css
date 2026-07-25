@@ -4601,3 +4601,26 @@ select.preap-input { padding-right: 16px; }
   .bankx-expmodal { width: 100%; height: 100vh; max-height: 100vh; border-radius: 0; border: 0; }
   .bankx-expmodal-body { padding: 14px; }
 }
+
+/* ---------- Account hub rows (Mi cuenta) ----------
+   The subtitle now carries real content (approved amount + chosen car), so it
+   must wrap on narrow screens instead of being clipped to one ellipsised line. */
+.hubrow-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; text-align: left; background: none; border: 0; cursor: pointer; font: inherit; color: inherit;
+}
+.hubrow-main { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.hubrow-ic { width: 44px; height: 44px; border-radius: 12px; flex: none; }
+.hubrow-text { min-width: 0; }
+.hubrow-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hubrow-end { display: flex; align-items: center; gap: 8px; flex: none; }
+
+@media (max-width: 560px) {
+  .hubrow-btn { align-items: flex-start; gap: 10px; }
+  .hubrow-main { align-items: flex-start; }
+  .hubrow-ic { width: 38px; height: 38px; border-radius: 10px; }
+  /* let the subtitle breathe over two lines rather than truncating it */
+  .hubrow-sub { white-space: normal; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .hubrow-end { flex-direction: column-reverse; align-items: flex-end; gap: 6px; }
+  .hubrow-end .chip { font-size: 10.5px; padding: 2px 8px; height: auto; }
+}
