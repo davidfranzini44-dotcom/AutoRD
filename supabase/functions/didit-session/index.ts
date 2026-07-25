@@ -41,8 +41,35 @@ Deno.serve(async (req) => {
         headers: { 'x-api-key': apiKey },
       })
       const d = await r.json().catch(() => ({}))
-      const status = d?.status ?? 'Unknown'
-      return json({ status, approved: status === 'Approved', declined: status === 'Declined' })
+      let status = d?.status ?? 'Unknown'
+      let approved = status === 'Approved'
+      let declined = status === 'Declined'
+      let graced = false
+
+      // OUR record is authoritative once the webhook applied the DR expired-
+      // cédula grace: Didit keeps reporting Declined / In Progress for that
+      // session, so polling Didit alone left a graced applicant stuck on the
+      // verification screen forever. Read the row this user owns (RLS-scoped).
+      if (!approved && session_id) {
+        const { data: row } = await supa
+          .from('kyc_verifications')
+          .select('status, didit_status')
+          .eq('didit_session_id', session_id)
+          .eq('profile_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (row?.status === 'aprobado') {
+          approved = true
+          declined = false
+          graced = true
+          status = row.didit_status ?? status
+        } else if (row?.status === 'rechazado') {
+          declined = true
+        }
+      }
+
+      return json({ status, approved, declined, graced })
     }
 
     // action === 'create'

@@ -515,6 +515,9 @@ export async function createApplication(payload) {
     const { data: c } = await supabase.rpc('seal_financing_contract', { p_application: app.id })
     contractHash = (Array.isArray(c) ? c[0] : c)?.hash || null
   } catch (_) { /* non-fatal — the token already exists via column default */ }
+  // The client accepted the terms once: issue an individually hashed consent for
+  // EACH routed bank, so every bank holds its own proof of authorization.
+  try { await supabase.rpc('sign_financing_consents', { p_application_id: app.id }) } catch (_) { /* non-fatal */ }
   return { ...app, contract_hash: contractHash }
 }
 

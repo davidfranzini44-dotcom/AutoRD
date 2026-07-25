@@ -159,7 +159,13 @@ function expiredCedulaOnly(d: any): boolean {
   if (!d) return false
   const blocking = collectWarnings(d).filter((w) => w.blocking)
   if (blocking.some((w) => !EXPIRY_RE.test(w.text))) return false // a real, non-expiry problem
-  if (!checkPassed(d?.liveness_checks ?? d?.liveness) || !checkPassed(d?.face_matches ?? d?.face_match)) return false
+  // Liveness must have actually RUN and passed. On a still-in-progress session
+  // the checks are absent, and "absent" must not count as success — otherwise a
+  // half-finished session could be graced before the person proves they're live.
+  const live = Array.isArray(d?.liveness_checks) ? d.liveness_checks[0] : (d?.liveness_checks ?? d?.liveness)
+  if (!live || !checkPassed(live)) return false
+  // Face match is workflow-dependent: if it ran, it must pass.
+  if (!checkPassed(d?.face_matches ?? d?.face_match)) return false
   return blocking.some((w) => EXPIRY_RE.test(w.text)) || documentExpired(d)
 }
 

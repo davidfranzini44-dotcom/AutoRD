@@ -180,10 +180,22 @@ export default function Contrato() {
 
           <section className="fc-signature">
             <div>
-              <small>Contrato generado y sellado tras la verificación de identidad (DIDIT).</small>
-              <div className="fc-hash">Hash: {c.hash || 'Pendiente'}</div>
+              <small>
+                {bank
+                  ? `Autorización otorgada a ${bank.name} al aceptar los términos, tras la verificación de identidad (DIDIT). Cada banco recibe su propia autorización, sellada de forma independiente.`
+                  : 'Contrato generado y sellado tras la verificación de identidad (DIDIT).'}
+              </small>
+              <div className="fc-hash">
+                {bank
+                  ? `Hash de esta autorización (${bank.name}): ${bank.consentHash || 'Pendiente'}`
+                  : `Hash: ${c.hash || 'Pendiente'}`}
+              </div>
             </div>
-            <div className="fc-sign"><b>Firma verificada por DIDIT</b><br />{c.customer}<br /><small>{fmtDate(c.consent_at)}</small></div>
+            <div className="fc-sign">
+              <b>Firma verificada por DIDIT</b><br />{c.customer}<br />
+              <small>{fmtDate(bank?.signedAt || c.consent_at)}</small>
+              {bank?.consentVersion ? <small>Consentimiento {bank.consentVersion}</small> : null}
+            </div>
           </section>
 
           <footer className="fc-footer">AutoRD · Documento generado automáticamente · Versión {c.version || 'v1.0'} · Conserva este contrato para cualquier consulta.</footer>
