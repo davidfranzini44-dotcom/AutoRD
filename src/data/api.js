@@ -567,6 +567,7 @@ export async function getMyFinancing() {
     approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
     validUntil: r.valid_until || null,
     expired: isValidityExpired(r.valid_until),
+    selected: !!r.selected,
   }))
   const hasOffer = responses.some((r) => r.status === 'offer')
   const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
@@ -592,6 +593,8 @@ export async function getMyFinancing() {
     down: app.down_payment != null ? Number(app.down_payment) : null,
     term: app.term_years,
     approvedAmount,
+    clientAcceptedAt: app.client_accepted_at || null,
+    selectedBankSlug: responses.find((r) => r.selected)?.bankId || null,
     responses,
     timeline,
   }
@@ -670,6 +673,14 @@ export async function activateFinancingAccount(token) {
   const { error: signErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
   if (signErr) return { ok: false, error: signErr.message }
   return { ok: true, linked: data.linked }
+}
+
+// Authenticated buyer accepts an offer from /mi-financiamiento (gated on ownership).
+export async function acceptFinancingOfferAuth(applicationId, bankSlug) {
+  if (!LIVE) return { ok: true, bankName: bankSlug }
+  const { data, error } = await supabase.rpc('accept_financing_offer_auth', { p_application_id: applicationId, p_bank_slug: bankSlug })
+  if (error) return { ok: false, reason: 'error' }
+  return data
 }
 
 // Bank/dealer/buyer/admin: mint (or reuse) the client's secure link for an app.

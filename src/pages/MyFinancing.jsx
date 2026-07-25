@@ -5,7 +5,7 @@ import {
   ChevronRight, Upload, Info, Car, FileWarning, FileText,
 } from 'lucide-react'
 import { banks, fmtRD } from '../data/demo'
-import { getApplicationDocuments, getMyFinancing, uploadApplicationDocument } from '../data/api'
+import { getApplicationDocuments, getMyFinancing, uploadApplicationDocument, acceptFinancingOfferAuth } from '../data/api'
 import StatusChip from '../components/StatusChip'
 import CarImage from '../components/CarImage'
 import BankLogo from '../components/BankLogo'
@@ -26,6 +26,8 @@ export default function MyFinancing() {
   const [docsLoading, setDocsLoading] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(null)
   const [docError, setDocError] = useState('')
+
+  const reloadFinancing = () => getMyFinancing().then((d) => setC(d)).catch(() => {})
 
   useEffect(() => {
     let alive = true
@@ -180,7 +182,7 @@ export default function MyFinancing() {
             <div className="card card-pad" id="ofertas">
               <div className="section-title"><h2 style={{ fontSize: 18 }}>Respuestas de bancos</h2></div>
               <div className="col gap-12">
-                {c.responses.map((r) => <BankResponse key={r.bankId} r={r} />)}
+                {c.responses.map((r) => <BankResponse key={r.bankId} r={r} appId={c.id} accepted={!!c.clientAcceptedAt} selectedSlug={c.selectedBankSlug} onAccepted={reloadFinancing} />)}
               </div>
               <div className="notice" style={{ marginTop: 16 }}>
                 <Info size={16} /><span>Cada banco realiza su propia evaluación de crédito de forma externa. AutoRD solo transmite tu solicitud y consentimiento y te muestra las respuestas.</span>
@@ -306,10 +308,20 @@ function DocumentRow({ doc, busy, onUpload }) {
   )
 }
 
-function BankResponse({ r }) {
+function BankResponse({ r, appId, accepted, selectedSlug, onAccepted }) {
   const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
   const [open, setOpen] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [acceptErr, setAcceptErr] = useState('')
+  const isSelected = r.selected || r.bankId === selectedSlug
+  async function accept() {
+    setAccepting(true); setAcceptErr('')
+    const res = await acceptFinancingOfferAuth(appId, r.bankId)
+    setAccepting(false)
+    if (res && res.ok) onAccepted?.()
+    else setAcceptErr('No pudimos registrar tu aceptación. Intenta de nuevo.')
+  }
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
       <div className="row center gap-12" style={{ padding: '14px 16px' }}>
@@ -338,14 +350,23 @@ function BankResponse({ r }) {
             <Term l="Inicial requerido" v={r.down ? fmtRD(r.down) : '—'} />
             <Term l="Cuota mensual" v={r.monthly ? fmtRD(r.monthly) : '—'} />
           </div>
-          <div className="row gap-8" style={{ marginTop: 12 }}>
+          <div className="row gap-8 wrap" style={{ marginTop: 12 }}>
+            {accepted && isSelected
+              ? <span className="chip chip-teal" style={{ height: 34, padding: '0 12px' }}><Check size={14} /> Oferta aceptada</span>
+              : !accepted
+                ? <button className="btn btn-primary btn-sm" disabled={accepting} onClick={accept}>
+                    {accepting ? <><Loader2 size={14} className="spin" /> Registrando…</> : `Aceptar ${r.approvedAmount ? 'pre-aprobación' : 'oferta'}`}
+                  </button>
+                : null}
             {r.approvedAmount
-              ? <Link to={`/buscar?precioMax=${r.approvedAmount}`} className="btn btn-primary btn-sm">Ver carros dentro de tu presupuesto</Link>
+              ? <Link to={`/buscar?precioMax=${r.approvedAmount}`} className="btn btn-outline btn-sm">Ver carros dentro de tu presupuesto</Link>
               : null}
             <button className="btn btn-outline btn-sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
               {open ? 'Ocultar detalle' : 'Ver detalle'}
             </button>
           </div>
+          {acceptErr && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{acceptErr}</div>}
+          {accepted && isSelected && <div className="tiny muted" style={{ marginTop: 8 }}>El banco y el dealer fueron notificados. Te contactarán para completar seguro, firma y entrega.</div>}
           {open && (
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--green-bd)' }}>
               <div className="kv"><span className="k">Banco</span><span className="v strong">{b.name}</span></div>
