@@ -170,9 +170,9 @@ function PreApprovedCard({ lead }) {
           <div className="strong">{lead.customer}</div>
           <div className="tiny muted">{lead.vehicle}</div>
         </div>
-        <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}>
-          <BadgeCheck size={13} /> {pa.approvedAmount ? `Pre-aprobado hasta ${fmtMoney(pa.approvedAmount, 'DOP')}` : 'Pre-aprobado'}
-        </span>
+        {lead.clientAccepted
+          ? <span className="chip" style={{ background: '#16a34a', color: '#fff' }}><BadgeCheck size={13} /> Cliente aceptó{lead.acceptedBank ? ` · ${lead.acceptedBank}` : ''}</span>
+          : <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><BadgeCheck size={13} /> {pa.approvedAmount ? `Pre-aprobado hasta ${fmtMoney(pa.approvedAmount, 'DOP')}` : 'Pre-aprobado'}</span>}
       </div>
       <div className="row wrap gap-16" style={{ margin: '10px 0' }}>
         <Metric label="Banco" value={pa.bankName || '—'} />

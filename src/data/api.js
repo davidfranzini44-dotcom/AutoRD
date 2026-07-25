@@ -872,7 +872,7 @@ export async function getDealerData(dealerDbId) {
   const [{ data: inv }, { data: leads }] = await Promise.all([
     supabase.from('vehicles').select(VEHICLE_SELECT).eq('dealer_id', dealerDbId),
     supabase.from('financing_applications')
-      .select('*, vehicle:vehicles(make, model, year), responses:application_banks(status, approved_amount, valid_until, bank:banks(name))')
+      .select('*, vehicle:vehicles(make, model, year), responses:application_banks(status, approved_amount, valid_until, selected, bank:banks(name))')
       .eq('dealer_id', dealerDbId).order('created_at', { ascending: false }),
   ])
   return {
@@ -882,6 +882,7 @@ export async function getDealerData(dealerDbId) {
       // The buyer's active pre-approval / offer for THIS car → fast-track for the dealer.
       const pre = resp.find((r) => ['preaprobada', 'oferta', 'condicional'].includes(r.status)
         && !isValidityExpired(r.valid_until))
+      const chosen = resp.find((r) => r.selected)
       return {
         buyerId: a.buyer_id,
         customer: a.buyer_name,
@@ -894,6 +895,9 @@ export async function getDealerData(dealerDbId) {
           approvedAmount: pre.approved_amount != null ? Number(pre.approved_amount) : null,
           validUntil: pre.valid_until || null,
         } : null,
+        clientAccepted: a.client_accepted_at != null,
+        acceptedBank: chosen?.bank?.name || null,
+        reservedUntil: a.reserved_until || null,
       }
     }),
   }
@@ -1097,6 +1101,9 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       expired: isValidityExpired(r.valid_until),
       vehicleLinkedAt: r.app?.vehicle_linked_at || null,
       buyerId: r.app?.buyer_id || null,
+      clientAccepted: r.app?.client_accepted_at != null,
+      selectedByClient: !!r.selected,
+      reservedUntil: r.app?.reserved_until || null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
       contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,

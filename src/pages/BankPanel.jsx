@@ -421,7 +421,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
               <span className="pill">Solicitud {a.id}</span>
               <h2>{a.customer}</h2>
               <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
-              {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval)) && (
+              {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval) || a.clientAccepted) && (
                 <div className="row wrap gap-6" style={{ marginTop: 8 }}>
                   {a.validUntil && (
                     <span className="pill" style={{ background: a.expired ? 'rgba(220,38,38,.14)' : 'rgba(22,128,92,.14)', color: a.expired ? '#dc2626' : '#12805c' }}>
@@ -430,6 +430,12 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
                   )}
                   {a.vehicleLinkedAt && !a.isPreapproval && (
                     <span className="pill" style={{ background: 'rgba(37,99,235,.14)', color: '#2563eb' }}>Cliente eligió vehículo · {fmtDay(a.vehicleLinkedAt)}</span>
+                  )}
+                  {a.selectedByClient && (
+                    <span className="pill" style={{ background: 'rgba(22,163,74,.16)', color: '#166534', fontWeight: 700 }}><CheckCircle2 size={12} /> El cliente aceptó tu oferta</span>
+                  )}
+                  {a.clientAccepted && !a.selectedByClient && (
+                    <span className="pill" style={{ background: 'rgba(100,116,139,.14)', color: '#475569' }}>Cliente aceptó otra oferta</span>
                   )}
                 </div>
               )}
