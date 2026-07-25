@@ -10,6 +10,7 @@ import { fmtRD } from '../data/demo'
 import { estimateMonthly } from '../data/finance'
 import {
   getFinancingPreview, verifyFinancingCedula, startFinancingOtp, verifyFinancingOtp, getFinancingByToken,
+  acceptFinancingOffer,
 } from '../data/api'
 
 const STATUS = {
@@ -79,7 +80,7 @@ export default function FinancingPublic() {
         </header>
 
         {step === 'portal' && full
-          ? <Portal full={full} token={token} />
+          ? <Portal full={full} token={token} onReload={loadFull} />
           : <Verify preview={preview} step={step} setStep={setStep} token={token} onDone={loadFull} />}
       </div>
       <PortalStyles />
@@ -215,7 +216,17 @@ function OtpStep({ preview, token, onOk }) {
 }
 
 /* ---------------- Read-only portal (after verification) ---------------- */
-function Portal({ full }) {
+function Portal({ full, token, onReload }) {
+  const [accepting, setAccepting] = useState(null)
+  const [acceptErr, setAcceptErr] = useState('')
+  const accepted = !!full.clientAcceptedAt
+  const selectedSlug = full.selectedBankSlug
+  async function accept(bankSlug) {
+    setAccepting(bankSlug); setAcceptErr('')
+    const r = await acceptFinancingOffer(token, bankSlug)
+    setAccepting(null)
+    if (r && r.ok) onReload(); else setAcceptErr('No pudimos registrar tu aceptación. Intenta de nuevo.')
+  }
   const best = useMemo(() => {
     const order = { oferta: 5, condicional: 4, preaprobada: 3, pendiente_docs: 2, en_evaluacion: 1, pendiente: 0, rechazada: -1 }
     return [...(full.responses || [])].sort((a, b) => (order[b.status] ?? 0) - (order[a.status] ?? 0))[0] || null
@@ -268,13 +279,30 @@ function Portal({ full }) {
         {full.vehicle && <div className="cfp-wallet-veh"><Car size={14} /> {full.vehicle.make} {full.vehicle.model} {full.vehicle.year} · {full.vehicle.dealer}</div>}
       </div>
 
+      {/* Acceptance confirmation */}
+      {accepted && (
+        <div className="cfp-accepted">
+          <CheckCircle2 size={20} />
+          <div>
+            <div className="strong small">Aceptaste {selectedSlug ? `la oferta de ${(full.responses.find((r) => r.bankSlug === selectedSlug) || {}).bankName || 'tu banco'}` : 'tu oferta'}</div>
+            <div className="tiny">El dealer y el banco fueron notificados. Te contactarán para completar seguro, firma y entrega.{full.reservedUntil ? ` Vehículo reservado hasta ${fmtDay(full.reservedUntil)}.` : ''}</div>
+          </div>
+        </div>
+      )}
+
       {/* Primary actions */}
       <div className="cfp-actions">
+        {!accepted && best && ['preaprobada', 'oferta', 'condicional'].includes(best.status) && (
+          <button className="btn btn-primary btn-block" disabled={!!accepting} onClick={() => accept(best.bankSlug)}>
+            {accepting ? <><Loader2 size={16} className="spin" /> Registrando…</> : <><CheckCircle2 size={16} /> {kind === 'approved' ? 'Aceptar esta oferta' : 'Aceptar pre-aprobación'}</>}
+          </button>
+        )}
+        {acceptErr && <div className="cfp-err" style={{ textAlign: 'center' }}>{acceptErr}</div>}
         {(kind === 'preapproved') && ceiling > 0 && (
-          <Link to={`/buscar?precioMax=${ceiling}`} className="btn btn-primary btn-block"><Car size={16} /> Ver vehículos elegibles</Link>
+          <Link to={`/buscar?precioMax=${ceiling}`} className="btn btn-outline btn-block"><Car size={16} /> Ver vehículos elegibles</Link>
         )}
         {kind === 'approved' && full.vehicle && (
-          <Link to={`/vehiculo/${full.vehicle.slug || full.vehicle.id}`} className="btn btn-primary btn-block">Continuar con la compra <ChevronRight size={16} /></Link>
+          <Link to={`/vehiculo/${full.vehicle.slug || full.vehicle.id}`} className="btn btn-outline btn-block">Continuar con la compra <ChevronRight size={16} /></Link>
         )}
         <a className="btn btn-block" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} /> Preguntar por WhatsApp</a>
       </div>
@@ -284,27 +312,59 @@ function Portal({ full }) {
         <NextSteps kind={kind} hasVehicle={!!full.vehicle} />
       </Section>
 
-      {/* Bank offers */}
+      {/* Bank offers — accept one; it becomes the active offer */}
       {(full.responses || []).filter((r) => r.status !== 'pendiente').length > 0 && (
         <Section title="Ofertas de los bancos">
           <div className="col gap-8">
-            {full.responses.filter((r) => r.status !== 'pendiente').map((r, i) => (
-              <div className="cfp-offer" key={i}>
-                <div className="row center gap-10" style={{ minWidth: 0 }}>
-                  <BankLogo slug={r.bankSlug} name={r.bankName} initials={r.bankInitials} color={r.bankColor} size={26} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="strong small">{r.bankName}</div>
-                    <div className="tiny muted">{r.apr ? `${r.apr}%` : '—'}{r.monthly ? ` · ${fmtRD(Math.round(r.monthly))}/mes` : ''}{r.term ? ` · ${r.term} años` : ''}</div>
+            {full.responses.filter((r) => r.status !== 'pendiente').map((r, i) => {
+              const positive = ['preaprobada', 'oferta', 'condicional'].includes(r.status)
+              const isSel = r.selected || r.bankSlug === selectedSlug
+              return (
+                <div className={`cfp-offer ${isSel ? 'sel' : ''}`} key={i}>
+                  <div className="row between center" style={{ gap: 10 }}>
+                    <div className="row center gap-10" style={{ minWidth: 0 }}>
+                      <BankLogo slug={r.bankSlug} name={r.bankName} initials={r.bankInitials} color={r.bankColor} size={26} />
+                      <div style={{ minWidth: 0 }}>
+                        <div className="strong small">{r.bankName}</div>
+                        <div className="tiny muted">{r.apr ? `${r.apr}%` : '—'}{r.monthly ? ` · ${fmtRD(Math.round(r.monthly))}/mes` : ''}{r.term ? ` · ${r.term} años` : ''}</div>
+                      </div>
+                    </div>
+                    <div className="row center gap-8">
+                      {r.approvedAmount ? <span className="tiny strong" style={{ color: 'var(--teal-800)' }}>{fmtRD(r.approvedAmount)}</span> : null}
+                      <Pill s={r.status} />
+                    </div>
                   </div>
+                  {positive && (isSel ? (
+                    <div className="cfp-offer-sel"><CheckCircle2 size={13} /> Oferta seleccionada</div>
+                  ) : !accepted ? (
+                    <button className="btn btn-outline btn-sm cfp-offer-btn" disabled={!!accepting} onClick={() => accept(r.bankSlug)}>
+                      {accepting === r.bankSlug ? <><Loader2 size={13} className="spin" /> …</> : 'Elegir esta oferta'}
+                    </button>
+                  ) : null)}
                 </div>
-                <div className="row center gap-8">
-                  {r.approvedAmount ? <span className="tiny strong" style={{ color: 'var(--teal-800)' }}>{fmtRD(r.approvedAmount)}</span> : null}
-                  <Pill s={r.status} />
+              )
+            })}
+          </div>
+        </Section>
+      )}
+
+      {/* Financing calculator */}
+      {ceiling > 0 && <CalcSection ceiling={ceiling} apr={best?.apr || 12} defTerm={best?.term || full.term || 7} defPrice={full.vehicle?.price || ceiling} />}
+
+      {/* Activity timeline (audit) */}
+      {(full.events || []).length > 0 && (
+        <Section title="Actividad">
+          <div className="cfp-activity">
+            {full.events.map((e, i) => (
+              <div className="cfp-act-row" key={i}>
+                <span className={`cfp-act-dot ${e.kind}`} />
+                <div className="grow">
+                  <div className="small">{eventLabel(e)}</div>
+                  <div className="tiny muted">{e.actor} · {fmtWhen(e.at)}</div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="tiny muted" style={{ marginTop: 8 }}>Aceptar una oferta y coordinar la firma estará disponible muy pronto.</div>
         </Section>
       )}
 
@@ -348,6 +408,53 @@ function NextSteps({ kind, hasVehicle }) {
 const Fact = ({ k, v }) => <div className="cfp-fact"><span>{k}</span><b>{v}</b></div>
 const Section = ({ title, children }) => <div className="cfp-section"><h3>{title}</h3>{children}</div>
 
+const fmtWhen = (at) => { const d = new Date(at); return Number.isFinite(d.getTime()) ? d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }) + ' · ' + d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' }) : '' }
+function eventLabel(e) {
+  if (e.kind === 'verified') return 'Confirmaste tu identidad'
+  if (e.kind === 'accepted') return `Aceptaste la oferta${e.detail ? ` de ${e.detail}` : ''}`
+  if (e.kind === 'vehicle_linked') return 'Se vinculó un vehículo a tu solicitud'
+  if (e.kind === 'bank_decision') return `Un banco respondió: ${STATUS[e.detail]?.label || e.detail}`
+  return e.detail || e.kind
+}
+
+// Client-side "what fits" calculator — adjust price / inicial / plazo.
+function CalcSection({ ceiling, apr, defTerm, defPrice }) {
+  const [price, setPrice] = useState(defPrice)
+  const [down, setDown] = useState(Math.min(defPrice, Math.round(defPrice * 0.2)))
+  const [term, setTerm] = useState(defTerm)
+  const financed = Math.max(0, price - down)
+  const monthly = financed > 0 ? estimateMonthly(financed, apr, term * 12) : 0
+  const fits = financed <= ceiling
+  const needMoreDown = fits ? 0 : financed - ceiling
+  return (
+    <Section title="Calcula tu cuota">
+      <div className="cfp-calc">
+        <label className="cfp-calc-field">
+          <span>Precio del vehículo</span>
+          <input className="input" inputMode="numeric" value={price ? fmtRD(price).replace('RD$', '').trim() : ''}
+            onChange={(e) => setPrice(Number(e.target.value.replace(/[^0-9]/g, '')) || 0)} />
+        </label>
+        <label className="cfp-calc-field">
+          <span>Inicial: <b>{fmtRD(down)}</b> ({price ? Math.round((down / price) * 100) : 0}%)</span>
+          <input type="range" min={0} max={price} step={10000} value={down} onChange={(e) => setDown(Number(e.target.value))} />
+        </label>
+        <div className="cfp-calc-terms">
+          {[4, 5, 6, 7, 8].map((y) => (
+            <button key={y} type="button" className={`chip ${term === y ? 'chip-teal' : ''}`} style={{ cursor: 'pointer', border: term === y ? 'none' : '1px solid var(--line)' }} onClick={() => setTerm(y)}>{y} años</button>
+          ))}
+        </div>
+      </div>
+      <div className="cfp-calc-out">
+        <div><span className="tiny muted">Cuota estimada</span><div className="cfp-calc-monthly">{monthly ? `${fmtRD(Math.round(monthly))}/mes` : '—'}</div></div>
+        <div className={`cfp-calc-fit ${fits ? 'ok' : 'bad'}`}>
+          {fits ? <><CheckCircle2 size={14} /> Dentro de tu aprobación</> : <><Info size={14} /> Necesitas {fmtRD(needMoreDown)} más de inicial</>}
+        </div>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 6 }}>Cálculo aproximado a {apr}% · financiando {fmtRD(financed)}. La cuota final la confirma el banco.</div>
+    </Section>
+  )
+}
+
 function PortalStyles() {
   return (
     <style>{`
@@ -381,6 +488,8 @@ function PortalStyles() {
       .cfp-condition { display: flex; align-items: flex-start; gap: 6px; margin-top: 14px; font-size: 11px; line-height: 1.45; background: rgba(255,255,255,.12); padding: 9px 11px; border-radius: 9px; }
       .cfp-wallet-veh { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 600; opacity: .95; }
       .cfp-actions { display: flex; flex-direction: column; gap: 8px; }
+      .cfp-accepted { display: flex; align-items: flex-start; gap: 10px; background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 12px 14px; }
+      .cfp-accepted .tiny { color: #15803d; line-height: 1.45; margin-top: 2px; }
       .cfp-section { background: #fff; border: 1px solid var(--line,#e2e8f0); border-radius: 14px; padding: 15px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,41,63,.05)); }
       .cfp-section h3 { font-size: 14px; margin: 0 0 12px; }
       .cfp-timeline { display: flex; flex-direction: column; gap: 2px; }
@@ -388,7 +497,23 @@ function PortalStyles() {
       .cfp-tl-dot { width: 26px; height: 26px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #eef2f4; color: #94a3b8; border: 1.5px solid #e2e8f0; }
       .cfp-tl-dot.done { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
       .cfp-tl-dot.now { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
-      .cfp-offer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line-2,#eef2f4); border-radius: 11px; }
+      .cfp-offer { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--line-2,#eef2f4); border-radius: 11px; }
+      .cfp-offer.sel { border-color: var(--teal-600,#0f9d8f); background: #f2fbf8; }
+      .cfp-offer-btn { align-self: stretch; }
+      .cfp-offer-sel { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: #166534; }
+      .cfp-calc { display: flex; flex-direction: column; gap: 12px; }
+      .cfp-calc-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted,#64748b); }
+      .cfp-calc-field input[type=range] { width: 100%; accent-color: var(--teal-600,#0f9d8f); }
+      .cfp-calc-terms { display: flex; flex-wrap: wrap; gap: 6px; }
+      .cfp-calc-out { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2,#eef2f4); }
+      .cfp-calc-monthly { font-size: 20px; font-weight: 800; color: var(--ink,#0f172a); }
+      .cfp-calc-fit { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; }
+      .cfp-calc-fit.ok { background: #dcfce7; color: #166534; }
+      .cfp-calc-fit.bad { background: #fef3c7; color: #b45309; }
+      .cfp-activity { display: flex; flex-direction: column; }
+      .cfp-act-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; }
+      .cfp-act-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: none; background: #cbd5e1; }
+      .cfp-act-dot.accepted { background: #16a34a; } .cfp-act-dot.verified { background: #0f766e; } .cfp-act-dot.bank_decision { background: #2563eb; }
       .cfp-doc { display: flex; align-items: flex-start; gap: 10px; }
       .cfp-doc-ic { width: 26px; height: 26px; border-radius: 8px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
       .cfp-doc-ic.warn { background: #fef3c7; color: #b45309; }

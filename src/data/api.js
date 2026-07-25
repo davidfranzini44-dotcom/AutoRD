@@ -652,6 +652,15 @@ export async function getFinancingByToken(token) {
   return data || { authorized: false }
 }
 
+// Client accepts a bank's offer from the portal (token-gated, both factors verified).
+// Makes it the single active offer, notifies dealer + bank, reserves the vehicle.
+export async function acceptFinancingOffer(token, bankSlug) {
+  if (!LIVE) return { ok: true, bankName: bankSlug }
+  const { data, error } = await supabase.rpc('accept_financing_offer', { p_token: token, p_bank_slug: bankSlug })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
 // Bank/dealer/buyer/admin: mint (or reuse) the client's secure link for an app.
 export async function getOrCreateFinancingToken(applicationId) {
   if (!LIVE) return 'demo-token'
