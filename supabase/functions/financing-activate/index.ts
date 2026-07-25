@@ -65,14 +65,21 @@ Deno.serve(async (req) => {
     if (!userId) return json({ ok: false, error: 'no_user' }, 500)
     await admin.from('profiles').update({ phone: to, phone_verified_at: new Date().toISOString() }).eq('id', userId)
 
-    // Link the application to this account when the current owner is anonymous
-    // (the usual case — the pre-approval was created by a frictionless anon user).
-    // Never steal an application that belongs to a real, distinct account.
+    // Link the application to this verified account. The OTP was delivered to the
+    // application's ON-FILE phone and the last-4 cédula matched, so the person is
+    // the applicant. Reassign when the current owner is anonymous, has no verified
+    // phone, or its verified phone IS this same number — but never steal an
+    // application from a real account that verified a DIFFERENT phone.
     let linked = app.buyer_id === userId
     if (app.buyer_id !== userId) {
       const { data: cur } = await admin.auth.admin.getUserById(app.buyer_id)
-      if (!cur?.user || cur.user.is_anonymous) {
+      const { data: curProf } = await admin.from('profiles').select('phone, phone_verified_at').eq('id', app.buyer_id).maybeSingle()
+      const curPhone = normPhone(curProf?.phone || '')
+      const canLink = !cur?.user || cur.user.is_anonymous || !curProf?.phone_verified_at || curPhone === to
+      if (canLink) {
         await admin.from('financing_applications').update({ buyer_id: userId }).eq('id', app.id)
+        // move KYC verification rows for this app so the account hub reads it correctly
+        await admin.from('kyc_verifications').update({ profile_id: userId }).eq('application_id', app.id)
         linked = true
       }
     }

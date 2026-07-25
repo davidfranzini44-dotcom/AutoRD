@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import { getMyFinancing, myUnreadCount } from '../data/api'
+import { fmtRD } from '../data/demo'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
 import { recentlyViewedCount } from '../data/recentlyViewed'
@@ -70,12 +71,14 @@ export default function Account() {
     : fin.approvedAmount > 0 ? 'preapproved'
     : (fin.responses || []).some((r) => r.status === 'offer') ? 'offers'
     : 'evaluating'
+  // Selected/attached vehicle, if any — so the hub reflects the car choice.
+  const finVeh = fin?.vehicle ? `${fin.vehicle.make} ${fin.vehicle.model} ${fin.vehicle.year}` : null
   const finSub = {
     loading: 'Cargando…',
     none: 'Aún no has solicitado financiamiento',
-    evaluating: `Bancos evaluando tu ${fin?.isPreapproval ? 'pre-aprobación' : 'solicitud'}`,
-    offers: 'Tienes ofertas de bancos para revisar',
-    preapproved: `Pre-aprobado — revisa tu presupuesto`,
+    evaluating: `Bancos evaluando tu ${fin?.isPreapproval ? 'pre-aprobación' : 'solicitud'}${finVeh ? ` · ${finVeh}` : ''}`,
+    offers: `Tienes ofertas de bancos${finVeh ? ` · ${finVeh}` : ' para revisar'}`,
+    preapproved: `Pre-aprobado${fin?.approvedAmount ? ` hasta ${fmtRD(fin.approvedAmount)}` : ''}${finVeh ? ` · ${finVeh}` : ''}`,
   }[finState]
 
   return (
