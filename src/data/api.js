@@ -1163,6 +1163,18 @@ export async function getClientHistoryForDealer(buyerId) {
   }))
 }
 
+// An application's cross-system audit timeline (bank/dealer/buyer, RLS-scoped):
+// bank decisions, client identity verification, acceptance, vehicle links.
+export async function getFinancingEvents(applicationId) {
+  if (!LIVE || !applicationId) return []
+  const { data, error } = await supabase.from('financing_events')
+    .select('actor, kind, detail, created_at')
+    .eq('application_id', applicationId)
+    .order('created_at', { ascending: false })
+  if (error || !Array.isArray(data)) return []
+  return data.map((e) => ({ actor: e.actor, kind: e.kind, detail: e.detail, at: e.created_at }))
+}
+
 export async function submitBankResponse(responseId, body) {
   if (!LIVE) return { ok: true }
   const { error } = await supabase.from('application_banks').update({

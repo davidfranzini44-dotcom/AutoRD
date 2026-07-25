@@ -9,7 +9,7 @@ import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
-  getOrCreateFinancingToken,
+  getOrCreateFinancingToken, getFinancingEvents,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -385,10 +385,34 @@ function ClientHistoryBank({ buyerId, currentAppId }) {
   )
 }
 
+// Friendly, bank-perspective label for a cross-system audit event.
+function bankEventLabel(e) {
+  if (e.kind === 'verified') return 'El cliente confirmó su identidad'
+  if (e.kind === 'accepted') return `El cliente aceptó la oferta${e.detail ? ` de ${e.detail}` : ''}`
+  if (e.kind === 'vehicle_linked') return 'El cliente vinculó un vehículo'
+  if (e.kind === 'doc') return 'El cliente subió un documento'
+  if (e.kind === 'bank_decision') return `Respuesta del banco registrada${e.detail ? ` (${e.detail})` : ''}`
+  return e.detail || e.kind
+}
+const fmtEventWhen = (at) => {
+  const d = new Date(at)
+  return Number.isFinite(d.getTime())
+    ? d.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }) + ' · ' + d.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })
+    : ''
+}
+
 function Expediente({ a, onAssign, onAddNote, bank }) {
   const [docs, setDocs] = useState([])
   const [docStatus, setDocStatus] = useState({})
   const [noteInput, setNoteInput] = useState('')
+  const [events, setEvents] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    if (!a.applicationId) { setEvents([]); return () => { alive = false } }
+    getFinancingEvents(a.applicationId).then((r) => { if (alive) setEvents(r) }).catch(() => { if (alive) setEvents([]) })
+    return () => { alive = false }
+  }, [a.applicationId])
 
   useEffect(() => {
     let alive = true
@@ -516,13 +540,19 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
             </div>
           </div>
           <div className="bankx-timeline" style={{ marginTop: 12 }}>
+            {events.map((e, i) => (
+              <div className="bankx-tlitem" key={`ev-${i}`}>
+                <span className="bankx-tldot" style={{ background: e.kind === 'accepted' ? '#16a34a' : e.kind === 'verified' ? '#0f766e' : '#2563eb' }} />
+                <div><b className="small">{bankEventLabel(e)}</b><div className="tiny muted">{fmtEventWhen(e.at)} · {e.actor}</div></div>
+              </div>
+            ))}
             {[...a.timeline].reverse().map((e, i) => (
               <div className="bankx-tlitem" key={i}>
                 <span className={`bankx-tldot ${/pendiente|solicit/i.test(e.name) ? 'amber' : ''}`} />
                 <div><b className="small">{e.name}</b><div className="tiny muted">{e.when} · {e.actor}{e.note ? ` · ${e.note}` : ''}</div></div>
               </div>
             ))}
-            {a.timeline.length === 0 && <div className="tiny muted">Sin actividad todavía.</div>}
+            {events.length === 0 && a.timeline.length === 0 && <div className="tiny muted">Sin actividad todavía.</div>}
           </div>
         </section>
       </div>

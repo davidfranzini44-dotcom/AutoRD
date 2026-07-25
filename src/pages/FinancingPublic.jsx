@@ -248,6 +248,8 @@ function Portal({ full, token, onReload }) {
   const kind = best ? (STATUS[best.status]?.kind || 'evaluating') : 'evaluating'
   const monthly = best?.monthly || (ceiling ? estimateMonthly(ceiling, best?.apr || 12, (best?.term || full.term || 7) * 12) : null)
   const waText = encodeURIComponent(`Hola, soy ${full.customerName || 'un cliente'} (solicitud ${full.code}). Tengo una consulta sobre mi financiamiento${best ? ` con ${best.bankName}` : ''}${full.vehicle ? ` del ${full.vehicle.make} ${full.vehicle.model}` : ''}.`)
+  const waNumber = String(full.dealerWhatsapp || '').replace(/[^0-9]/g, '')
+  const waHref = waNumber ? `https://wa.me/${waNumber}?text=${waText}` : `https://wa.me/?text=${waText}`
 
   return (
     <>
@@ -317,7 +319,7 @@ function Portal({ full, token, onReload }) {
         {kind === 'approved' && full.vehicle && (
           <Link to={`/vehiculo/${full.vehicle.slug || full.vehicle.id}`} className="btn btn-outline btn-block">Continuar con la compra <ChevronRight size={16} /></Link>
         )}
-        <a className="btn btn-block" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={`https://wa.me/?text=${waText}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} /> Preguntar por WhatsApp</a>
+        <a className="btn btn-block" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={waHref} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} /> Preguntar por WhatsApp</a>
       </div>
 
       {/* Next steps */}
