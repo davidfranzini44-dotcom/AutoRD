@@ -309,6 +309,7 @@ function DocumentRow({ doc, busy, onUpload }) {
 function BankResponse({ r }) {
   const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
+  const [open, setOpen] = useState(false)
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
       <div className="row center gap-12" style={{ padding: '14px 16px' }}>
@@ -340,9 +341,28 @@ function BankResponse({ r }) {
           <div className="row gap-8" style={{ marginTop: 12 }}>
             {r.approvedAmount
               ? <Link to={`/buscar?precioMax=${r.approvedAmount}`} className="btn btn-primary btn-sm">Ver carros dentro de tu presupuesto</Link>
-              : <button className="btn btn-primary btn-sm">Aceptar oferta</button>}
-            <button className="btn btn-outline btn-sm">Ver detalle</button>
+              : null}
+            <button className="btn btn-outline btn-sm" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+              {open ? 'Ocultar detalle' : 'Ver detalle'}
+            </button>
           </div>
+          {open && (
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--green-bd)' }}>
+              <div className="kv"><span className="k">Banco</span><span className="v strong">{b.name}</span></div>
+              {r.approvedAmount ? <div className="kv"><span className="k">Monto pre-aprobado</span><span className="v strong">{fmtRD(r.approvedAmount)}</span></div> : null}
+              <div className="kv"><span className="k">Tasa anual</span><span className="v">{r.apr ? `${r.apr}%` : '—'}</span></div>
+              <div className="kv"><span className="k">Plazo</span><span className="v">{r.term ? `${r.term} años` : '—'}</span></div>
+              <div className="kv"><span className="k">Inicial requerido</span><span className="v">{r.down ? fmtRD(r.down) : '—'}</span></div>
+              <div className="kv"><span className="k">Cuota estimada</span><span className="v">{r.monthly ? `${fmtRD(r.monthly)}/mes` : '—'}</span></div>
+              {r.validUntil ? <div className="kv"><span className="k">Vigencia</span><span className="v" style={{ color: r.expired ? 'var(--amber)' : undefined }}>{r.expired ? `Vencida el ${fmtDay(r.validUntil)}` : `Válida hasta ${fmtDay(r.validUntil)}`}</span></div> : null}
+              {r.note ? (
+                <div style={{ marginTop: 8 }}><div className="tiny strong" style={{ marginBottom: 2 }}>Condiciones</div><div className="small muted">{r.note}</div></div>
+              ) : null}
+              <div className="tiny muted" style={{ marginTop: 10 }}>
+                Esta {r.approvedAmount ? 'pre-aprobación' : 'oferta'} está sujeta a validación final de documentos, seguro, contrato y políticas del banco.
+              </div>
+            </div>
+          )}
         </div>
       )}
       {r.status === 'docs' && (
