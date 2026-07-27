@@ -1457,6 +1457,26 @@ export async function getInternalNotes(applicationId) {
   }))
 }
 
+// ---------------- Approval package ------------------------------------------
+// There is no financing_packages table: the terms already live on
+// application_banks and are already rendered by /contrato/:token. Generating a
+// package stamps provenance and seals a hash of those terms, so a later edit is
+// detectable instead of silently changing a document someone already acted on.
+export async function generateApprovalPackage(responseId) {
+  if (!LIVE) return null
+  if (!responseId) throw new Error('Falta la respuesta del banco')
+  const { data, error } = await supabase.rpc('bank_generate_package', { p_response_id: responseId })
+  if (error) throw error
+  return data
+}
+
+export async function getPackageState(responseId) {
+  if (!LIVE || !responseId) return null
+  const { data, error } = await supabase.rpc('bank_package_state', { p_response_id: responseId })
+  if (error) return null
+  return data || null
+}
+
 export const UNDERWRITING_STAGES = [
   { id: 'nuevo', label: 'Nuevo' },
   { id: 'identidad', label: 'Revisando identidad' },

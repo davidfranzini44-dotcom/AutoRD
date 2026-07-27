@@ -12,6 +12,7 @@ import {
   getOrCreateFinancingToken, getFinancingEvents, getApplicationCedula,
   getBankClientInfo, saveBankClientInfo, realEmail,
   getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
+  generateApprovalPackage, getPackageState,
   UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
@@ -848,6 +849,10 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
         <section className="card pad">
           <CapacityTool a={a} />
         </section>
+
+        <section className="card pad">
+          <PackagePanel a={a} />
+        </section>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
           {a.isPreapproval ? (
@@ -1401,6 +1406,78 @@ function CapacityTool({ a }) {
           <div className="notice" style={{ marginTop: 12 }}>
             <Info size={15} />
             <span>Cálculo de referencia. No aprueba ni rechaza: la decisión y las condiciones finales son del banco.</span>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+// Approval package. Deliberately NOT a new document: the terms already live on
+// application_banks and /contrato/:token already renders them under
+// "Condiciones ofrecidas por {banco}". Generating seals a hash of those terms
+// and stamps who/when, so an edit afterwards is surfaced rather than silently
+// changing a document the client may already have acted on.
+function PackagePanel({ a }) {
+  const [state, setState] = useState(undefined)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const load = useCallback(() => {
+    if (!a.responseId) { setState(null); return }
+    getPackageState(a.responseId).then(setState).catch(() => setState(null))
+  }, [a.responseId])
+  useEffect(load, [load])
+
+  const generate = async () => {
+    setBusy(true); setErr('')
+    try { await generateApprovalPackage(a.responseId); load() }
+    catch (e) { setErr(e?.message || 'No se pudo generar') }
+    finally { setBusy(false) }
+  }
+
+  const fmtWhen = (d) => (d ? new Date(d).toLocaleString('es-DO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null)
+
+  return (
+    <>
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, margin: 0 }}>Paquete de condiciones</h3>
+        {state?.hasPackage && !state?.stale && <span className="chip chip-green">Generado</span>}
+        {state?.stale && <span className="chip chip-amber">Condiciones cambiaron</span>}
+      </div>
+
+      {state === undefined ? (
+        <div className="tiny muted"><Loader2 size={13} className="spin" /> Cargando…</div>
+      ) : !state?.canGenerate && !state?.hasPackage ? (
+        <div className="tiny muted">Disponible una vez registres una decisión con condiciones (pre-aprobación, oferta o condicional).</div>
+      ) : (
+        <>
+          {state?.hasPackage && (
+            <div className="bankx-infoline">
+              <span>Generado</span>
+              <b>{fmtWhen(state.generatedAt)}{state.generatedBy ? ` · ${state.generatedBy}` : ''}</b>
+            </div>
+          )}
+          {state?.stale && (
+            <div className="notice" style={{ marginTop: 10 }}>
+              <AlertTriangle size={15} />
+              <span>Las condiciones cambiaron desde que se generó el paquete. Vuelve a generarlo para que el cliente vea los términos vigentes.</span>
+            </div>
+          )}
+          {err && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{err}</div>}
+          <div className="row wrap gap-8" style={{ marginTop: 12 }}>
+            <button className="btn btn-navy btn-sm" disabled={busy || !state?.canGenerate} onClick={generate}>
+              {busy ? <Loader2 size={14} className="spin" /> : <FileCheck2 size={14} />}
+              {state?.hasPackage ? ' Regenerar paquete' : ' Generar paquete'}
+            </button>
+            {a.contractToken && (
+              <a className="btn btn-outline btn-sm" href={`/contrato/${a.contractToken}`} target="_blank" rel="noreferrer">
+                <ExternalLink size={14} /> Ver como lo ve el cliente
+              </a>
+            )}
+          </div>
+          <div className="tiny muted" style={{ marginTop: 8 }}>
+            El cliente y el dealer ven las condiciones en el contrato; las notas internas y el análisis de riesgo nunca se incluyen.
           </div>
         </>
       )}
