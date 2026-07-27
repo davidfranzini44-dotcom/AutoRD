@@ -9,7 +9,7 @@ import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
-  getOrCreateFinancingToken, getFinancingEvents,
+  getOrCreateFinancingToken, getFinancingEvents, getApplicationCedula,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -156,12 +156,14 @@ export default function BankPanel() {
             <div className="row center gap-10">
               <div className="bankx-brand-logo"><BankLogo slug={bank.id || bank.slug} name={bank.name} initials={bank.initials} color={bank.color} size={30} /></div>
               <div>
-                <h1>Mesa de crédito · {bank.name}</h1>
-                <p className="muted small">Solicitudes listas, documentos y SLA en una sola cola de decisión.</p>
+                <h1>Mesa de crédito</h1>
+                <p className="muted small">{bank.name} · solicitudes con identidad verificada y consentimiento firmado.</p>
               </div>
             </div>
           </div>
-          <span className="chip chip-navy bankx-ext"><ShieldCheck size={14} /> Evaluación de crédito externa</span>
+          {/* Was "Evaluación de crédito externa" — external to whom? The reader
+              IS the bank. What it needs to say is that AutoRD does not decide. */}
+          <span className="chip chip-navy bankx-ext"><ShieldCheck size={14} /> La decisión es del banco</span>
         </div>
 
         {/* KPIs */}
@@ -315,6 +317,43 @@ const fmtDay = (d) => {
   const s = String(d).length === 10 ? `${d}T12:00:00` : d
   const dt = new Date(s)
   return Number.isFinite(dt.getTime()) ? dt.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' }) : String(d)
+}
+
+// The bank needs the real cédula to pull credit — a mask is useless for that —
+// but it stays hidden until the analyst asks, and every reveal is recorded
+// server-side (financing_events) so there is a trail of who read what.
+function CedulaLine({ app }) {
+  const [full, setFull] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(false)
+
+  const reveal = async () => {
+    setBusy(true); setErr(false)
+    const c = await getApplicationCedula(app.applicationId)
+    setBusy(false)
+    if (c) setFull(c); else setErr(true)
+  }
+
+  return (
+    <div className="bankx-infoline">
+      <span>Cédula</span>
+      <b className="mono-num row center gap-8" style={{ justifyContent: 'flex-end' }}>
+        {full ? (
+          <>{full}<span className="chip" style={{ fontSize: 10 }}>verificada</span></>
+        ) : (
+          <>
+            {app.maskedCedula || <span className="muted tiny">No disponible</span>}
+            {app.applicationId && !err && (
+              <button className="btn btn-ghost btn-sm" style={{ padding: '2px 8px', height: 24 }} disabled={busy} onClick={reveal}>
+                {busy ? <Loader2 size={12} className="spin" /> : 'Ver completa'}
+              </button>
+            )}
+            {err && <span className="muted tiny">Sin cédula verificada</span>}
+          </>
+        )}
+      </b>
+    </div>
+  )
 }
 
 // Generate (or reuse) the client's secure /f/:token link and copy it. The client
@@ -500,11 +539,14 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
       <div className="bankx-expgrid">
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
-          <div className="bankx-infoline"><span>Cédula</span><b className="mono-num">{a.maskedCedula}</b></div>
-          <div className="bankx-infoline"><span>Teléfono</span><b>{dash(a.phone)}</b></div>
-          <div className="bankx-infoline"><span>Email</span><b>{dash(a.email)}</b></div>
-          <div className="bankx-infoline"><span>Dirección</span><b>{dash(a.city)}</b></div>
-          <div className="bankx-infoline"><span>Ocupación</span><b>{dash(a.employment)}</b></div>
+          <CedulaLine app={a} />
+          <div className="bankx-infoline"><span>Teléfono</span><b>{a.phone ? `+${String(a.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
+          <div className="bankx-infoline"><span>Email</span><b>{a.email || <span className="muted tiny">No registrado</span>}</b></div>
+          {/* Dirección and Ocupación are only shown when the customer actually
+              declared them. They used to be filled from a hash — a bank must not
+              see an address or occupation AutoRD invented. */}
+          <div className="bankx-infoline"><span>Ocupación</span><b>{a.employment || <span className="muted tiny">No declarada</span>}</b></div>
+          <div className="bankx-infoline"><span>Dirección</span><b>{a.city || <span className="muted tiny">No verificada</span>}</b></div>
         </section>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
