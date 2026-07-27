@@ -727,6 +727,74 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// ---------------- Dealer: real financing applications ----------------
+// The dealer console used to render a hardcoded demo pipeline, so a real dealer
+// saw invented customers and none of their actual applications. This returns the
+// dealer's REAL applications. RLS decides what they may see: applications and
+// bank responses for their own deals — never the buyer's income or documents.
+const DEALER_STAGE = (app) => {
+  const st = (app.responses || []).map((r) => r.status)
+  if (st.some((s) => ['preaprobada', 'oferta', 'condicional'].includes(s))) return 'preaprobado'
+  if (st.includes('pendiente_docs')) return 'documentos'
+  if (st.length && st.every((s) => s === 'rechazada')) return 'rechazado'
+  if (app.kyc_status !== 'aprobado') return 'kyc_pendiente'
+  if (!app.consent_signed) return 'kyc_aprobado'
+  if (st.length) return 'enviado'
+  return 'consentimiento'
+}
+
+export async function getDealerApplications(dealerDbId) {
+  if (!LIVE || !dealerDbId) return []
+  const { data, error } = await supabase
+    .from('financing_applications')
+    .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(status, apr, monthly, approved_amount, valid_until, selected, down_required, bank:banks(name, slug))')
+    .eq('dealer_id', dealerDbId)
+    .order('created_at', { ascending: false })
+  if (error || !Array.isArray(data)) return []
+
+  return data.map((a) => {
+    const responses = (a.responses || []).map((r) => ({
+      name: r.bank?.name || 'Banco',
+      slug: r.bank?.slug,
+      status: r.status,
+      apr: r.apr,
+      monthly: r.monthly != null ? Number(r.monthly) : null,
+      approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+      validUntil: r.valid_until || null,
+      expired: isValidityExpired(r.valid_until),
+      selected: !!r.selected,
+    }))
+    // Best live offer = lowest APR among active, unexpired approvals.
+    const best = responses
+      .filter((r) => ['preaprobada', 'oferta', 'condicional'].includes(r.status) && !r.expired)
+      .sort((x, y) => (x.apr ?? 99) - (y.apr ?? 99))[0] || null
+    const v = a.vehicle ? mapVehicle(a.vehicle) : null
+    return {
+      id: a.code,
+      applicationId: a.id,
+      buyerId: a.buyer_id,
+      customer: a.buyer_name || 'Cliente',
+      phone: a.buyer_phone || '',
+      vehicle: v ? { ...v, name: `${v.make} ${v.model} ${v.year}` } : null,
+      isPreapproval: !a.vehicle_id,
+      amount: a.requested_amount != null ? Number(a.requested_amount) : null,
+      down: a.down_payment != null ? Number(a.down_payment) : null,
+      term: a.term_years,
+      kyc: a.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente',
+      consent: !!a.consent_signed,
+      banks: responses,
+      best: best ? { bank: best.name, apr: best.apr, monthly: best.monthly, approvedAmount: best.approvedAmount } : null,
+      status: DEALER_STAGE(a),
+      clientAccepted: a.client_accepted_at != null,
+      acceptedBank: responses.find((r) => r.selected)?.name || null,
+      reservedUntil: a.reserved_until || null,
+      createdAt: a.created_at,
+      // Dealers cannot read documents (RLS) — surface only that a bank asked.
+      docsRequested: responses.some((r) => r.status === 'pendiente_docs'),
+    }
+  })
+}
+
 // Authenticated buyer accepts an offer from /mi-financiamiento (gated on ownership).
 export async function acceptFinancingOfferAuth(applicationId, bankSlug) {
   if (!LIVE) return { ok: true, bankName: bankSlug }

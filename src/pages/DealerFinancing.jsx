@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck, BadgeCheck,
 } from 'lucide-react'
-import { getDealerData, getClientHistoryForDealer, getDealerPreapprovalInterests } from '../data/api'
+import { getDealerData, getClientHistoryForDealer, getDealerPreapprovalInterests, getDealerApplications, LIVE } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
@@ -10,7 +10,11 @@ import WhatsAppIcon from '../components/WhatsAppIcon'
 import { buildFinancing, FIN_STAGES, finStage, kycLink } from '../data/dealerDemo'
 
 const ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
-const kycAppMsg = (a) => `Hola ${a.customer}, para continuar con tu financiamiento del ${a.vehicle.name} primero verifica tu identidad (cédula + prueba de vida, sin crear cuenta, ~2 min): ${kycLink(ORIGIN, { vehiculo: a.vehicle.id, nombre: a.customer })}`
+// Real applications may have no vehicle yet (an open pre-approval), so every
+// message has to read correctly with or without one.
+const vehName = (a) => (a.vehicle ? a.vehicle.name : 'tu financiamiento')
+const ofVeh = (a) => (a.vehicle ? ` del ${a.vehicle.name}` : '')
+const kycAppMsg = (a) => `Hola ${a.customer}, para continuar con tu financiamiento${ofVeh(a)} primero verifica tu identidad (cédula + prueba de vida, sin crear cuenta, ~2 min): ${kycLink(ORIGIN, { vehiculo: a.vehicle?.id, nombre: a.customer })}`
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waLink = (phone, text) => `https://wa.me/${digits(phone)}?text=${encodeURIComponent(text)}`
@@ -18,21 +22,31 @@ const TONE = {
   green: { bg: '#dcfce7', fg: '#166534' }, red: { bg: '#fee2e2', fg: '#b91c1c' },
   amber: { bg: '#fef3c7', fg: '#b45309' }, blue: { bg: '#dbeafe', fg: '#1d4ed8' },
 }
+// Covers BOTH the demo vocabulary and the real bank_response_status enum.
 const BANK_STATUS = {
   en_evaluacion: { label: 'En evaluación', tone: 'blue' },
+  pendiente: { label: 'Enviado, sin respuesta', tone: 'blue' },
   preaprobado: { label: 'Pre-aprobado', tone: 'green' },
+  preaprobada: { label: 'Pre-aprobado', tone: 'green' },
+  oferta: { label: 'Aprobado', tone: 'green' },
+  condicional: { label: 'Aprobado con condiciones', tone: 'green' },
   rechazado: { label: 'Rechazado', tone: 'red' },
+  rechazada: { label: 'Rechazado', tone: 'red' },
   documentos: { label: 'Solicita documentos', tone: 'amber' },
+  pendiente_docs: { label: 'Solicita documentos', tone: 'amber' },
 }
+const APPROVED_STATUS = ['preaprobado', 'preaprobada', 'oferta', 'condicional']
 const StatusBadge = ({ st }) => {
   const s = finStage(st); const t = TONE[s.tone] || TONE.blue
   return <span className="chip" style={{ background: t.bg, color: t.fg }}>{s.label}</span>
 }
 
-const docMsg = (a) => `Hola ${a.customer}, para avanzar con su financiamiento del ${a.vehicle.name} necesitamos: ${a.missing.length ? a.missing.join(', ') : 'sus documentos de ingreso'}. ¿Los puede enviar por aquí?`
+// The dealer cannot see WHICH documents the bank asked for (that stays between
+// the client and the bank), so the nudge stays general.
+const docMsg = (a) => `Hola ${a.customer}, el banco solicitó documentos para avanzar con su financiamiento${ofVeh(a)}. Puede subirlos desde el enlace que le enviamos. ¿Necesita ayuda?`
 const offerMsg = (a) => a.best
-  ? `Hola ${a.customer}, ¡buenas noticias! ${a.best.bank} pre-aprobó su financiamiento del ${a.vehicle.name} al ${a.best.apr}% (cuota aprox. ${fmtMoney(a.best.monthly, 'DOP')}/mes). ¿Coordinamos la firma?`
-  : `Hola ${a.customer}, tengo novedades sobre su financiamiento del ${a.vehicle.name}. ¿Podemos conversar?`
+  ? `Hola ${a.customer}, ¡buenas noticias! ${a.best.bank} aprobó su financiamiento${ofVeh(a)}${a.best.apr ? ` al ${a.best.apr}%` : ''}${a.best.monthly ? ` (cuota aprox. ${fmtMoney(a.best.monthly, 'DOP')}/mes)` : ''}. ¿Coordinamos la firma?`
+  : `Hola ${a.customer}, tengo novedades sobre su financiamiento${ofVeh(a)}. ¿Podemos conversar?`
 
 export default function DealerFinancing() {
   const { profile } = useAuth() || {}
@@ -42,11 +56,14 @@ export default function DealerFinancing() {
   const [active, setActive] = useState(null)
 
   const [interests, setInterests] = useState([])
+  const [realApps, setRealApps] = useState([])
+  const isDemo = !LIVE
 
   useEffect(() => {
     let alive = true
     getDealerData(profile?.dealer_id).then((d) => { if (alive) { setInventory(d.inventory || []); setLeads(d.leads || []) } }).catch(() => {})
     getDealerPreapprovalInterests().then((r) => { if (alive) setInterests(r) }).catch(() => {})
+    getDealerApplications(profile?.dealer_id).then((r) => { if (alive) setRealApps(r) }).catch(() => {})
     return () => { alive = false }
   }, [profile?.dealer_id])
 
@@ -54,7 +71,10 @@ export default function DealerFinancing() {
   // the fast path: identity already verified, budget already blessed by a bank.
   const preApproved = leads.filter((l) => l.preApproval)
 
-  const apps = useMemo(() => buildFinancing(inventory), [inventory])
+  // REAL applications for this dealer. (Offline demo mode still gets sample rows
+  // so the console is explorable without a backend — but a live dealer must only
+  // ever see their own customers.)
+  const apps = useMemo(() => (isDemo ? buildFinancing(inventory) : realApps), [isDemo, inventory, realApps])
   const shown = filter ? apps.filter((a) => a.status === filter) : apps
   const countFor = (key) => apps.filter((a) => a.status === key).length
 
@@ -126,39 +146,62 @@ export default function DealerFinancing() {
           <div className="card card-pad" key={a.id}>
             <div className="row between center wrap gap-10" style={{ marginBottom: 10 }}>
               <div role="button" tabIndex={0} className="row center gap-10 dl-customer-open" onClick={() => setActive(a)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActive(a) } }} style={{ minWidth: 0, cursor: 'pointer' }}>
-                <div className="dash-top-photo fin-thumb" style={{ width: 60, height: 44 }}><CarImage make={a.vehicle.make} model={a.vehicle.model} bodyType={a.vehicle.bodyType} seed={a.vehicle.id || a.id} tone={a.vehicle.tone} photo={a.vehicle.photo} /></div>
+                <div className="dash-top-photo fin-thumb" style={{ width: 60, height: 44 }}>
+                  {a.vehicle
+                    ? <CarImage make={a.vehicle.make} model={a.vehicle.model} bodyType={a.vehicle.bodyType} seed={a.vehicle.id || a.id} tone={a.vehicle.tone} photo={a.vehicle.photo} />
+                    : <div className="row center" style={{ width: '100%', height: '100%', justifyContent: 'center', background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Landmark size={18} /></div>}
+                </div>
                 <div style={{ minWidth: 0 }}>
                   <div className="strong" style={{ textDecoration: 'underline', textDecorationColor: 'var(--line, #d9e5e7)', textUnderlineOffset: 3 }}>{a.customer}</div>
-                  <div className="tiny muted">{a.id} · {a.vehicle.name}</div>
+                  <div className="tiny muted">{a.id} · {a.vehicle ? a.vehicle.name : 'Pre-aprobación sin vehículo'}</div>
                 </div>
               </div>
               <StatusBadge st={a.status} />
             </div>
 
             <div className="row wrap gap-16" style={{ marginBottom: 10 }}>
-              <Metric label="Monto solicitado" value={fmtMoney(a.amount, 'DOP')} />
-              <Metric label="Inicial" value={fmtMoney(a.down, 'DOP')} />
-              <Metric label="Ingreso mensual" value={fmtMoney(a.income, 'DOP')} />
+              <Metric label="Monto solicitado" value={a.amount ? fmtMoney(a.amount, 'DOP') : '—'} />
+              <Metric label="Inicial" value={a.down ? fmtMoney(a.down, 'DOP') : '—'} />
+              <Metric label="Plazo" value={a.term ? `${a.term} años` : '—'} />
               <Metric label="Bancos" value={a.banks.length ? `${a.banks.length} enviados` : '—'} />
-              {a.best && <Metric label="Mejor oferta" value={`${a.best.bank} · ${a.best.apr}%`} accent />}
+              {a.best && <Metric label="Mejor oferta" value={`${a.best.bank}${a.best.apr ? ` · ${a.best.apr}%` : ''}`} accent />}
             </div>
 
-            {a.missing.length > 0 && (
+            {a.clientAccepted && (
+              <div className="notice" style={{ borderColor: '#bbf7d0', background: '#f0fdf4', marginBottom: 10 }}>
+                <CheckCircle2 size={15} color="#166534" /><span className="small">Cliente aceptó{a.acceptedBank ? ` la oferta de ${a.acceptedBank}` : ''} — coordina seguro, firma y entrega.</span>
+              </div>
+            )}
+            {a.docsRequested && !a.clientAccepted && (
               <div className="notice" style={{ borderColor: '#fde68a', background: '#fffbeb', marginBottom: 10 }}>
-                <AlertTriangle size={15} color="#b45309" /><span className="small">Faltan documentos: {a.missing.join(', ')}</span>
+                <AlertTriangle size={15} color="#b45309" /><span className="small">Un banco solicitó documentos al cliente.</span>
               </div>
             )}
 
             <div className="row wrap gap-8">
               <button className="btn btn-outline btn-sm" onClick={() => setActive(a)}><Eye size={14} /> Ver solicitud</button>
-              {a.status === 'kyc_pendiente' && <a className="btn btn-navy btn-sm" href={waLink(a.phone, kycAppMsg(a))} target="_blank" rel="noreferrer"><ShieldCheck size={14} /> Solicitar KYC</a>}
-              {a.missing.length > 0 && a.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-sm" href={waLink(a.phone, docMsg(a))} target="_blank" rel="noreferrer"><FileText size={14} /> Solicitar documentos</a>}
+              {a.status === 'kyc_pendiente' && a.vehicle && <a className="btn btn-navy btn-sm" href={waLink(a.phone, kycAppMsg(a))} target="_blank" rel="noreferrer"><ShieldCheck size={14} /> Solicitar KYC</a>}
+              {a.docsRequested && a.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-sm" href={waLink(a.phone, docMsg(a))} target="_blank" rel="noreferrer"><FileText size={14} /> Recordar documentos</a>}
               <a className="btn btn-outline btn-sm" href={waLink(a.phone, offerMsg(a))} target="_blank" rel="noreferrer"><Send size={14} /> Enviar oferta</a>
-              <a className="btn btn-sm" href={waLink(a.phone, `Hola ${a.customer}, le contactamos por su financiamiento del ${a.vehicle.name}.`)} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', border: 'none' }}><WhatsAppIcon size={15} /> WhatsApp</a>
+              <a className="btn btn-sm" href={waLink(a.phone, `Hola ${a.customer}, le contactamos por su financiamiento${a.vehicle ? ` del ${a.vehicle.name}` : ''}.`)} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', border: 'none' }}><WhatsAppIcon size={15} /> WhatsApp</a>
             </div>
           </div>
         ))}
-        {shown.length === 0 && <div className="card card-pad muted tiny" style={{ textAlign: 'center' }}>No hay solicitudes en este estado.</div>}
+        {shown.length === 0 && (
+          <div className="card card-pad" style={{ textAlign: 'center' }}>
+            {filter ? (
+              <div className="muted tiny">No hay solicitudes en este estado.</div>
+            ) : (
+              <>
+                <div className="verify-ic" style={{ width: 44, height: 44, borderRadius: 12, margin: '0 auto 10px', background: 'var(--teal-50)', color: 'var(--teal-700)' }}><Landmark size={20} /></div>
+                <div className="strong small">Aún no tienes solicitudes de financiamiento</div>
+                <div className="tiny muted" style={{ marginTop: 4, maxWidth: 420, marginInline: 'auto', lineHeight: 1.45 }}>
+                  Cuando un cliente solicite financiamiento por uno de tus vehículos, aparecerá aquí con su estado de KYC y las respuestas de los bancos.
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {active && <AppDrawer app={active} onClose={() => setActive(null)} />}
@@ -265,21 +308,29 @@ function AppDrawer({ app, onClose }) {
           <button className="icon-btn" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
         </div>
         <div className="col gap-14" style={{ padding: 18 }}>
-          <div className="row center gap-10">
-            <div className="dash-top-photo fin-thumb" style={{ width: 72, height: 52 }}><CarImage make={app.vehicle.make} model={app.vehicle.model} bodyType={app.vehicle.bodyType} seed={app.vehicle.id || app.id} tone={app.vehicle.tone} photo={app.vehicle.photo} /></div>
-            <div><div className="strong small">{app.vehicle.name}</div>{app.vehicle.price ? <div className="tiny muted">{fmtMoney(app.vehicle.price, app.vehicle.currency)}</div> : null}</div>
-          </div>
+          {app.vehicle ? (
+            <div className="row center gap-10">
+              <div className="dash-top-photo fin-thumb" style={{ width: 72, height: 52 }}><CarImage make={app.vehicle.make} model={app.vehicle.model} bodyType={app.vehicle.bodyType} seed={app.vehicle.id || app.id} tone={app.vehicle.tone} photo={app.vehicle.photo} /></div>
+              <div><div className="strong small">{app.vehicle.name}</div>{app.vehicle.price ? <div className="tiny muted">{fmtMoney(app.vehicle.price, app.vehicle.currency)}</div> : null}</div>
+            </div>
+          ) : (
+            <div className="notice"><Landmark size={15} /><span className="small">Pre-aprobación sin vehículo — el cliente aún no ha elegido carro.</span></div>
+          )}
 
           <div className="card" style={{ padding: 12 }}>
             <Row k="Teléfono" v={app.phone || '—'} />
-            <Row k="Identidad (KYC)" v={app.status === 'kyc_pendiente' ? 'Pendiente' : 'Verificada'} />
+            <Row k="Identidad (KYC)" v={app.kyc === 'aprobado' ? 'Verificada' : 'Pendiente'} />
+            <Row k="Consentimiento" v={app.consent ? 'Firmado' : 'Pendiente'} />
           </div>
 
           <div className="card" style={{ padding: 12 }}>
-            <Row k="Monto solicitado" v={fmtMoney(app.amount, 'DOP')} />
-            <Row k="Inicial" v={fmtMoney(app.down, 'DOP')} />
-            <Row k="Ingreso mensual" v={fmtMoney(app.income, 'DOP')} />
+            <Row k="Monto solicitado" v={app.amount ? fmtMoney(app.amount, 'DOP') : '—'} />
+            <Row k="Inicial" v={app.down ? fmtMoney(app.down, 'DOP') : '—'} />
+            <Row k="Plazo" v={app.term ? `${app.term} años` : '—'} />
+            {app.clientAccepted && <Row k="Aceptada por el cliente" v={app.acceptedBank || 'Sí'} />}
           </div>
+          {/* Income and the buyer's documents are deliberately absent: RLS keeps
+              them between the client and the bank. */}
 
           <div>
             <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', marginBottom: 6 }}>Bancos</div>
@@ -291,8 +342,8 @@ function AppDrawer({ app, onClose }) {
                   return (
                     <div key={b.name} className="row between center" style={{ border: '1px solid var(--line-2, #e2e8f0)', borderRadius: 8, padding: '8px 12px' }}>
                       <span className="small row center gap-6"><Landmark size={14} className="muted" /> {b.name}</span>
-                      {b.status === 'preaprobado'
-                        ? <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><CheckCircle2 size={12} /> {info.label} · {b.apr}%</span>
+                      {APPROVED_STATUS.includes(b.status)
+                        ? <span className="chip" style={{ background: '#dcfce7', color: '#166534' }}><CheckCircle2 size={12} /> {info.label}{b.apr ? ` · ${b.apr}%` : ''}</span>
                         : <span className="chip" style={{ background: t.bg, color: t.fg }}>{info.label}</span>}
                     </div>
                   )
@@ -303,7 +354,7 @@ function AppDrawer({ app, onClose }) {
 
           {app.best && (
             <div className="notice" style={{ borderColor: 'var(--green-bd, #bbf7d0)', background: 'var(--green-bg, #f0fdf4)' }}>
-              <Wallet size={15} color="#166534" /><span className="small">Pre-aprobado por {app.best.bank} al {app.best.apr}% · cuota aprox. {fmtMoney(app.best.monthly, 'DOP')}/mes</span>
+              <Wallet size={15} color="#166534" /><span className="small">Aprobado por {app.best.bank}{app.best.apr ? ` al ${app.best.apr}%` : ''}{app.best.monthly ? ` · cuota aprox. ${fmtMoney(app.best.monthly, 'DOP')}/mes` : ''}</span>
             </div>
           )}
 
