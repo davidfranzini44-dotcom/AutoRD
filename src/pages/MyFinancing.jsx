@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { buildChecklist, checklistSummary, CHECK_STATE } from '../data/checklist'
+import { resolveFinancingStatus } from '../data/financingStatus'
 import { kycValidity } from '../data/kyc'
 import { TONE } from '../data/bankDemo'
 import { Link } from 'react-router-dom'
@@ -70,7 +71,6 @@ export default function MyFinancing() {
     )
   }
   const v = c.vehicle
-  const offers = c.responses.filter((r) => r.status === 'offer')
   // ?falta=<key> comes from the bank's "Pedir info" WhatsApp message, so the
   // client lands on the exact item instead of a page they have to scan.
   const focusKey = new URLSearchParams(window.location.search).get('falta') || ''
@@ -83,7 +83,6 @@ export default function MyFinancing() {
     status: 'solicitado',
     demoFallback: true,
   }] : []
-  const openDocs = docRows.some((d) => d.status !== 'subido')
   const checklist = buildChecklist({
     profile,
     // Identity counts only while the verification is still inside its 12-month
@@ -92,6 +91,7 @@ export default function MyFinancing() {
     documents: docRows,
   })
   const summary = checklistSummary(checklist)
+  const fstatus = resolveFinancingStatus(c, summary.outstanding)
   const preApproved = c.approvedAmount && c.approvedAmount > 0
   // The response that grants the ceiling — carries the bank-set validity date.
   const bestPre = c.responses
@@ -134,62 +134,16 @@ export default function MyFinancing() {
 
         <div className="split" style={{ gridTemplateColumns: '1fr 340px' }}>
           <div className="col gap-16">
-            {/* Pre-approval highlight: budget + shop CTA */}
-            {preApproved && (
-              <div className="card card-pad" style={{ borderColor: preExpired ? 'var(--amber-bd)' : 'var(--teal-700)', background: preExpired ? 'var(--amber-bg)' : 'var(--teal-50)' }}>
-                <div className="row between center wrap gap-12">
-                  <div className="row center gap-12">
-                    <div className="verify-ic ok" style={{ background: '#fff', color: preExpired ? 'var(--amber)' : 'var(--teal-700)' }}><Landmark size={22} /></div>
-                    <div>
-                      <div className="strong">{preExpired ? 'Tu pre-aprobación venció' : `¡Estás pre-aprobado! Hasta ${fmtRD(c.approvedAmount)}`}</div>
-                      <div className="tiny muted">
-                        {preExpired
-                          ? `La vigencia terminó${preValidUntil ? ` el ${preValidUntil}` : ''}. Solicita una nueva para confirmar tu monto y tasa actuales.`
-                          : `Elige un vehículo dentro de tu presupuesto y lo vinculamos a esta pre-aprobación — sin repetir tu verificación.${preValidUntil ? ` Válida hasta el ${preValidUntil}.` : ''}`}
-                      </div>
-                    </div>
-                  </div>
-                  {preExpired
-                    ? <Link to="/financiamiento" className="btn btn-primary">Solicitar nueva pre-aprobación</Link>
-                    : <Link to={`/buscar?precioMax=${c.approvedAmount}`} className="btn btn-primary">Ver carros dentro de tu presupuesto</Link>}
-                </div>
-              </div>
-            )}
+            {/* One status card. This used to be three independent banners
+                (pre-aprobación / ofertas / documentos) that could all render at
+                once, each with its own primary button — so the page could show
+                three "next steps" and no way to tell which one mattered. The
+                status is resolved once, in financingStatus.js, and the checklist
+                below carries the detail. */}
+            <StatusCard s={fstatus} summary={summary} validUntilLabel={fmtDay(fstatus.validUntil)} />
 
             {/* Cars this buyer flagged against their pre-approval */}
             <MyInterests items={interests} onChanged={reloadInterests} />
-
-            {/* Offers highlight */}
-            {offers.length > 0 && (
-              <div className="card card-pad" style={{ borderColor: 'var(--green-bd)', background: 'linear-gradient(180deg,#f2fbf6,#fff)' }}>
-                <div className="row between center wrap gap-12">
-                  <div className="row center gap-12">
-                    <div className="verify-ic ok" style={{ background: 'var(--green-bg)', color: 'var(--green)' }}><Check size={22} strokeWidth={3} /></div>
-                    <div>
-                      <div className="strong">Tienes {offers.length} oferta{offers.length > 1 ? 's' : ''} recibida{offers.length > 1 ? 's' : ''}</div>
-                      <div className="tiny muted">Revisa y compara las condiciones de cada banco</div>
-                    </div>
-                  </div>
-                  <a href="#ofertas" className="btn btn-primary">Ver ofertas recibidas ({offers.length})</a>
-                </div>
-              </div>
-            )}
-
-            {/* Document request banner */}
-            {(docsRequested || openDocs) && (
-              <div className="card card-pad" style={{ borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
-                <div className="row between center wrap gap-12">
-                  <div className="row center gap-12">
-                    <div className="verify-ic" style={{ background: '#fff', color: 'var(--amber)' }}><FileWarning size={20} /></div>
-                    <div>
-                      <div className="strong">Banco solicita documentos adicionales</div>
-                      <div className="tiny" style={{ color: 'var(--amber)' }}>{docRows[0]?.bankName || banks.find((b) => b.id === docsRequested?.bankId)?.name || 'El banco'} necesita información para continuar</div>
-                    </div>
-                  </div>
-                  <a href="#documentos" className="btn btn-navy"><Upload size={16} /> Enviar documentos</a>
-                </div>
-              </div>
-            )}
 
             {(docRows.length > 0 || docsLoading) && (
               <DocumentCenter
@@ -568,6 +522,58 @@ function QueFalta({ items, summary, focus }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// The top card: status, the numbers that matter for that status, and exactly
+// one primary action. Colour comes from the status tone so "aprobado" can never
+// render amber and "rechazado" can never render green.
+function StatusCard({ s, summary, validUntilLabel }) {
+  const tone = TONE[s.tone] || TONE.slate
+  const isBad = s.key === 'rechazado' || s.key === 'expirado'
+  return (
+    <div className="card card-pad fin-status" style={{ borderColor: tone.fg, background: isBad ? '#fff' : tone.bg }}>
+      <div className="row between center wrap gap-12">
+        <div className="row center gap-12" style={{ minWidth: 0 }}>
+          <div className="verify-ic" style={{ background: '#fff', color: tone.fg, flex: 'none' }}>
+            {s.key === 'aprobado' ? <Check size={22} strokeWidth={3} />
+              : s.key === 'preaprobado' ? <Landmark size={22} />
+              : s.key === 'requiere_info' ? <FileWarning size={20} />
+              : s.key === 'expirado' ? <Clock size={20} />
+              : s.key === 'rechazado' ? <Info size={20} />
+              : <Loader2 size={20} className="spin" />}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <span className="chip" style={{ background: '#fff', color: tone.fg, marginBottom: 6 }}>{s.label}</span>
+            <div className="strong">{s.headline}</div>
+            <div className="tiny muted">{s.sub}</div>
+          </div>
+        </div>
+        {s.cta && (s.cta.href.startsWith('#')
+          ? <a href={s.cta.href} className="btn btn-primary">{s.cta.label}</a>
+          : <Link to={s.cta.href} className="btn btn-primary">{s.cta.label}</Link>)}
+      </div>
+
+      {(s.amount || s.monthly || validUntilLabel) && (
+        <div className="fin-status-facts">
+          {s.amount != null && <div><span>{s.key === 'aprobado' ? 'Monto aprobado' : 'Monto máximo'}</span><b>{fmtRD(s.amount)}</b></div>}
+          {s.monthly ? <div><span>Cuota estimada</span><b>{fmtRD(s.monthly)}/mes</b></div> : null}
+          {s.apr != null && <div><span>Tasa</span><b>{s.apr}%</b></div>}
+          {validUntilLabel && <div><span>{s.key === 'expirado' ? 'Venció el' : 'Válida hasta'}</span><b>{validUntilLabel}</b></div>}
+        </div>
+      )}
+
+      {s.key === 'en_revision' && (
+        <div className="tiny muted" style={{ marginTop: 10 }}>
+          ¿Dudas mientras esperas? Escríbenos por WhatsApp y te ayudamos.
+        </div>
+      )}
+      {s.key === 'requiere_info' && summary.outstanding > 0 && (
+        <div className="tiny" style={{ marginTop: 10, color: tone.fg }}>
+          {summary.outstanding} cosa{summary.outstanding === 1 ? '' : 's'} por completar.
+        </div>
+      )}
     </div>
   )
 }
