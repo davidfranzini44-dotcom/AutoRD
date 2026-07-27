@@ -4935,3 +4935,14 @@ select.preap-input { padding-right: 16px; }
   .fin-status .btn-primary { flex: 1 0 100%; width: 100%; justify-content: center; }
   .fin-status-facts > div { flex: 1 1 44%; }
 }
+
+/* Cars within the client's approval, inside the financing hub. Narrower than
+   the marketplace grid because it sits in a card inside a two-column page. */
+.fin-fitgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+@media (max-width: 560px) { .fin-fitgrid { grid-template-columns: 1fr; } }
+
+/* Financing answer on a vehicle card. The phone grid is 2-up, so a card body is
+   about 123px of usable width — the verdict is a short chip and the number sits
+   under it rather than inside, which wrapped to two lines. */
+.vcard-fin { margin-top: 10px; }
+.vcard-fin-num { margin-top: 4px; font-weight: 700; }

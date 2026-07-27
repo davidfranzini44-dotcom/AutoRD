@@ -51,3 +51,35 @@ export function affordablePrice({ income, down = 0, apr, months, dtiPct = 30 }) 
   const principal = maxPrincipal(maxMonthly, apr, months)
   return { maxMonthly, principal, price: principal + dn }
 }
+
+// Does this car fit the client's approval?
+//
+// Promoted out of FinancingPublic, where it lived as four loose consts inside a
+// calculator and was therefore unavailable to the marketplace — the buyer could
+// only find out whether a car fit after opening their token portal. Same maths,
+// one home, so the hub, the vehicle cards and the portal cannot drift apart.
+//
+// Returns null when there is no approval to measure against; the caller shows a
+// plain calculator instead of a fit verdict it cannot justify.
+export function vehicleFit({ price, approvedAmount, apr = 12, termYears = 5, down = null, downPct = 20 } = {}) {
+  const p = Number(price) || 0
+  const ceiling = Number(approvedAmount) || 0
+  if (!p || !ceiling) return null
+
+  // What the client would normally put down, unless they named a figure.
+  const assumedDown = down != null ? Math.max(0, Number(down) || 0) : Math.round(p * (downPct / 100))
+  const financed = Math.max(0, p - assumedDown)
+  const fits = financed <= ceiling
+
+  // The total inicial that brings the rest under the bank's ceiling, and how
+  // much MORE that is than they were planning on. "Necesitas RD$X más de
+  // inicial" is the useful sentence; "no califica" is not.
+  const minDown = Math.max(0, p - ceiling)
+  const extraDownNeeded = Math.max(0, minDown - assumedDown)
+
+  const months = Math.max(1, Math.round(Number(termYears) || 5) * 12)
+  // Always quote an achievable payment: never finance above the ceiling.
+  const monthly = estimateMonthly(Math.min(financed, ceiling), Number(apr) || 0, months)
+
+  return { fits, price: p, ceiling, down: assumedDown, minDown, extraDownNeeded, financed, monthly, months }
+}

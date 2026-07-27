@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { buildChecklist, checklistSummary, CHECK_STATE } from '../data/checklist'
 import { resolveFinancingStatus } from '../data/financingStatus'
+import { vehicleFit } from '../data/finance'
+import { listVehicles } from '../data/api'
+import VehicleCard from '../components/VehicleCard'
 import { kycValidity } from '../data/kyc'
 import { TONE } from '../data/bankDemo'
 import { Link } from 'react-router-dom'
@@ -37,6 +40,8 @@ export default function MyFinancing() {
   const reloadInterests = () => getMyInterestList().then(setInterests).catch(() => {})
   useEffect(() => { reloadInterests() }, [])
 
+  const [fitCars, setFitCars] = useState([])
+
   const reloadFinancing = () => getMyFinancing().then((d) => setC(d)).catch(() => {})
 
   useEffect(() => {
@@ -44,6 +49,29 @@ export default function MyFinancing() {
     getMyFinancing().then((d) => { if (alive) setC(d) })
     return () => { alive = false }
   }, [])
+
+  // Cars the client could actually drive away in. Filtered by the same
+  // vehicleFit() the marketplace cards use, so the hub and the card can never
+  // disagree about whether something fits.
+  useEffect(() => {
+    const ceiling = Number(c?.approvedAmount) || 0
+    if (!ceiling || c?.vehicle) { setFitCars([]); return undefined }
+    let alive = true
+    const best = (c.responses || []).filter((r) => Number(r.approvedAmount) > 0 && !r.expired)
+      .sort((a, b) => (b.approvedAmount || 0) - (a.approvedAmount || 0))[0] || null
+    listVehicles().then((list) => {
+      if (!alive) return
+      setFitCars((list || [])
+        .filter((v) => vehicleFit({
+          price: v.price, approvedAmount: ceiling,
+          apr: best?.apr ?? undefined, termYears: best?.term ?? undefined,
+        })?.fits)
+        // Most car for the budget first — that is what the ceiling is for.
+        .sort((a, b) => (b.price || 0) - (a.price || 0))
+        .slice(0, 6))
+    }).catch(() => { if (alive) setFitCars([]) })
+    return () => { alive = false }
+  }, [c?.approvedAmount, !!c?.vehicle])
 
   useEffect(() => {
     if (c === undefined) return undefined
@@ -159,6 +187,21 @@ export default function MyFinancing() {
                 one list: bank document requests used to live here while the
                 profile fields lived in Mi cuenta and were never surfaced. */}
             <QueFalta items={checklist} summary={summary} focus={focusKey} />
+
+            {fitCars.length > 0 && (
+              <div className="card card-pad">
+                <div className="section-title row between center">
+                  <h2 style={{ fontSize: 18 }}>Vehículos que puedes financiar</h2>
+                  <Link className="tiny" to={`/buscar?precioMax=${c.approvedAmount}`}>Ver todos</Link>
+                </div>
+                <p className="muted small" style={{ marginTop: -4, marginBottom: 12 }}>
+                  Dentro de tu aprobación de {fmtRD(c.approvedAmount)}. Al elegir uno lo vinculamos a esta solicitud sin repetir tu verificación.
+                </p>
+                <div className="fin-fitgrid">
+                  {fitCars.map((v) => <VehicleCard key={v.id} v={v} />)}
+                </div>
+              </div>
+            )}
 
             {/* Bank response cards */}
             <div className="card card-pad" id="ofertas">
