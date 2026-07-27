@@ -66,31 +66,37 @@ export function appPriority(a) {
 }
 
 // Add contact / KYC / consent detail, reviewer, SLA and a review timeline.
+// NOTE ON FABRICATION: this used to invent a phone number, an email, a city and
+// an occupation for every application — including REAL ones — from a hash of the
+// id. A bank could have dialled a made-up number or weighed a made-up occupation
+// in a credit decision. Contact and employment details now come from the record
+// only; anything genuinely unknown stays empty and the UI says so.
 export function enrichApp(a, i = 0) {
   const h = hashInt(a.id || String(i))
   const hoursWaiting = [3, 9, 27, 51, 6, 14, 33, 2][h % 8]
   const reviewer = a.status === 'nueva' ? null : REVIEWERS[h % REVIEWERS.length]
-  const first = (a.customer || '').split(' ')[0]
-  const emailUser = first ? first.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '') : 'cliente'
   const enriched = {
     ...a,
     hoursWaiting,
-    maskedCedula: maskCedula(a.cedula),
-    phone: `1809${String(200 + (h % 700)).padStart(3, '0')}${String(1000 + (h % 8999)).padStart(4, '0')}`,
-    email: `${emailUser}@correo.com`,
-    city: CITIES[h % CITIES.length],
-    employment: a.employment || EMPLOYMENTS[h % EMPLOYMENTS.length],
+    // Real values pass straight through; absent ones stay absent.
+    maskedCedula: a.maskedCedula || (a.cedula && a.cedula !== '—' ? maskCedula(a.cedula) : null),
+    phone: a.phone || null,
+    email: a.email || null,
+    city: a.city || null,
+    employment: a.employment || null,
     reviewer,
     reviewerState: a.status === 'nueva' ? 'Sin asignar' : a.status === 'docs' ? 'Esperando documentos' : (a.status === 'evaluando' && a.kyc === 'aprobado' && a.consent) ? 'Listo para decisión' : 'En revisión',
     lastTouched: relHrs(Math.max(0, hoursWaiting - 1)),
     kycAt: relHrs(hoursWaiting + 6),
     cedulaVerified: a.kyc === 'aprobado',
     livenessPassed: a.kyc === 'aprobado',
-    consentAt: relHrs(hoursWaiting + 5),
-    consentVersion: 'v1.2',
-    banksAuthorized: 'Banco Popular, BHD, Banreservas, Scotiabank',
+    // Real consent facts when we have them (financing_bank_consents carries a
+    // per-bank signature + version); never a hardcoded bank list.
+    consentAt: a.consentAt || relHrs(hoursWaiting + 5),
+    consentVersion: a.consentVersion || null,
+    banksAuthorized: a.banksAuthorized || null,
     receivedAt: relHrs(hoursWaiting),
-    incomeSource: a.employment === 'Negocio propio' ? 'Declarado (negocio)' : 'Declarado (nómina)',
+    incomeSource: a.employment ? (a.employment === 'Negocio propio' ? 'Declarado (negocio)' : 'Declarado (nómina)') : null,
   }
   enriched.priority = appPriority(enriched)
   enriched.timeline = buildTimeline(enriched)

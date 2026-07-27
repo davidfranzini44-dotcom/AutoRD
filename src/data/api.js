@@ -756,6 +756,15 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// Full cédula for a bank routed on the application (audited server-side).
+// Masked everywhere by default; revealed only when the analyst asks for it.
+export async function getApplicationCedula(applicationId) {
+  if (!LIVE || !applicationId) return null
+  const { data, error } = await supabase.rpc('get_application_cedula', { p_application_id: applicationId })
+  if (error || !data?.ok) return null
+  return data.cedula
+}
+
 // ---------------- Admin: WhatsApp delivery health ----------------
 // Works in BOTH modes (own worker / Reparando gateway) because it reads what
 // AutoRD itself records: OTPs issued vs consumed, the delivery log, the outbox.
@@ -1320,7 +1329,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type))')
+    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
@@ -1328,7 +1337,15 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     const fin = Array.isArray(r.app?.financials) ? r.app.financials[0] : r.app?.financials
     const isPre = !r.app?.vehicle_id
     return {
-      id: r.app?.code, customer: r.app?.buyer_name, cedula: '—',
+      // Real contact + identity. Anything we don't hold stays null so the UI can
+      // say "no registrado" instead of the panel inventing it (it used to
+      // fabricate a phone, an email, a city and an occupation from a hash).
+      id: r.app?.code, customer: r.app?.buyer_name,
+      cedula: null,
+      maskedCedula: fin?.cedula_masked || null,
+      phone: r.app?.buyer_phone || null,
+      email: r.app?.buyer_email || null,
+      city: null,
       isPreapproval: isPre,
       vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
       dealer: r.app?.dealer?.name, amount: r.app?.requested_amount != null ? Number(r.app.requested_amount) : null,
@@ -1343,6 +1360,11 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       selectedByClient: !!r.selected,
       reservedUntil: r.app?.reserved_until || null,
       kyc: r.app?.kyc_status === 'aprobado' ? 'aprobado' : 'pendiente', consent: r.app?.consent_signed,
+      // THIS bank's own consent record (0044), not a hardcoded string.
+      consentAt: (r.app?.consents || []).find((c) => c.bank_id === bankDbId)?.signed_at
+        || r.app?.consent_signed_at || null,
+      consentVersion: (r.app?.consents || []).find((c) => c.bank_id === bankDbId)?.consent_version || null,
+      banksAuthorized: [...new Set((r.app?.routed || []).map((x) => x.bank?.name).filter(Boolean))].join(', ') || null,
       contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
     }

@@ -48,10 +48,16 @@ export default function Contrato() {
   )
 
   const banks = Array.isArray(c.banks) ? c.banks : []
+  // When a BANK analyst opens this, the server already narrowed bank_details to
+  // that bank alone (get_public_financing_contract) — it never ships a
+  // competitor's terms to the browser. `scoped` just tells the UI to drop the
+  // bank switcher and go straight to their own contract.
   const details = Array.isArray(c.bank_details) ? c.bank_details : []
+  const scoped = !!c.scoped_to_bank
   // Each bank gets its OWN consent contract (?banco=<slug>): its brand, its
   // terms, and consent language naming only that bank.
-  const bank = bankSlug ? details.find((b) => b.slug === bankSlug) : null
+  const requested = scoped ? details[0]?.slug : bankSlug
+  const bank = requested ? details.find((b) => b.slug === requested) : null
   const banksText = bank ? bank.name : (banks.length ? banks.join(', ') : 'los bancos seleccionados')
 
   return (
@@ -64,7 +70,7 @@ export default function Contrato() {
         </div>
 
         {/* One consent per bank — pick which bank's contract to read. */}
-        {details.length > 0 && (
+        {details.length > 0 && !scoped && (
           <div className="fc-noprint fc-bankpick">
             <span className="fc-bankpick-label">Contrato por banco:</span>
             <div className="fc-bankpick-row">
