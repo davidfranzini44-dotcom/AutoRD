@@ -15,6 +15,7 @@ import {
   UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
+import { riskFlags, riskSummary, assessCapacity, FLAG_LEVEL, CAPACITY_VERDICT } from '../data/underwriting'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -839,6 +840,14 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
               from a hash, and a bank must not see details AutoRD invented. */}
           <ClientInfoPanel app={a} />
         </section>
+
+        <section className="card pad">
+          <RiskPanel a={a} documents={docs} />
+        </section>
+
+        <section className="card pad">
+          <CapacityTool a={a} />
+        </section>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
           {a.isPreapproval ? (
@@ -1298,4 +1307,103 @@ function KV({ k, v, mono }) {
 }
 function F({ label, children, style }) {
   return <div className="field" style={style}><label>{label}</label>{children}</div>
+}
+
+// Risk summary. Only shows flags the record can actually justify — a red flag
+// against a real applicant can cost them a car, so anything we cannot compute
+// stays silent rather than appearing as a warning.
+function RiskPanel({ a, documents }) {
+  const flags = riskFlags(a, { documents })
+  const summary = riskSummary(flags)
+  const tone = TONE[summary.tone] || TONE.slate
+  return (
+    <>
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, margin: 0 }}>Riesgo</h3>
+        <span className="chip" style={{ background: tone.bg, color: tone.fg }}>{summary.label}</span>
+      </div>
+      {summary.clean ? (
+        <div className="tiny muted">No se detectaron alertas con la información disponible.</div>
+      ) : (
+        <div className="col gap-8">
+          {flags.map((f) => {
+            const lt = TONE[(FLAG_LEVEL[f.level] || {}).tone] || TONE.slate
+            return (
+              <div className="bankx-flag" key={f.key}>
+                <span className="bankx-flag-dot" style={{ background: lt.fg }} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="strong small">{f.label}</div>
+                  <div className="tiny muted">{f.detail}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
+// Decision SUPPORT. It never approves or rejects, and says so on screen — an
+// analyst reading a green pill under time pressure should not mistake it for a
+// credit decision the bank did not make.
+function CapacityTool({ a }) {
+  const [income, setIncome] = useState(a.income ?? '')
+  const [debts, setDebts] = useState('')
+  const [down, setDown] = useState(a.down ?? '')
+  const [price, setPrice] = useState(a.vehiclePrice ?? '')
+  const [amount, setAmount] = useState(a.amount ?? '')
+  const [apr, setApr] = useState(a.apr ?? 12)
+  const [term, setTerm] = useState(a.term ?? 5)
+  const [maxDti, setMaxDti] = useState(40)
+
+  const r = assessCapacity({
+    income, monthlyDebts: debts, downAvailable: down, vehiclePrice: price,
+    requestedAmount: amount, apr, termYears: term, maxDtiPct: maxDti,
+  })
+  const verdict = r?.verdict ? CAPACITY_VERDICT[r.verdict] : null
+  const vt = verdict ? (TONE[verdict.tone] || TONE.slate) : TONE.slate
+
+  return (
+    <>
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, margin: 0 }}>Herramienta de capacidad</h3>
+        <span className="pill">Solo referencia</span>
+      </div>
+
+      <div className="bankx-kv-grid">
+        <F label="Ingreso mensual"><input className="input" inputMode="numeric" value={income} onChange={(e) => setIncome(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Deudas mensuales"><input className="input" inputMode="numeric" value={debts} onChange={(e) => setDebts(e.target.value.replace(/[^0-9]/g, ''))} placeholder="0" /></F>
+        <F label="Inicial disponible"><input className="input" inputMode="numeric" value={down} onChange={(e) => setDown(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Precio del vehículo"><input className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Monto a financiar"><input className="input" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Tasa (%)"><input className="input" value={apr} onChange={(e) => setApr(e.target.value)} /></F>
+        <F label="Plazo (años)"><input className="input" inputMode="numeric" value={term} onChange={(e) => setTerm(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Máx. cuota/ingreso (%)"><input className="input" inputMode="numeric" value={maxDti} onChange={(e) => setMaxDti(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+      </div>
+
+      {!r ? (
+        <div className="tiny muted" style={{ marginTop: 12 }}>Ingresa el ingreso mensual para calcular.</div>
+      ) : (
+        <>
+          <div className="bankx-cap-out">
+            <div><span>Cuota estimada</span><b>{r.monthly != null ? fmtRD(r.monthly) : '—'}</b></div>
+            <div><span>Capacidad máxima</span><b>{fmtRD(Math.round(r.maxMonthly))}/mes</b></div>
+            <div><span>Monto máximo</span><b>{fmtRD(Math.round(r.maxFinanceable))}</b></div>
+            <div><span>Cuota/ingreso</span><b>{r.dti != null ? `${Math.round(r.dti * 100)}%` : '—'}</b></div>
+          </div>
+          {verdict && (
+            <div className="row center gap-8" style={{ marginTop: 12 }}>
+              <span className="chip" style={{ background: vt.bg, color: vt.fg }}>{verdict.label}</span>
+            </div>
+          )}
+          <div className="tiny muted" style={{ marginTop: 8 }}>{r.explanation}</div>
+          <div className="notice" style={{ marginTop: 12 }}>
+            <Info size={15} />
+            <span>Cálculo de referencia. No aprueba ni rechaza: la decisión y las condiciones finales son del banco.</span>
+          </div>
+        </>
+      )}
+    </>
+  )
 }

@@ -1470,7 +1470,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, officer:profiles(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
+    .select('*, officer:profiles(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
@@ -1513,6 +1513,11 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
       createdAt: r.created_at || r.app?.created_at || null,
+      // Needed by the risk flags: financing more than the car is worth can only
+      // be detected when the price is actually present.
+      vehiclePrice: r.app?.vehicle?.price != null ? Number(r.app.vehicle.price) : null,
+      apr: r.apr != null ? Number(r.apr) : null,
+      monthly: r.monthly != null ? Number(r.monthly) : null,
       // Real per-bank underwriting state (0056), not a hash.
       underwritingStage: r.underwriting_stage || 'nuevo',
       stageUpdatedAt: r.stage_updated_at || null,
