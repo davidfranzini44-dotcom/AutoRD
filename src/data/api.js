@@ -1400,7 +1400,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
+    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
@@ -1414,6 +1414,9 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       id: r.app?.code, customer: r.app?.buyer_name,
       cedula: null,
       maskedCedula: fin?.cedula_masked || null,
+      // The four digits the panel actually displays. cedula_masked cannot supply
+      // them: it keeps the first three digits and the check digit, not the tail.
+      cedulaLast4: fin?.cedula_last4 || null,
       phone: r.app?.buyer_phone || null,
       // Passwordless accounts carry a synthetic wa<digits>@autord.local address.
       // Surfacing it as a contact email is worse than showing nothing.

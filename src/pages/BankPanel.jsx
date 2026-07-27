@@ -28,13 +28,26 @@ import {
 const appScore = (a) => (a.kyc === 'aprobado' ? 40 : 0) + (a.consent ? 30 : 0) + (a.status !== 'docs' ? 20 : 0) + ((a.hoursWaiting || 0) < 24 ? 10 : 0)
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waMsg = (a) => `Hola ${a.customer}, te contactamos por tu solicitud de financiamiento ${a.id}${a.vehicle ? ` del ${a.vehicle}` : ''}.`
+// The last four digits, and only from a source that actually contains them.
+//
+// Deliberately NOT derived from cedula_masked: that mask has the shape
+// ###-•••••••-#, which keeps the FIRST three digits and the check digit and
+// bullets out the middle seven. Taking its "last 4" produced the municipality
+// prefix plus the check digit, displayed under a last-4 label — a wrong number
+// that looked right. The real digits come from cedula_last4 (stored at KYC time,
+// verified against the same peppered hash the client portal gate uses), or from
+// the full cédula once an analyst has revealed it.
 const cedulaLast4 = (app) => {
-  const raw = digits(app?.cedula || app?.maskedCedula || app?.cedulaMasked || '')
-  return raw.length >= 4 ? raw.slice(-4) : ''
+  const full = digits(app?.cedula)
+  if (full.length >= 4) return full.slice(-4)
+  const stored = digits(app?.cedulaLast4)
+  return stored.length === 4 ? stored : ''
 }
+// A DR cédula is 3-7-1, so the last four sit at the tail of the middle group
+// plus the check digit — masking to those positions keeps it recognisable.
 const maskedCedulaLabel = (app) => {
-  const last4 = cedulaLast4(app)
-  return last4 ? `***-***${last4}` : ''
+  const l4 = cedulaLast4(app)
+  return l4 ? `•••-••••${l4.slice(0, 3)}-${l4.slice(3)}` : ''
 }
 const dash = (v) => (v == null || v === '' ? '—' : v)
 
