@@ -86,6 +86,8 @@ export default function Financing() {
     : rawQuestions.map((q) => (q.key === 'telefono' ? { ...q, type: 'login' } : q))
 
   const [step, setStep] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [form, setForm] = useState(() => ({
     nombre: '', cedula: '', telefono: '', email: '',
     ingreso: seed.ingreso ? fmtMoneyInput(seed.ingreso) : '',
@@ -268,6 +270,11 @@ export default function Financing() {
   }, [kyc, session]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitToBanks = async () => {
+    // Re-entry guard: without it a double-tap sends TWO applications to every
+    // bank (seen live — two files 1.2s apart from the same person).
+    if (submitting) return
+    setSubmitting(true)
+    setSubmitError('')
     // Route only to banks that are BOTH selected and eligible for this car
     // (term within their max for the car's condition, and they finance its fuel).
     const bankDbIds = eligibleSel.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
@@ -292,8 +299,20 @@ export default function Financing() {
           requestedAmount,
         })
       }
-    } catch (_) { /* demo/offline */ }
-    next()
+      next()
+    } catch (err) {
+      // Offline/demo has no backend — advancing is correct there. With a real
+      // backend a failure must NOT look like success: previously every error was
+      // swallowed and the customer saw "Solicitud enviada" for an application
+      // that was never created.
+      if (!configured) { next() } else {
+        setSubmitError(String(err?.message || '').includes('duplicate_submission')
+          ? 'Ya enviamos tu solicitud hace un momento. Revisa "Mi financiamiento".'
+          : 'No pudimos enviar tu solicitud. Revisa tu conexión e intenta de nuevo.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   // What the calculator already captured — shown at the top so the customer still
@@ -395,10 +414,17 @@ export default function Financing() {
 
           {/* Step 0 (Datos) has its own in-card controls (one question at a time). */}
           {step > 0 && step < 4 && (
-            <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
-              <button className="btn btn-outline" onClick={back} disabled={step === 0}><ChevronLeft size={17} /> Atrás</button>
-              <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} eligibleCount={eligibleSel.length} />
-            </div>
+            <>
+              {submitError && (
+                <div className="notice" style={{ marginTop: 18, borderColor: 'var(--amber-bd)', background: 'var(--amber-bg)' }}>
+                  <Info size={16} /><span>{submitError}</span>
+                </div>
+              )}
+              <div className="row between" style={{ marginTop: 22, borderTop: '1px solid var(--line)', paddingTop: 18 }}>
+                <button className="btn btn-outline" onClick={back} disabled={step === 0 || submitting}><ChevronLeft size={17} /> Atrás</button>
+                <PrimaryNext step={step} next={next} submitToBanks={submitToBanks} kyc={kyc} consent={consent} eligibleCount={eligibleSel.length} submitting={submitting} />
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -406,10 +432,14 @@ export default function Financing() {
   )
 }
 
-function PrimaryNext({ step, next, submitToBanks, kyc, consent, eligibleCount }) {
+function PrimaryNext({ step, next, submitToBanks, kyc, consent, eligibleCount, submitting }) {
   if (step === 1) return <button className="btn btn-primary" onClick={next} disabled={kyc !== 'ok'}>Continuar <ChevronRight size={17} /></button>
   if (step === 2) return <button className="btn btn-primary" onClick={next} disabled={!consent}>Firmar y continuar <ChevronRight size={17} /></button>
-  if (step === 3) return <button className="btn btn-primary" onClick={submitToBanks} disabled={eligibleCount === 0}><Send size={16} /> Enviar solicitud a bancos</button>
+  if (step === 3) return (
+    <button className="btn btn-primary" onClick={submitToBanks} disabled={eligibleCount === 0 || submitting}>
+      {submitting ? <><Loader2 size={16} className="spin" /> Enviando…</> : <><Send size={16} /> Enviar solicitud a bancos</>}
+    </button>
+  )
   return <button className="btn btn-primary" onClick={next}>Continuar <ChevronRight size={17} /></button>
 }
 
