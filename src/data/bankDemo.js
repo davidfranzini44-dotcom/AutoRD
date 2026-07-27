@@ -5,11 +5,9 @@
 // Everything here is deterministic (no randomness) so it stays stable.
 // ============================================================
 
-export const REVIEWERS = [
-  { id: 'r1', name: 'Laura Fernández', initials: 'LF' },
-  { id: 'r2', name: 'Miguel Ortega', initials: 'MO' },
-  { id: 'r3', name: 'Ana Pérez', initials: 'AP' },
-]
+// REVIEWERS (three invented analysts) removed: the panel and the reports now
+// read the bank's real team from profiles. Kept out deliberately so nothing
+// reaches for it again.
 
 export const REVIEWER_STATES = ['Sin asignar', 'En revisión', 'Esperando documentos', 'Listo para decisión']
 
@@ -73,8 +71,18 @@ export function appPriority(a) {
 // only; anything genuinely unknown stays empty and the UI says so.
 export function enrichApp(a, i = 0) {
   const h = hashInt(a.id || String(i))
-  const hoursWaiting = [3, 9, 27, 51, 6, 14, 33, 2][h % 8]
-  const reviewer = a.status === 'nueva' ? null : REVIEWERS[h % REVIEWERS.length]
+  // Two more hash-invented fields, missed by the pass described above:
+  //   * the assigned analyst was REVIEWERS[hash % 3] — three people who do not
+  //     work at the bank, shown as the officer accountable for the file.
+  //   * hoursWaiting was picked from a fixed array, and it feeds appScore's SLA
+  //     component, so a made-up clock was scoring real applications.
+  // Both now come from the record: the officer from application_banks, the wait
+  // from created_at. Unknown stays unknown.
+  const created = a.createdAt ? new Date(a.createdAt) : null
+  const hoursWaiting = created && Number.isFinite(created.getTime())
+    ? Math.max(0, Math.round((Date.now() - created.getTime()) / 3600000))
+    : (a.hoursWaiting ?? null)
+  const reviewer = a.reviewer || null
   const enriched = {
     ...a,
     hoursWaiting,

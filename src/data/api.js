@@ -1395,12 +1395,82 @@ export async function updateMyProfile(patch) {
   if (error) throw error
 }
 
+// ---------------- Bank underwriting: officer, stage, internal notes ----------
+// All of this is per (application, bank) and private to that bank. Writes go
+// through SECURITY DEFINER RPCs so the audit entry lands in the same
+// transaction as the change and cannot be skipped.
+
+// The bank's own team, from real profiles — not the three invented analysts the
+// panel used to assign by hashing the application id.
+export async function getBankOfficers(bankDbId) {
+  if (!LIVE || !bankDbId) return []
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, bank_role')
+    .eq('bank_id', bankDbId).eq('active', true)
+    .order('full_name')
+  if (error) return []
+  return (data || []).map((p) => ({ id: p.id, name: p.full_name || 'Sin nombre', role: p.bank_role || null }))
+}
+
+export async function setUnderwriting(responseId, { stage = null, officerId = null } = {}) {
+  if (!LIVE) return null
+  if (!responseId) throw new Error('Falta la solicitud')
+  const { error } = await supabase.rpc('bank_set_underwriting', {
+    p_response_id: responseId, p_stage: stage, p_officer: officerId,
+  })
+  if (error) throw error
+}
+
+// Separate from setUnderwriting because passing null there means "leave alone",
+// so there would be no way to express "clear the assignment".
+export async function unassignOfficer(responseId) {
+  if (!LIVE) return null
+  const { error } = await supabase.rpc('bank_unassign_officer', { p_response_id: responseId })
+  if (error) throw error
+}
+
+export async function addInternalNote(applicationId, { note, nextAction = null, nextActionDate = null } = {}) {
+  if (!LIVE) return null
+  const { data, error } = await supabase.rpc('bank_add_internal_note', {
+    p_application_id: applicationId, p_note: note,
+    p_next_action: nextAction, p_next_action_date: nextActionDate || null,
+  })
+  if (error) throw error
+  return data
+}
+
+// RLS scopes these to the caller's own bank; no bank_id filter needed here, and
+// adding one client-side would imply the boundary is enforced in the browser.
+export async function getInternalNotes(applicationId) {
+  if (!LIVE || !applicationId) return []
+  const { data, error } = await supabase
+    .from('financing_internal_notes')
+    .select('id, note, next_action, next_action_date, created_at, author:profiles(full_name)')
+    .eq('application_id', applicationId)
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data || []).map((r) => ({
+    id: r.id, note: r.note,
+    nextAction: r.next_action, nextActionDate: r.next_action_date,
+    createdAt: r.created_at, author: r.author?.full_name || 'Banco',
+  }))
+}
+
+export const UNDERWRITING_STAGES = [
+  { id: 'nuevo', label: 'Nuevo' },
+  { id: 'identidad', label: 'Revisando identidad' },
+  { id: 'ingresos', label: 'Revisando ingresos' },
+  { id: 'esperando_info', label: 'Esperando información' },
+  { id: 'comite', label: 'En comité' },
+]
+
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
+    .select('*, officer:profiles(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
@@ -1442,6 +1512,11 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       banksAuthorized: [...new Set((r.app?.routed || []).map((x) => x.bank?.name).filter(Boolean))].join(', ') || null,
       contractToken: r.app?.contract_token || null,
       status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
+      createdAt: r.created_at || r.app?.created_at || null,
+      // Real per-bank underwriting state (0056), not a hash.
+      underwritingStage: r.underwriting_stage || 'nuevo',
+      stageUpdatedAt: r.stage_updated_at || null,
+      reviewer: r.officer?.id ? { id: r.officer.id, name: r.officer.full_name || 'Analista' } : null,
     }
   })
 }

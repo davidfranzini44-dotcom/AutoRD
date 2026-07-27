@@ -4,8 +4,8 @@ import { Download, Sparkles, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import useBankIdentity from '../hooks/useBankIdentity'
 import { fmtRD } from '../data/demo'
-import { getBankApplications } from '../data/api'
-import { enrichApp, bankStats, byDealer, byAmountRange, REVIEWERS } from '../data/bankDemo'
+import { getBankApplications, getBankOfficers } from '../data/api'
+import { enrichApp, bankStats, byDealer, byAmountRange } from '../data/bankDemo'
 
 const PERIODS = [{ k: 'mes', l: 'Este mes' }, { k: '7d', l: '7 días' }, { k: 'trim', l: 'Trimestre' }]
 const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0)
@@ -14,7 +14,16 @@ export default function BankReports() {
   const { profile } = useAuth() || {}
   const bank = useBankIdentity(profile)
   const [apps, setApps] = useState([])
+  // Real team members: this report used to rate three analysts who do not work
+  // at the bank, using an SLA clock that was also invented.
+  const [officers, setOfficers] = useState([])
   const [period, setPeriod] = useState('mes')
+
+  useEffect(() => {
+    let alive = true
+    getBankOfficers(profile?.bank_id).then((list) => { if (alive) setOfficers(list) })
+    return () => { alive = false }
+  }, [profile?.bank_id])
 
   useEffect(() => {
     let alive = true
@@ -62,7 +71,7 @@ export default function BankReports() {
   ]
 
   // SLA per analyst.
-  const analysts = REVIEWERS.map((r) => {
+  const analysts = officers.map((r) => {
     const mine = apps.filter((a) => a.reviewer?.id === r.id)
     const active = mine.filter((a) => !['preaprobada', 'rechazada'].includes(a.status)).length
     const listas = mine.filter((a) => a.status === 'evaluando' && a.kyc === 'aprobado' && a.consent).length

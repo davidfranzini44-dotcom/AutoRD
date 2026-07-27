@@ -11,6 +11,8 @@ import {
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
   getOrCreateFinancingToken, getFinancingEvents, getApplicationCedula,
   getBankClientInfo, saveBankClientInfo, realEmail,
+  getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
+  UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
 import { useAuth } from '../context/AuthContext'
@@ -21,7 +23,7 @@ import WhatsAppIcon from '../components/WhatsAppIcon'
 import useBankIdentity from '../hooks/useBankIdentity'
 import { estimateMonthly } from '../data/finance'
 import {
-  REVIEWERS, DOC_TYPES, DOC_STATUS, TONE, enrichApp, bankStats,
+  DOC_TYPES, DOC_STATUS, TONE, enrichApp, bankStats,
 } from '../data/bankDemo'
 
 // Simple internal readiness score (0–100) derived from KYC / consent / docs / SLA.
@@ -79,18 +81,29 @@ export default function BankPanel() {
   const [consentOnly, setConsentOnly] = useState(false)
   const [docsOnly, setDocsOnly] = useState(false)
   // Session overlays (no backend): reviewer assignment + internal notes per app.
-  const [overrides, setOverrides] = useState({}) // { [id]: { reviewer, notes:[] } }
   const { profile } = useAuth() || {}
   const bank = useBankIdentity(profile)
 
-  useEffect(() => {
-    let alive = true
-    getBankApplications(profile?.bank_id, 'todas').then((data) => {
-      if (!alive) return
+  const [officers, setOfficers] = useState([])
+
+  const reloadApps = useCallback(() => {
+    // No bank_id guard: getBankApplications falls back to demo data when the
+    // app is not wired to Supabase, and short-circuiting here left the queue
+    // permanently empty in that mode.
+    return getBankApplications(profile?.bank_id, 'todas').then((data) => {
       const enriched = (data || []).map(enrichApp)
       setRaw(enriched)
       setSelId((cur) => cur || enriched[0]?.id || null)
     }).catch(() => {})
+  }, [profile?.bank_id])
+
+  useEffect(() => { reloadApps() }, [reloadApps])
+
+  // The bank's real team, replacing the three invented analysts the panel used
+  // to assign by hashing the application id.
+  useEffect(() => {
+    let alive = true
+    getBankOfficers(profile?.bank_id).then((list) => { if (alive) setOfficers(list) })
     return () => { alive = false }
   }, [profile?.bank_id])
 
@@ -102,10 +115,9 @@ export default function BankPanel() {
     return () => window.removeEventListener('keydown', onKey)
   }, [expOpen])
 
-  const apps = useMemo(() => raw.map((a) => {
-    const o = overrides[a.id]
-    return o ? { ...a, reviewer: o.reviewer !== undefined ? o.reviewer : a.reviewer, notes: o.notes || [] } : a
-  }), [raw, overrides])
+  // reviewer and notes used to be layered on from local `overrides` state, which
+  // is why they never survived a refresh. Both now arrive with the row.
+  const apps = raw
 
   const dealers = [...new Set(apps.map((a) => a.dealer).filter(Boolean))].sort()
   const stats = bankStats(apps)
@@ -114,7 +126,8 @@ export default function BankPanel() {
   const slaRisk = stats.waiting.length
   const unassigned = apps.filter((a) => !a.reviewer && !['preaprobada', 'rechazada'].includes(a.status)).length
   const approvalVolume = stats.totalApproved || 0
-  const reviewerLoad = REVIEWERS.map((r) => ({
+  // Workload per REAL team member (0056); this used to chart three invented ones.
+  const reviewerLoad = officers.map((r) => ({
     ...r,
     count: apps.filter((a) => a.reviewer?.id === r.id && !['preaprobada', 'rechazada'].includes(a.status)).length,
     ready: apps.filter((a) => a.reviewer?.id === r.id && a.kyc === 'aprobado' && a.consent && a.status === 'evaluando').length,
@@ -135,11 +148,42 @@ export default function BankPanel() {
     return true
   })
   const sel = apps.find((a) => a.id === selId) || null
+
+  // Internal notes for the open expediente only — one query, not one per row.
+  const [selNotes, setSelNotes] = useState([])
+  const loadNotes = useCallback(() => {
+    const appId = apps.find((a) => a.id === selId)?.applicationId
+    if (!appId) { setSelNotes([]); return Promise.resolve() }
+    return getInternalNotes(appId).then((rows) => setSelNotes(rows.map((n) => ({
+      by: n.author,
+      text: n.note + (n.nextAction ? ` · Próximo paso: ${n.nextAction}` : ''),
+      when: new Date(n.createdAt).toLocaleString('es-DO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+    })))).catch(() => setSelNotes([]))
+  }, [apps, selId])
+  useEffect(() => { loadNotes() }, [loadNotes])
+
+  const addNoteFor = async (n) => {
+    const appId = apps.find((a) => a.id === selId)?.applicationId
+    if (!appId || !n?.text) return
+    try { await addInternalNote(appId, { note: n.text }); await loadNotes() } catch (_) { /* no-op */ }
+  }
   const filterCount = (id) => id === 'todas' ? apps.length : apps.filter((a) => a.status === id).length
 
   const openApp = (id) => { setSelId(id); setSheetOpen(true) }
-  const assignReviewer = (id, reviewer) => setOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), reviewer } }))
-  const addNote = (id, note) => setOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), notes: [{ ...note }, ...((o[id]?.notes) || [])] } }))
+  // Both of these used to write to React state, so reassigning an analyst or
+  // writing a note was lost on refresh and never reached the audit trail.
+  const assignOfficer = async (responseId, officerId) => {
+    if (!responseId) return
+    try {
+      if (officerId) await setUnderwriting(responseId, { officerId })
+      else await unassignOfficer(responseId)
+      await reloadApps()
+    } catch (_) { /* surfaced by the row staying put */ }
+  }
+  const changeStage = async (responseId, stage) => {
+    if (!responseId || !stage) return
+    try { await setUnderwriting(responseId, { stage }); await reloadApps() } catch (_) { /* no-op */ }
+  }
   const reviewReady = () => { setFilter('evaluando'); setKycOnly(true); setConsentOnly(true); setDocsOnly(false) }
 
   // 5 top KPIs (mockup order).
@@ -240,7 +284,7 @@ export default function BankPanel() {
               </label>
               <label className="col gap-4"><span className="tiny strong">Analista</span>
                 <select className="input" value={reviewerF} onChange={(e) => setReviewerF(e.target.value)} style={{ height: 38, minWidth: 160 }}>
-                  <option value="">Todos</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  <option value="">Todos</option>{officers.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </label>
             </div>
@@ -300,7 +344,7 @@ export default function BankPanel() {
               </div>
               <div className="bankx-qactions">
                 <button className="btn" onClick={() => { setReviewerF(''); setShowFilters(true) }}>Rebalancear</button>
-                <button className="btn btn-primary" onClick={() => sel && assignReviewer(sel.id, REVIEWERS[0])} disabled={!sel}>Asignar a mí</button>
+                <button className="btn btn-primary" onClick={() => sel && assignOfficer(sel.responseId, profile?.id)} disabled={!sel}>Asignar a mí</button>
               </div>
             </aside>
           </div>
@@ -318,7 +362,8 @@ export default function BankPanel() {
                 <button className="icon-btn" onClick={() => setExpOpen(false)} aria-label="Cerrar"><X size={18} /></button>
               </div>
               <div className="bankx-expmodal-body">
-                <Expediente key={sel.id} a={sel} onAssign={(r) => assignReviewer(sel.id, r)} onAddNote={(n) => addNote(sel.id, n)} bank={bank} />
+                <Expediente key={sel.id} a={{ ...sel, notes: selNotes }} onAssign={assignOfficer} onStage={changeStage}
+                  onAddNote={addNoteFor} officers={officers} bank={bank} />
               </div>
             </div>
           </div>
@@ -680,7 +725,7 @@ const fmtEventWhen = (at) => {
     : ''
 }
 
-function Expediente({ a, onAssign, onAddNote, bank }) {
+function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
   const [docs, setDocs] = useState([])
   const [docStatus, setDocStatus] = useState({})
   const [noteInput, setNoteInput] = useState('')
@@ -767,11 +812,21 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
               </div>
             ))}
           </div>
-          <label className="row center gap-6 tiny" style={{ marginTop: 12 }}><UserCheck size={14} className="muted" />
-            <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
-              <option value="">Sin analista asignado</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </label>
+          <div className="row wrap center gap-8" style={{ marginTop: 10 }}>
+            <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
+              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                value={a.reviewer?.id || ''} onChange={(e) => onAssign(a.responseId, e.target.value || null)}>
+                <option value="">Sin analista asignado</option>
+                {(officers || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </label>
+            <label className="row center gap-6 tiny"><ClipboardList size={14} className="muted" />
+              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                value={a.underwritingStage || 'nuevo'} onChange={(e) => onStage(a.responseId, e.target.value)}>
+                {UNDERWRITING_STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
+              </select>
+            </label>
+          </div>
         </aside>
       </div>
 
@@ -851,7 +906,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
   )
 }
 
-function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
+function ApplicationDetail({ a, onBack, onAssign, onStage, onAddNote, officers, bank }) {
   const [docs, setDocs] = useState([])
   const [docStatus, setDocStatus] = useState({}) // local overlay: { [docId]: status }
   const [noteInput, setNoteInput] = useState('')
@@ -914,11 +969,21 @@ function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
       {/* Reviewer assignment */}
       <div className="card pad">
         <div className="row wrap between center gap-8">
-          <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
-            <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
-              <option value="">Sin analista asignado</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </label>
+          <div className="row wrap center gap-8" style={{ marginTop: 10 }}>
+            <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
+              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                value={a.reviewer?.id || ''} onChange={(e) => onAssign(a.responseId, e.target.value || null)}>
+                <option value="">Sin analista asignado</option>
+                {(officers || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </label>
+            <label className="row center gap-6 tiny"><ClipboardList size={14} className="muted" />
+              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                value={a.underwritingStage || 'nuevo'} onChange={(e) => onStage(a.responseId, e.target.value)}>
+                {UNDERWRITING_STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
+              </select>
+            </label>
+          </div>
           <Chip tone={a.priority.tone}>{a.priority.label}</Chip>
         </div>
         <div className="tiny muted" style={{ marginTop: 8 }}>{a.reviewerState} · recibida {a.receivedAt} · último cambio {a.lastTouched}</div>
