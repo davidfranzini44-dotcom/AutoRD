@@ -1825,6 +1825,54 @@ function mapLead(r) {
 }
 
 // Real leads for the dealer CRM (WhatsApp conversations + vehicle + KYC status).
+// The dealer's real sales team, from profiles — replacing the three invented
+// salespeople the panel assigned by index.
+export async function getDealerSalespeople(dealerDbId) {
+  if (!LIVE || !dealerDbId) return []
+  const { data, error } = await supabase
+    .from('profiles').select('id, full_name, dealer_role')
+    .eq('dealer_id', dealerDbId).eq('active', true).order('full_name')
+  if (error) return []
+  return (data || []).map((p) => ({ id: p.id, name: p.full_name || 'Sin nombre', role: p.dealer_role || null }))
+}
+
+// Every buyer with real intent toward this dealer's stock, whether or not they
+// ever sent a WhatsApp. getDealerLeads() only ever returned WhatsApp
+// conversations, so a pre-approved buyer who never messaged was invisible.
+// Financing state here is derived per lead and carries nothing bank-private.
+export async function getDealerPipeline(dealerDbId) {
+  if (!LIVE || !dealerDbId) return []
+  const { data, error } = await supabase.rpc('dealer_pipeline', { p_dealer: dealerDbId })
+  if (error) return []
+  return (data || []).map((r) => ({
+    buyerId: r.buyer_id, customer: r.customer, phone: r.phone,
+    dealerStage: r.dealer_stage || 'nuevo',
+    salespersonId: r.salesperson_id, salesperson: r.salesperson,
+    nextAction: r.next_action, nextActionDate: r.next_action_date,
+    vehicleId: r.vehicle_id, vehicle: r.vehicle,
+    vehiclePrice: r.vehicle_price != null ? Number(r.vehicle_price) : null,
+    source: r.source, lastActivity: r.last_activity,
+    applicationId: r.application_id, appStatus: r.app_status,
+    approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+    approvalValidUntil: r.approval_valid_until,
+    needsDocs: !!r.needs_docs, inBank: !!r.in_bank, kyc: r.kyc_status,
+  }))
+}
+
+// The dealer's own annotations. Financing state is never written here — it is
+// the bank's, and a stored copy would let the pipeline contradict it.
+export async function saveDealerLead(dealerDbId, buyerId, { stage, salespersonId, nextAction, nextActionDate } = {}) {
+  if (!LIVE) return null
+  if (!dealerDbId || !buyerId) throw new Error('Falta el dealer o el cliente')
+  const row = { dealer_id: dealerDbId, buyer_id: buyerId, updated_at: new Date().toISOString() }
+  if (stage !== undefined) row.stage = stage
+  if (salespersonId !== undefined) row.salesperson_id = salespersonId || null
+  if (nextAction !== undefined) row.next_action = nextAction || null
+  if (nextActionDate !== undefined) row.next_action_date = nextActionDate || null
+  const { error } = await supabase.from('dealer_leads').upsert(row, { onConflict: 'dealer_id,buyer_id' })
+  if (error) throw error
+}
+
 export async function getDealerLeads() {
   if (!LIVE) return []
   const { data, error } = await supabase.rpc('wa_ib_leads')

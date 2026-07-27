@@ -4,12 +4,12 @@ import {
   AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, FileText, Landmark,
   MessageCircle, Phone, Plus, Save, Search, ShieldCheck, X,
 } from 'lucide-react'
-import { getDealerLeads, updateLead, ibMessages, LIVE } from '../data/api'
+import { getDealerLeads, updateLead, ibMessages, LIVE, getDealerSalespeople } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
 import WhatsAppIcon from '../components/WhatsAppIcon'
-import { LEAD_STAGES, SALESPEOPLE, buildLeads, kycLink } from '../data/dealerDemo'
+import { LEAD_STAGES, buildLeads, kycLink } from '../data/dealerDemo'
 import './DealerLeads.css'
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
@@ -105,6 +105,7 @@ function viewIncludesLead(view, l) {
 export default function DealerLeads() {
   const { profile } = useAuth() || {}
   const [leads, setLeads] = useState([])
+  const [team, setTeam] = useState([])
   const [loading, setLoading] = useState(true)
   const [reload, setReload] = useState(0)
   const [q, setQ] = useState('')
@@ -131,6 +132,14 @@ export default function DealerLeads() {
       })
     return () => { alive = false }
   }, [profile?.dealer_id, reload])
+
+  // The dealer's real sales team. The dropdowns used to list three people who do
+  // not work here (SALESPEOPLE[i % 3]); assigning one meant nothing.
+  useEffect(() => {
+    let alive = true
+    getDealerSalespeople(profile?.dealer_id).then((list) => { if (alive) setTeam(list) })
+    return () => { alive = false }
+  }, [profile?.dealer_id])
   const refetch = () => setReload((x) => x + 1)
 
   const filtered = useMemo(() => leads.filter((l) => {
@@ -246,7 +255,7 @@ export default function DealerLeads() {
         </label>
         <select className="input" value={sales} onChange={(e) => setSales(e.target.value)}>
           <option value="">Todos los vendedores</option>
-          {SALESPEOPLE.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+          {team.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
         </select>
         <select className="input" value={view} onChange={(e) => setView(e.target.value)}>
           {VIEW_TABS.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
@@ -525,7 +534,7 @@ function LeadDrawer({ lead, onClose, onChange, setLeads }) {
             <label className="col gap-4"><span className="tiny strong">Vendedor</span>
               <select className="input" value={salesperson} onChange={(e) => onSales(e.target.value)}>
                 <option value="">Sin asignar</option>
-                {SALESPEOPLE.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                {team.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </label>
           </div>
@@ -608,7 +617,7 @@ function ManualLeadModal({ onClose, onCreate }) {
         <label className="col gap-4"><span className="tiny strong">Vendedor</span>
           <select className="input" value={salesperson} onChange={(e) => setSalesperson(e.target.value)}>
             <option value="">Sin asignar</option>
-            {SALESPEOPLE.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+            {team.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
           </select>
         </label>
         <label className="col gap-4"><span className="tiny strong">Nota</span><textarea className="input dl-note" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Qué quiere comprar, presupuesto, seguimiento..." /></label>

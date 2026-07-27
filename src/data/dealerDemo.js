@@ -5,11 +5,9 @@
 // Everything here is deterministic (no randomness) so it stays stable.
 // ============================================================
 
-export const SALESPEOPLE = [
-  { id: 's1', name: 'Carlos Jiménez', initials: 'CJ' },
-  { id: 's2', name: 'María Rodríguez', initials: 'MR' },
-  { id: 's3', name: 'Luis Fernández', initials: 'LF' },
-]
+// SALESPEOPLE (three invented sellers, assigned by index) removed: the panel
+// now reads the dealer's real team from profiles, same as the bank officers.
+export const SALESPEOPLE = []
 const sp = (i) => SALESPEOPLE[i % SALESPEOPLE.length]
 
 export const LEAD_STAGES = [
