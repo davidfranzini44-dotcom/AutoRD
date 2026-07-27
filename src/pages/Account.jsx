@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Heart, FileText, ShieldCheck, ShieldAlert, MessageCircle,
-  ChevronRight, LogOut, User, Landmark, Clock, Bell, Loader2,
+  ChevronRight, LogOut, User, Landmark, Clock, Bell, Loader2, Calculator,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import WhatsAppIcon from '../components/WhatsAppIcon'
@@ -12,12 +12,14 @@ import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
 import { recentlyViewedCount } from '../data/recentlyViewed'
 import { kycValidity, fmtKycDate } from '../data/kyc'
+import { isInstitutionProfile } from '../data/roles'
 
 // Buyer account hub: one place for saved cars, financing status, verified
 // identity and WhatsApp contact. Read-only summary that links out to the
 // dedicated pages — the account itself lives in Supabase Auth + `profiles`.
 export default function Account() {
   const { user, profile, signOut, refreshProfile } = useAuth() || {}
+  const institutionUser = isInstitutionProfile(profile)
   const [favs, setFavs] = useState(favoriteCount())
   const [alerts, setAlerts] = useState(savedSearchCount())
   const [viewed, setViewed] = useState(recentlyViewedCount())
@@ -46,10 +48,14 @@ export default function Account() {
   }, [])
 
   useEffect(() => {
+    if (institutionUser) {
+      setFin(null)
+      return undefined
+    }
     let alive = true
     getMyFinancing().then((d) => { if (alive) setFin(d) }).catch(() => { if (alive) setFin(null) })
     return () => { alive = false }
-  }, [])
+  }, [institutionUser])
 
   useEffect(() => {
     if (!user) { setUnread(0); return undefined }
@@ -141,45 +147,51 @@ export default function Account() {
             badge={viewed > 0 ? String(viewed) : null}
           />
 
-          {/* Financing */}
-          <HubRow
-            to="/mi-financiamiento"
-            icon={finState === 'evaluating' ? <Clock size={20} /> : <FileText size={20} />}
-            tone="teal"
-            title="Mi financiamiento"
-            sub={finSub}
-            badge={finState === 'offers' ? 'Ofertas' : finState === 'preapproved' ? 'Pre-aprobado' : null}
-          />
+          {!institutionUser && (
+            <>
+              {/* Financing */}
+              <HubRow
+                to="/mi-financiamiento"
+                icon={finState === 'evaluating' ? <Clock size={20} /> : <FileText size={20} />}
+                tone="teal"
+                title="Mi financiamiento"
+                sub={finSub}
+                badge={finState === 'offers' ? 'Ofertas' : finState === 'preapproved' ? 'Pre-aprobado' : null}
+              />
 
-          {/* Identity (KYC) — valid for 12 months, then re-verify */}
-          <HubRow
-            to="/verificar"
-            icon={kyc.valid ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
-            tone={kyc.valid ? 'green' : 'amber'}
-            title="Identidad"
-            sub={kyc.valid
-              ? `Verificada · válida hasta ${fmtKycDate(kyc.expires)}${kyc.daysLeft <= 30 ? ` · vence pronto` : ''}`
-              : kyc.verified
-                ? `Venció el ${fmtKycDate(kyc.expires)} — vuelve a verificar`
-                : 'Sin verificar — verifica tu cédula para agilizar el financiamiento'}
-            badge={kyc.valid ? 'Vigente' : kyc.verified ? 'Vencida' : null}
-          />
+              {/* Identity (KYC) — valid for 12 months, then re-verify */}
+              <HubRow
+                to="/verificar"
+                icon={kyc.valid ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
+                tone={kyc.valid ? 'green' : 'amber'}
+                title="Identidad"
+                sub={kyc.valid
+                  ? `Verificada · válida hasta ${fmtKycDate(kyc.expires)}${kyc.daysLeft <= 30 ? ` · vence pronto` : ''}`
+                  : kyc.verified
+                    ? `Venció el ${fmtKycDate(kyc.expires)} — vuelve a verificar`
+                    : 'Sin verificar — verifica tu cédula para agilizar el financiamiento'}
+                badge={kyc.valid ? 'Vigente' : kyc.verified ? 'Vencida' : null}
+              />
+            </>
+          )}
 
           {/* WhatsApp — add / verify the number right here (no dead-end link) */}
-          <WhatsAppRow phone={phone} verifiedAt={profile?.phone_verified_at} onSaved={refreshProfile} />
+          <WhatsAppRow phone={phone} verifiedAt={profile?.phone_verified_at} onSaved={refreshProfile} institutionUser={institutionUser} />
         </div>
 
         {/* Discover */}
         <div className="card card-pad" style={{ marginTop: 16, background: 'var(--teal-50)', borderColor: 'var(--teal-200, var(--line))' }}>
           <div className="row between center wrap gap-12">
             <div className="row center gap-12">
-              <div className="verify-ic" style={{ background: '#fff', color: 'var(--teal-700)' }}><Landmark size={20} /></div>
+              <div className="verify-ic" style={{ background: '#fff', color: 'var(--teal-700)' }}>{institutionUser ? <Calculator size={20} /> : <Landmark size={20} />}</div>
               <div>
-                <div className="strong">¿Cuánto puedes financiar?</div>
-                <div className="tiny muted">Obtén una pre-aprobación con bancos antes de elegir tu carro.</div>
+                <div className="strong">{institutionUser ? 'Calculadora de cuota' : '¿Cuánto puedes financiar?'}</div>
+                <div className="tiny muted">{institutionUser ? 'Calcula cuotas estimadas para orientar clientes sin iniciar KYC ni solicitud.' : 'Obtén una pre-aprobación con bancos antes de elegir tu carro.'}</div>
               </div>
             </div>
-            <Link to="/financiamiento" className="btn btn-primary">Solicitar pre-aprobación</Link>
+            <Link to={institutionUser ? '/?calculadora=1' : '/financiamiento'} className="btn btn-primary">
+              {institutionUser ? 'Abrir calculadora' : 'Solicitar pre-aprobación'}
+            </Link>
           </div>
         </div>
       </div>
@@ -196,7 +208,7 @@ const TONE = {
 
 // Add / verify the WhatsApp number in place — the row used to link to the
 // financing wizard, which was a dead end for someone just managing their number.
-function WhatsAppRow({ phone, verifiedAt, onSaved }) {
+function WhatsAppRow({ phone, verifiedAt, onSaved, institutionUser = false }) {
   const t = TONE.green
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState(phone ? String(phone).replace(/^\+?1?/, '') : '')
@@ -245,7 +257,7 @@ function WhatsAppRow({ phone, verifiedAt, onSaved }) {
       {open && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line-2)' }}>
           {step === 'done' ? (
-            <div className="tiny" style={{ color: 'var(--green)' }}>Número verificado. Te avisaremos por WhatsApp sobre tu financiamiento.</div>
+            <div className="tiny" style={{ color: 'var(--green)' }}>{institutionUser ? 'Número verificado para tu cuenta.' : 'Número verificado. Te avisaremos por WhatsApp sobre tu financiamiento.'}</div>
           ) : step === 'code' ? (
             <>
               <div className="tiny muted" style={{ marginBottom: 8 }}>Escribe el código que enviamos a +1 {digits}.</div>
@@ -260,7 +272,7 @@ function WhatsAppRow({ phone, verifiedAt, onSaved }) {
             </>
           ) : (
             <>
-              <div className="tiny muted" style={{ marginBottom: 8 }}>Verifica tu WhatsApp para recibir avisos de tu financiamiento.</div>
+              <div className="tiny muted" style={{ marginBottom: 8 }}>{institutionUser ? 'Verifica tu WhatsApp para recibir avisos de tu cuenta.' : 'Verifica tu WhatsApp para recibir avisos de tu financiamiento.'}</div>
               <div className="row gap-8 wrap">
                 <input className="input" inputMode="tel" placeholder="809 555 0100" value={value}
                   onChange={(e) => setValue(e.target.value.replace(/[^0-9\s-]/g, ''))} style={{ maxWidth: 180 }} />
