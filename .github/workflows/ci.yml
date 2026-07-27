@@ -1,0 +1,42 @@
+name: CI
+
+# Runs the test suite and a production build on every push and pull request to
+# main. The suite exists because the DR expired-cédula grace shipped broken twice
+# in one day; this is what stops the next regression reaching a real applicant
+# instead of relying on someone remembering to run `npm test`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # `npm ci` installs exactly what package-lock.json pins.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # A green suite with a broken bundle still breaks production, so build too.
+      - name: Build
+        run: npm run build
