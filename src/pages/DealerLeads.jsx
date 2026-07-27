@@ -353,8 +353,18 @@ export default function DealerLeads() {
         </section>
       )}
 
-      {active && <LeadDrawer lead={active} onClose={() => setActive(null)} onChange={refetch} setLeads={setLeads} inventory={inventory} />}
-      {manualOpen && <ManualLeadModal onClose={() => setManualOpen(false)} onCreate={addManualLead} />}
+      {active && (
+        <LeadDrawer
+          lead={active}
+          dealerId={profile?.dealer_id}
+          team={team}
+          onClose={() => setActive(null)}
+          onChange={refetch}
+          setLeads={setLeads}
+          inventory={inventory}
+        />
+      )}
+      {manualOpen && <ManualLeadModal team={team} onClose={() => setManualOpen(false)} onCreate={addManualLead} />}
     </div>
   )
 }
@@ -489,7 +499,7 @@ function PipelineLeadCardV2({ lead, busy, onOpen, onMove }) {
   )
 }
 
-function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
+function LeadDrawer({ lead, dealerId, team = [], onClose, onChange, setLeads, inventory = [] }) {
   const [stage, setStage] = useState(lead.stage)
   const [salesperson, setSalesperson] = useState(lead.salesperson || '')
   const [notes, setNotes] = useState(noteOf(lead))
@@ -498,17 +508,23 @@ function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
 
   const st = stageMeta(stage)
   const action = actionForLead({ ...lead, stage })
+  const readiness = leadReadiness(lead)
+  const hasPhone = digits(lead.phone).length >= 10
 
   useEffect(() => {
     let alive = true
+    if (!lead.conversationId) {
+      setMessages([])
+      return () => { alive = false }
+    }
     ibMessages(lead.id).then((m) => { if (alive) setMessages(m || []) }).catch(() => { if (alive) setMessages([]) })
     return () => { alive = false }
-  }, [lead.id])
+  }, [lead.id, lead.conversationId])
 
   const patch = async (fields) => {
     try {
       if (lead.buyerId && !lead.conversationId) {
-        await saveDealerLead(profile?.dealer_id, lead.buyerId, {
+        await saveDealerLead(dealerId, lead.buyerId, {
           stage: fields.stage, salespersonId: fields.salespersonId,
           nextAction: fields.notes, nextActionDate: fields.followUp,
         })
@@ -539,8 +555,37 @@ function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
 
         <div className="dl-drawer-body">
           <div className="dl-drawer-actions">
-            <a href={action.href} target="_blank" rel="noreferrer" className="btn btn-primary btn-block"><WhatsAppIcon size={16} /> {action.cta}</a>
-            <a href={`tel:${digits(lead.phone)}`} className="btn btn-outline btn-block"><Phone size={16} /> Llamar</a>
+            {hasPhone ? (
+              <>
+                <a href={action.href} target="_blank" rel="noreferrer" className="btn btn-primary btn-block"><WhatsAppIcon size={16} /> {action.cta}</a>
+                <a href={`tel:${digits(lead.phone)}`} className="btn btn-outline btn-block"><Phone size={16} /> Llamar</a>
+              </>
+            ) : (
+              <div className="dl-no-contact">
+                <AlertTriangle size={16} />
+                <span>Este lead no tiene teléfono confirmado. Pide al cliente completar WhatsApp en su solicitud.</span>
+              </div>
+            )}
+          </div>
+
+          <div className="dl-detail-block dl-contact-block">
+            <SectionTitle>Contacto y aprobación</SectionTitle>
+            <div className="dl-contact-hero">
+              <div>
+                <span>Cliente</span>
+                <strong>{lead.customer || 'Cliente'}</strong>
+              </div>
+              <span className={`chip ${readiness.tone === 'slate' ? '' : `chip-${readiness.tone}`}`.trim()}>{readiness.label}</span>
+            </div>
+            <KeyValue k="WhatsApp / teléfono" v={lead.phone ? `+${digits(lead.phone)}` : 'No registrado'} />
+            <KeyValue k="Monto aprobado" v={lead.approvedAmount ? fmtMoney(lead.approvedAmount, 'DOP') : 'Sin aprobación activa'} />
+            <KeyValue k="Vence" v={lead.approvalValidUntil ? new Date(`${lead.approvalValidUntil}T12:00:00`).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Sin fecha'} />
+            <KeyValue k="Solicitud" v={lead.applicationId || 'No vinculada'} />
+            {readiness.reasons.length > 0 && (
+              <div className="dl-reason-list">
+                {readiness.reasons.slice(0, 3).map((reason) => <span key={reason}>{reason}</span>)}
+              </div>
+            )}
           </div>
 
           <div className="dl-detail-block">
@@ -576,8 +621,8 @@ function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
           <div className="dl-detail-block">
             <SectionTitle>Verificación y financiamiento</SectionTitle>
             <KeyValue k="KYC" v={lead.kycVerified ? 'Verificado' : 'Pendiente'} />
-            <KeyValue k="Financiamiento" v={lead.fin ? stageMeta(lead.stage).label : (isFinanceLead(lead) ? 'En proceso' : 'No iniciado')} />
-            {!lead.kycVerified && (
+            <KeyValue k="Financiamiento" v={lead.approvedAmount ? `Pre-aprobado hasta ${fmtMoney(lead.approvedAmount, 'DOP')}` : needsDocs(lead) ? 'Banco solicitó documentos' : lead.inBank ? 'En revisión banco' : (isFinanceLead(lead) ? 'En proceso' : 'No iniciado')} />
+            {!lead.kycVerified && hasPhone && (
               <a className="btn btn-navy btn-block" href={waLink(lead.phone, kycMessage(lead))} target="_blank" rel="noreferrer">
                 <ShieldCheck size={15} /> Solicitar verificación KYC
               </a>
@@ -652,7 +697,7 @@ function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
   )
 }
 
-function ManualLeadModal({ onClose, onCreate }) {
+function ManualLeadModal({ team = [], onClose, onCreate }) {
   const [customer, setCustomer] = useState('')
   const [phone, setPhone] = useState('')
   const [vehicle, setVehicle] = useState('')

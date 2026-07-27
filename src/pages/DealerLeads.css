@@ -783,6 +783,66 @@
   background: var(--surface-2, #f8fbfb);
 }
 
+.dl-contact-block {
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbfa 100%);
+  border-color: rgba(13, 148, 136, .18);
+}
+
+.dl-contact-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.dl-contact-hero span:first-child {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dl-contact-hero strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.dl-no-contact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--amber-bd, #fde68a);
+  border-radius: 12px;
+  background: var(--amber-bg, #fffbeb);
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dl-reason-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.dl-reason-list span {
+  padding: 5px 8px;
+  border: 1px solid #d7ece8;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .dl-section-title {
   margin-bottom: 8px;
   color: var(--muted);
