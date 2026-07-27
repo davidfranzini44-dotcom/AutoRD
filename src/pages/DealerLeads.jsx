@@ -266,7 +266,7 @@ export default function DealerLeads() {
         </div>
       ) : (
         <section className="dl-work-grid">
-          <article className="dl-panel">
+          <article className="dl-panel dl-priority-panel">
             <div className="dl-panel-head">
               <h3>Prioridad de hoy</h3>
               <span>{loading ? 'Cargando' : `${priorityLeads.length} en cola`}</span>
@@ -293,7 +293,7 @@ export default function DealerLeads() {
                     </div>
                     <div className="dl-stage-body">
                       {items.map((l) => (
-                        <PipelineLeadCard key={l.id} lead={l} busy={busyId === l.id} onOpen={() => setActive(l)} onMove={moveStage} />
+                        <PipelineLeadCardV2 key={l.id} lead={l} busy={busyId === l.id} onOpen={() => setActive(l)} onMove={moveStage} />
                       ))}
                       {items.length === 0 && <span className="dl-stage-empty">Sin leads</span>}
                     </div>
@@ -402,6 +402,50 @@ function PipelineLeadCard({ lead, busy, onOpen, onMove }) {
       <div className="dl-stage-move" onClick={(e) => e.stopPropagation()}>
         <button type="button" disabled={busy || stageIdx(lead.stage) === 0} onClick={() => onMove(lead, -1)} aria-label="Etapa anterior"><ChevronLeft size={12} /></button>
         <button type="button" disabled={busy || stageIdx(lead.stage) === LEAD_STAGES.length - 1} onClick={() => onMove(lead, 1)} aria-label="Etapa siguiente"><ChevronRight size={12} /></button>
+      </div>
+    </div>
+  )
+}
+
+function PipelineLeadCardV2({ lead, busy, onOpen, onMove }) {
+  const action = actionForLead(lead)
+  const st = stageMeta(lead.stage)
+  const financeLabel = needsDocs(lead) ? 'Docs banco' : isPreApproved(lead) ? 'Oferta lista' : isFinanceLead(lead) ? 'Financ.' : null
+
+  return (
+    <div className="dl-stage-card dl-stage-card-v2" role="button" tabIndex={0} onClick={onOpen} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}>
+      <div className="dl-stage-card-top">
+        <span className="dl-owner">{initialsOf(lead.salesperson || lead.customer)}</span>
+        <div>
+          <strong>{lead.customer}</strong>
+          <span>{lead.last || 'Ahora'} · {action.detail}</span>
+        </div>
+        <span className={`dl-pill ${action.tone}`}>{action.label}</span>
+      </div>
+
+      <div className="dl-stage-vehicle">
+        <span>{lead.vehicle?.name || 'Vehículo por confirmar'}</span>
+        {lead.vehicle?.price ? <b>{fmtMoney(lead.vehicle.price, lead.vehicle.currency)}</b> : null}
+      </div>
+
+      <div className="dl-stage-tags">
+        <span>{st.label}</span>
+        <span>{lead.salesperson || 'Sin vendedor'}</span>
+        {financeLabel && <span>{financeLabel}</span>}
+        {!lead.kycVerified && <span>KYC pendiente</span>}
+      </div>
+
+      <div className="dl-stage-card-actions" onClick={(e) => e.stopPropagation()}>
+        <a className="btn btn-primary btn-sm" href={action.href} target="_blank" rel="noreferrer"><WhatsAppIcon size={13} /> {action.cta}</a>
+        <button type="button" className="btn btn-outline btn-sm" onClick={onOpen}>Ver</button>
+      </div>
+
+      <div className="dl-stage-card-foot">
+        <span>Etapa</span>
+        <div className="dl-stage-move" onClick={(e) => e.stopPropagation()}>
+          <button type="button" disabled={busy || stageIdx(lead.stage) === 0} onClick={() => onMove(lead, -1)} aria-label="Etapa anterior"><ChevronLeft size={12} /></button>
+          <button type="button" disabled={busy || stageIdx(lead.stage) === LEAD_STAGES.length - 1} onClick={() => onMove(lead, 1)} aria-label="Etapa siguiente"><ChevronRight size={12} /></button>
+        </div>
       </div>
     </div>
   )
