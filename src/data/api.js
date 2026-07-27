@@ -727,6 +727,24 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// ---------------- Admin: WhatsApp delivery health ----------------
+// Works in BOTH modes (own worker / Reparando gateway) because it reads what
+// AutoRD itself records: OTPs issued vs consumed, the delivery log, the outbox.
+export async function getWaHealth() {
+  if (!LIVE) return null
+  const { data, error } = await supabase.rpc('wa_health')
+  if (error || !data?.ok) return null
+  return data
+}
+
+// Put messages a dead worker stranded in 'sending' back on the queue.
+export async function requeueStuckWaMessages(minutes = 5) {
+  if (!LIVE) return 0
+  const { data, error } = await supabase.rpc('wa_requeue_stuck', { p_minutes: minutes })
+  if (error) return 0
+  return Number(data) || 0
+}
+
 // ---------------- Admin: verified buyers who never applied ----------------
 // Someone who completes KYC but abandons the wizard before "Enviar solicitud a
 // bancos" leaves NO application, so nobody sees them — even though they are the

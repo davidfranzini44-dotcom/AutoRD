@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell, Landmark, UserPlus, Copy, Check } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank, getVerifiedWithoutApplication } from '../data/api'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank, getVerifiedWithoutApplication, getWaHealth, requeueStuckWaMessages } from '../data/api'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 
 const TYPE_META = {
@@ -31,11 +31,17 @@ export default function AdminPanel() {
   const [hist, setHist] = useState([])
   const [histKind, setHistKind] = useState(null) // null | 'otp' | 'notif'
   const timer = useRef(null)
+  const [healthState, setHealth] = useState(null)
+  const [requeuing, setRequeuing] = useState(false)
 
   const loadHist = (k = histKind) => getNotifications(k).then(setHist).catch(() => {})
   useEffect(() => { loadHist() }, [histKind]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const load = async () => { try { setWa(await getWaStatus()) } catch (e) { setMsg(e.message || String(e)) } }
+  const load = async () => {
+    try { setWa(await getWaStatus()) } catch (e) { setMsg(e.message || String(e)) }
+    // Delivery health is mode-agnostic, so poll it alongside the worker status.
+    getWaHealth().then(setHealth).catch(() => {})
+  }
   useEffect(() => {
     load(); checkWaGateway().then(setGw).catch(() => {})
     timer.current = setInterval(load, 4000)
@@ -59,7 +65,16 @@ export default function AdminPanel() {
   // When active, the QR/pairing UI here is irrelevant.
   const gateway = gw?.mode === 'reparando'
   // Heuristic: enabled but no recent heartbeat -> the worker probably isn't running.
+  // Only meaningful for OUR worker; in gateway mode the heartbeat lives in the
+  // other project, which is why delivery health (below) is the real signal.
   const stale = !gateway && wa?.enabled && wa?.last_seen_at && (Date.now() - new Date(wa.last_seen_at).getTime() > 30000)
+  // Works in BOTH modes: stuck/stalled queue, or codes going out and never used.
+  const health = healthState
+  const bad = health?.verdict === 'down'
+  const warn = health?.verdict === 'warn'
+  // In gateway mode this is the ONLY liveness signal AutoRD has — previously
+  // there was none at all, so a dead shared worker was completely silent here.
+  const gatewayDown = gateway && gw?.ready === false
 
   return (
     <main className="page">
@@ -85,7 +100,46 @@ export default function AdminPanel() {
               <Info size={16} /><span>El worker de WhatsApp no está respondiendo. Asegúrate de que <code>autord-wa-worker</code> esté corriendo.</span>
             </div>
           )}
+          {gatewayDown && (
+            <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}>
+              <Info size={16} /><span>El gateway de Reparando no tiene una conexión activa. Los códigos y avisos no se están enviando.</span>
+            </div>
+          )}
           {wa?.worker_error && <div className="notice" style={{ marginBottom: 14, borderColor: 'var(--red-bd)', background: 'var(--red-bg)' }}><Info size={16} /><span>{wa.worker_error}</span></div>}
+
+          {/* Delivery health — the signal that works in BOTH modes. */}
+          {health && (
+            <div className="card" style={{ padding: 12, marginBottom: 14, borderColor: bad ? 'var(--red-bd)' : warn ? 'var(--amber-bd)' : 'var(--line)' }}>
+              <div className="row between center" style={{ flexWrap: 'wrap', gap: 8 }}>
+                <div className="row center gap-8">
+                  <span className="chip" style={{
+                    background: bad ? 'var(--red-bg)' : warn ? 'var(--amber-bg)' : 'var(--green-bg)',
+                    color: bad ? 'var(--red)' : warn ? 'var(--amber)' : 'var(--green)', fontWeight: 700,
+                  }}>
+                    {bad ? 'Entrega caída' : warn ? 'Revisar' : 'Entrega OK'}
+                  </span>
+                  <span className="small">{health.reason}</span>
+                </div>
+                {health.stuckSending > 0 && (
+                  <button className="btn btn-outline btn-sm" disabled={requeuing} onClick={async () => {
+                    setRequeuing(true)
+                    const n = await requeueStuckWaMessages(5)
+                    setMsg(n > 0 ? `${n} mensaje(s) devueltos a la cola.` : 'No había mensajes atascados.')
+                    setRequeuing(false); load()
+                  }}>
+                    {requeuing ? <Loader2 size={14} className="spin" /> : null} Reintentar {health.stuckSending} atascado(s)
+                  </button>
+                )}
+              </div>
+              <div className="row wrap gap-16" style={{ marginTop: 10 }}>
+                <HealthStat label="En cola" value={health.queued} bad={health.queued > 0} />
+                <HealthStat label="Atascados" value={health.stuckSending} bad={health.stuckSending > 0} />
+                <HealthStat label="Enviados (1h)" value={health.sent1h} />
+                <HealthStat label="Fallidos (1h)" value={health.failed1h} bad={health.failed1h > 0} />
+                <HealthStat label="Códigos (15 min)" value={`${health.otpsUsed15m}/${health.otps15m} usados`} />
+              </div>
+            </div>
+          )}
 
           {gateway ? (
             <div className="col gap-12">
@@ -212,6 +266,15 @@ export default function AdminPanel() {
 // + rules) and its first OWNER account, which can then self-manage its analysts.
 function EnrollBankCard() {
   return <EnrollBankCardInner />
+}
+
+function HealthStat({ label, value, bad }) {
+  return (
+    <div>
+      <div className="tiny muted">{label}</div>
+      <div className="strong small" style={bad ? { color: 'var(--red, #b91c1c)' } : undefined}>{value}</div>
+    </div>
+  )
 }
 
 // A buyer who passes KYC but abandons the wizard before "Enviar solicitud a
