@@ -8,6 +8,10 @@
 // Secrets: DIDIT_WEBHOOK_SECRET, DIDIT_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // In the Didit console, set the webhook URL to this function's URL.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// The expired-cédula decision lives in its own module so it can be unit-tested
+// (tests/kyc-grace.test.js replays the real payloads from the two incidents it
+// caused). Do not inline this logic back here.
+import { cedulaGraceActive, expiredCedulaOnly, extractCedulaLast4 } from './kyc-grace.ts'
 
 const enc = new TextEncoder()
 const DIDIT_BASE = Deno.env.get('DIDIT_BASE_URL') ?? 'https://verification.didit.me/v2'
@@ -92,95 +96,6 @@ async function captureIdentityImages(admin: any, apiKey: string, sessionId: stri
   }
 }
 
-// ---- DR cédula grace ----------------------------------------------------
-// Dominican cédulas kept circulating past their printed expiry while the JCE
-// rolled out renewals, so an EXPIRED-but-otherwise-valid cédula should still
-// pass KYC — but only until this cutoff, after which normal rules resume.
-const CEDULA_GRACE_UNTIL_MS = Date.UTC(2027, 0, 1) // 2027-01-01T00:00:00Z
-const cedulaGraceActive = () => Date.now() < CEDULA_GRACE_UNTIL_MS
-const EXPIRY_RE = /expir|vencid|caducid/ // expired / vencida / caducidad
-
-// Gather warnings from a Didit decision (schema varies by workflow version) as
-// { text, blocking } pairs.
-//
-// Severity matters: Didit marks real problems with log_type 'error' and emits
-// advisory notes as 'information' (e.g. UNPARSED_ADDRESS when the address on the
-// cédula can't be geolocated, or POSSIBLE_DUPLICATED_USER when the person simply
-// retried the flow). Those advisory notes must NOT cancel the expired-cédula
-// grace — treating every warning as blocking is what wrongly declined real
-// applicants whose ONLY error was DOCUMENT_EXPIRED.
-type Warn = { text: string; blocking: boolean }
-const NON_BLOCKING_SEVERITY = /^(information|info|notice)$/
-function collectWarnings(d: any): Warn[] {
-  const out: Warn[] = []
-  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
-  const pushFrom = (arr: any) => {
-    if (!Array.isArray(arr)) return
-    for (const w of arr) {
-      if (typeof w === 'string') {
-        out.push({ text: w.toLowerCase(), blocking: true })
-      } else if (w && typeof w === 'object') {
-        const text = String(w.risk ?? w.code ?? w.type ?? w.name ?? w.description ?? w.message ?? '').toLowerCase()
-        const sev = String(w.log_type ?? w.severity ?? w.level ?? 'error').toLowerCase()
-        if (text) out.push({ text, blocking: !NON_BLOCKING_SEVERITY.test(sev) })
-      }
-    }
-  }
-  pushFrom(d?.warnings)
-  pushFrom(d?.decision?.warnings)
-  pushFrom((first(d?.id_verifications) ?? d?.id_verification)?.warnings)
-  return out
-}
-
-// A biometric check (liveness / face match) counts as passed when it's absent
-// or its status reads approved/passed and not failed.
-function checkPassed(v: any): boolean {
-  const o = Array.isArray(v) ? v[0] : v
-  if (!o) return true
-  const st = String(o.status ?? o.decision ?? o.result ?? '').toLowerCase()
-  if (!st) return true
-  return /approv|pass|success|match|clear|ok/.test(st) && !/declin|fail|reject|no.?match|not.?/.test(st)
-}
-
-// The document's printed expiration date, if present and parseable, is in the past.
-function documentExpired(d: any): boolean {
-  const idv = (Array.isArray(d?.id_verifications) ? d.id_verifications[0] : d?.id_verifications) ?? d?.id_verification ?? {}
-  const raw = idv.date_of_expiration ?? idv.expiration_date ?? idv.expiry_date ?? idv.expires_at ?? idv.document_expiry
-  if (!raw) return false
-  const t = Date.parse(String(raw))
-  return Number.isFinite(t) && t < Date.now()
-}
-
-// True when the ONLY blocking problem with an otherwise-clean verification is an
-// expired document: biometrics passed, every error-severity warning is the
-// expiry itself, and expiry is actually flagged. Advisory (information) warnings
-// are ignored — they are notes, not reasons to decline.
-function expiredCedulaOnly(d: any): boolean {
-  if (!d) return false
-  const blocking = collectWarnings(d).filter((w) => w.blocking)
-  if (blocking.some((w) => !EXPIRY_RE.test(w.text))) return false // a real, non-expiry problem
-  // Liveness must have actually RUN and passed. On a still-in-progress session
-  // the checks are absent, and "absent" must not count as success — otherwise a
-  // half-finished session could be graced before the person proves they're live.
-  const live = Array.isArray(d?.liveness_checks) ? d.liveness_checks[0] : (d?.liveness_checks ?? d?.liveness)
-  if (!live || !checkPassed(live)) return false
-  // Face match is workflow-dependent: if it ran, it must pass.
-  if (!checkPassed(d?.face_matches ?? d?.face_match)) return false
-  return blocking.some((w) => EXPIRY_RE.test(w.text)) || documentExpired(d)
-}
-
-// Pull the last 4 digits of the verified cédula out of the Didit decision, so the
-// client-portal (/f/:token) last-4 gate has something to match against. Field
-// names vary by workflow; we try the usual ones and keep only digits.
-function extractCedulaLast4(decision: any): string | null {
-  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
-  const idv = first(decision?.id_verifications) ?? decision?.id_verification ?? decision?.document ?? {}
-  const raw = idv?.personal_number ?? idv?.document_number ?? idv?.national_number
-    ?? idv?.id_number ?? idv?.number ?? decision?.personal_number
-  if (!raw) return null
-  const digits = String(raw).replace(/[^0-9]/g, '')
-  return digits.length >= 4 ? digits.slice(-4) : null
-}
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method', { status: 405 })
