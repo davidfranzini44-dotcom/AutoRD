@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell, Landmark, UserPlus, Copy, Check } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank } from '../data/api'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank, getVerifiedWithoutApplication } from '../data/api'
+import WhatsAppIcon from '../components/WhatsAppIcon'
 
 const TYPE_META = {
   otp:           { label: 'OTP', icon: KeyRound },
@@ -154,6 +155,9 @@ export default function AdminPanel() {
         {/* Enroll a partner bank + its first owner account */}
         <EnrollBankCard />
 
+        {/* Verified identities that never became an application */}
+        <VerifiedWithoutApplicationCard />
+
         {/* History of sent WhatsApp messages */}
         <div className="card card-pad" style={{ marginTop: 14 }}>
           <div className="row between center" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
@@ -207,6 +211,74 @@ export default function AdminPanel() {
 // Platform admin: enroll a partner bank (creates the bank + seeds its rate card
 // + rules) and its first OWNER account, which can then self-manage its analysts.
 function EnrollBankCard() {
+  return <EnrollBankCardInner />
+}
+
+// A buyer who passes KYC but abandons the wizard before "Enviar solicitud a
+// bancos" leaves no application — invisible to every dealer and bank, despite
+// being the highest-intent lead there is. This is the only place they surface.
+function VerifiedWithoutApplicationCard() {
+  const [rows, setRows] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    getVerifiedWithoutApplication()
+      .then((r) => { if (alive) setRows(r) })
+      .catch(() => { if (alive) setRows([]) })
+    return () => { alive = false }
+  }, [])
+
+  const nudge = (r) => {
+    const name = (r.name || '').split(' ')[0]
+    const text = `Hola${name ? ` ${name}` : ''}, ya verificamos tu identidad en AutoRD ✅. Solo falta elegir los bancos para enviar tu solicitud — toma menos de un minuto: ${typeof window !== 'undefined' ? window.location.origin : ''}/financiamiento`
+    return `https://wa.me/${String(r.phone || '').replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}`
+  }
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 14 }}>
+      <div className="row between center" style={{ marginBottom: 4, flexWrap: 'wrap', gap: 8 }}>
+        <div className="row center gap-8">
+          <ShieldCheck size={18} />
+          <h2 style={{ fontSize: 16 }}>Verificados sin solicitud</h2>
+        </div>
+        {rows?.length > 0 && <span className="chip">{rows.length}</span>}
+      </div>
+      <p className="tiny muted" style={{ marginBottom: 10 }}>
+        Identidad verificada pero nunca enviaron la solicitud a bancos. Son los leads más calientes que tienes.
+      </p>
+
+      {rows === null ? (
+        <div className="muted small row center gap-8"><Loader2 size={14} className="spin" /> Cargando…</div>
+      ) : rows.length === 0 ? (
+        <div className="muted small">Nadie pendiente — todos los verificados completaron su solicitud.</div>
+      ) : (
+        <div className="col">
+          {rows.map((r) => (
+            <div key={r.profileId} className="row between center" style={{ borderTop: '1px solid var(--line)', padding: '10px 0', gap: 10, flexWrap: 'wrap' }}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div className="row center gap-8" style={{ flexWrap: 'wrap' }}>
+                  <span className="small strong">{r.name || 'Sin nombre'}</span>
+                  {r.graced && <span className="chip" style={{ fontSize: 10.5 }}>cédula vencida · gracia</span>}
+                </div>
+                <div className="tiny muted" style={{ marginTop: 3 }}>
+                  +{r.phone}{r.phoneVerified ? ' · WhatsApp verificado' : ''} · verificado {r.daysSince != null ? (r.daysSince < 1 ? 'hoy' : `hace ${Math.round(r.daysSince)} día${Math.round(r.daysSince) === 1 ? '' : 's'}`) : '—'}
+                </div>
+              </div>
+              {r.phone && (
+                <a className="btn btn-sm" href={nudge(r)} target="_blank" rel="noreferrer"
+                  style={{ background: '#25D366', color: '#fff', border: 'none', flexShrink: 0 }}>
+                  <WhatsAppIcon size={15} /> Recordar
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EnrollBankCardInner() {
   const [f, setF] = useState({ bankName: '', slug: '', color: '#0f766e', ownerName: '', ownerEmail: '' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')

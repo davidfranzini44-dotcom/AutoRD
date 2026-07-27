@@ -727,6 +727,26 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// ---------------- Admin: verified buyers who never applied ----------------
+// Someone who completes KYC but abandons the wizard before "Enviar solicitud a
+// bancos" leaves NO application, so nobody sees them — even though they are the
+// highest-intent lead there is. Admin-only (the RPC enforces is_admin()).
+export async function getVerifiedWithoutApplication() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('get_verified_without_application')
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    profileId: r.profile_id,
+    name: r.name,
+    phone: r.phone,
+    phoneVerified: !!r.phone_verified,
+    verifiedAt: r.kyc_verified_at,
+    kycStatus: r.kyc_status,
+    graced: !!r.graced,
+    daysSince: r.days_since != null ? Number(r.days_since) : null,
+  }))
+}
+
 // ---------------- Dealer: real engagement (vehicle_events) ----------------
 // Real view/share/contact/financing counts per vehicle. The dashboard used to
 // show invented view numbers ([214, 142, 98, …]) against real cars.
