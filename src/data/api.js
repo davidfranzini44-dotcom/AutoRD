@@ -706,6 +706,35 @@ export async function getMyPreapprovalInterests() {
   return map
 }
 
+// The buyer's own list of flagged cars, with enough detail to render them.
+// `withinBudget` is recomputed server-side: an approval can shrink or expire
+// after the car was flagged.
+export async function getMyInterestList() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('get_my_preapproval_interests_detailed')
+  if (error || !Array.isArray(data)) return []
+  return data.map((r) => ({
+    vehicleDbId: r.vehicle_id,
+    slug: r.slug,
+    label: r.label,
+    price: r.price != null ? Number(r.price) : null,
+    currency: r.currency || 'DOP',
+    photo: r.photo,
+    dealer: r.dealer_name,
+    status: r.status,
+    createdAt: r.created_at,
+    withinBudget: !!r.within_budget,
+  }))
+}
+
+// Buyer takes an interest back — it stops showing on the dealer's active list.
+export async function cancelPreapprovalInterest(vehicleDbId) {
+  if (!LIVE) return { ok: true }
+  const { data, error } = await supabase.rpc('cancel_preapproval_interest', { p_vehicle_id: vehicleDbId })
+  if (error) return { ok: false }
+  return data
+}
+
 // Dealer: pre-approved buyers interested in this dealer's cars (active only).
 export async function getDealerPreapprovalInterests() {
   if (!LIVE) return []

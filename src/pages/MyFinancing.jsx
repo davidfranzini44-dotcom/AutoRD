@@ -5,7 +5,7 @@ import {
   ChevronRight, Upload, Info, Car, FileWarning, FileText,
 } from 'lucide-react'
 import { banks, fmtRD } from '../data/demo'
-import { getApplicationDocuments, getMyFinancing, uploadApplicationDocument, acceptFinancingOfferAuth } from '../data/api'
+import { getApplicationDocuments, getMyFinancing, uploadApplicationDocument, acceptFinancingOfferAuth, getMyInterestList, cancelPreapprovalInterest } from '../data/api'
 import StatusChip from '../components/StatusChip'
 import CarImage from '../components/CarImage'
 import BankLogo from '../components/BankLogo'
@@ -26,6 +26,10 @@ export default function MyFinancing() {
   const [docsLoading, setDocsLoading] = useState(false)
   const [uploadingDoc, setUploadingDoc] = useState(null)
   const [docError, setDocError] = useState('')
+
+  const [interests, setInterests] = useState([])
+  const reloadInterests = () => getMyInterestList().then(setInterests).catch(() => {})
+  useEffect(() => { reloadInterests() }, [])
 
   const reloadFinancing = () => getMyFinancing().then((d) => setC(d)).catch(() => {})
 
@@ -135,6 +139,9 @@ export default function MyFinancing() {
                 </div>
               </div>
             )}
+
+            {/* Cars this buyer flagged against their pre-approval */}
+            <MyInterests items={interests} onChanged={reloadInterests} />
 
             {/* Offers highlight */}
             {offers.length > 0 && (
@@ -303,6 +310,87 @@ function DocumentRow({ doc, busy, onUpload }) {
           />
           <label htmlFor={inputId} className="btn btn-primary btn-sm"><Upload size={15} /> Subir archivo</label>
         </>
+      )}
+    </div>
+  )
+}
+
+// The cars the buyer flagged with "Me interesa". Several can be active at once;
+// committing to one converts it and archives the rest. Until now this list
+// existed only in the database — the buyer could flag cars and never see or
+// undo them, while dealers kept chasing an interest they'd moved on from.
+const INTEREST_STATUS = {
+  activa: { label: 'Interés activo', bg: 'var(--teal-50)', fg: 'var(--teal-800)' },
+  convertida: { label: 'Elegido', bg: '#dcfce7', fg: '#166534' },
+  archivada: { label: 'Descartado', bg: '#f1f5f9', fg: '#64748b' },
+}
+
+function MyInterests({ items, onChanged }) {
+  const [busy, setBusy] = useState(null)
+  const active = items.filter((i) => i.status === 'activa')
+  const past = items.filter((i) => i.status !== 'activa')
+  if (!items.length) return null
+
+  const remove = async (it) => {
+    setBusy(it.vehicleDbId)
+    await cancelPreapprovalInterest(it.vehicleDbId)
+    setBusy(null)
+    onChanged?.()
+  }
+
+  return (
+    <div className="card card-pad">
+      <div className="row between center" style={{ marginBottom: 4 }}>
+        <div className="row center gap-8"><Car size={16} color="var(--teal-700)" /><h2 style={{ fontSize: 15, margin: 0 }}>Vehículos que te interesan</h2></div>
+        {active.length > 0 && <span className="chip chip-teal">{active.length}</span>}
+      </div>
+      <p className="tiny muted" style={{ marginBottom: 10 }}>
+        Los dealers ven que ya estás aprobado para estos carros. Cuando elijas uno, los demás se archivan.
+      </p>
+
+      <div className="col gap-8">
+        {active.map((it) => {
+          const st = INTEREST_STATUS[it.status]
+          return (
+            <div key={it.vehicleDbId} className="row between center gap-10" style={{ border: '1px solid var(--line-2)', borderRadius: 11, padding: 10, flexWrap: 'wrap' }}>
+              <Link to={`/vehiculo/${it.slug}`} className="row center gap-10" style={{ minWidth: 0, textDecoration: 'none', color: 'inherit', flex: 1 }}>
+                <div style={{ width: 64, height: 46, flex: 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)', background: '#eef3f6' }}>
+                  {it.photo ? <img src={it.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="strong small">{it.label}</div>
+                  <div className="tiny muted">{it.price ? fmtRD(it.price) : '—'}{it.dealer ? ` · ${it.dealer}` : ''}</div>
+                  {!it.withinBudget && (
+                    <div className="tiny" style={{ color: 'var(--amber)', marginTop: 2 }}>Ya no está dentro de tu aprobación</div>
+                  )}
+                </div>
+              </Link>
+              <div className="row center gap-8" style={{ flex: 'none' }}>
+                <span className="chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                <button className="btn btn-ghost btn-sm" disabled={busy === it.vehicleDbId} onClick={() => remove(it)} title="Quitar de mi lista">
+                  {busy === it.vehicleDbId ? <Loader2 size={14} className="spin" /> : 'Quitar'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {past.length > 0 && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--line-2)' }}>
+          <div className="tiny muted" style={{ marginBottom: 6 }}>Historial</div>
+          <div className="col gap-6">
+            {past.map((it) => {
+              const st = INTEREST_STATUS[it.status] || INTEREST_STATUS.archivada
+              return (
+                <div key={it.vehicleDbId} className="row between center">
+                  <Link to={`/vehiculo/${it.slug}`} className="small" style={{ textDecoration: 'none', color: 'inherit' }}>{it.label}</Link>
+                  <span className="chip" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )
