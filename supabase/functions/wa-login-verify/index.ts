@@ -59,15 +59,40 @@ Deno.serve(async (req) => {
     }
     await admin.from('phone_otps').update({ consumed_at: new Date().toISOString() }).eq('id', row.id)
 
-    // Find-or-create the account for this phone (deterministic synthetic email),
-    // then generate a magiclink token the browser exchanges for a session.
-    // Find-or-create the account for this phone (deterministic synthetic email),
-    // set a one-time random password, and return it. The browser immediately
-    // signs in with it (password grant is 100% reliable for a confirmed email).
-    const email = `wa${to}@autord.local`
+    // Resolve WHICH account this phone belongs to before touching credentials.
+    //
+    // This used to jump straight to wa<phone>@autord.local, which meant a buyer
+    // who had registered with a real email and then logged in by phone got a
+    // SECOND account — their saved cars and financing history split across two
+    // identities. One human, one account.
+    const { data: owners, error: ownerErr } = await admin.rpc('find_profiles_by_phone', { p_digits: to })
+    if (ownerErr) return json({ ok: false, error: 'lookup_failed' }, 500)
+
+    const matches = (owners ?? []) as Array<{ id: string; role: string; dealer_id: string | null; bank_id: string | null; email: string }>
+    const isInstitution = (m: typeof matches[number]) =>
+      !!m.dealer_id || !!m.bank_id || m.role === 'dealer' || m.role === 'bank' || m.role === 'admin'
+    const buyers = matches.filter((m) => !isInstitution(m))
+
+    // Two different people cannot share a number. Guessing which one to sign in
+    // would hand somebody another person's financing, so refuse and say so.
+    if (buyers.length > 1) return json({ ok: false, error: 'ambiguous_phone' }, 409)
+
+    // A dealer/bank/admin phone gets a BUYER account, never their institution
+    // one: staff shop as customers too, but a customer-facing OTP must never
+    // mint a session that opens a console. Their institution login stays
+    // email+password.
+    const institutionOnly = buyers.length === 0 && matches.length > 0
+
+    const linked = buyers[0] ?? null
+    const email = linked?.email ?? `wa${to}@autord.local`
     const password = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '')
-    const { data: uid } = await admin.rpc('auth_uid_by_email', { p_email: email })
-    let userId = uid as string | null
+
+    let userId: string | null = linked?.id ?? null
+    if (!userId) {
+      const { data: uid } = await admin.rpc('auth_uid_by_email', { p_email: email })
+      userId = (uid as string | null) ?? null
+    }
+
     if (userId) {
       const up = await admin.auth.admin.updateUserById(userId, { password })
       if (up.error) return json({ ok: false, error: up.error.message }, 500)
@@ -76,9 +101,22 @@ Deno.serve(async (req) => {
       if (cu.error) return json({ ok: false, error: cu.error.message }, 500)
       userId = cu.data.user?.id ?? null
     }
-    if (userId) await admin.from('profiles').update({ phone: to, phone_verified_at: new Date().toISOString() }).eq('id', userId)
 
-    return json({ ok: true, verified: true, email, password, phone: to })
+    // Only stamp the phone on an account this phone actually owns. Never write
+    // it onto a linked account whose phone field is already something else.
+    if (userId) {
+      await admin.from('profiles')
+        .update({ phone: to, phone_verified_at: new Date().toISOString() })
+        .eq('id', userId)
+    }
+
+    return json({
+      ok: true, verified: true, email, password, phone: to,
+      linked: !!linked,
+      // Surfaced so the client can explain why a staff member landed in a buyer
+      // session rather than their console.
+      buyerOnly: institutionOnly,
+    })
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

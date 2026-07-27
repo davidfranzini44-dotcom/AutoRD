@@ -1689,6 +1689,17 @@ export async function sendPhoneOtp(phone, kind = 'otp') {
 // Logged-out buyers sign in with their WhatsApp number: a code is sent to it,
 // they confirm it, and a real Supabase session is minted (re-loginable account
 // keyed to the phone). Reuses the same delivery gateway.
+// Edge-function error codes -> what a customer should actually read.
+const PHONE_LOGIN_ERRORS = {
+  expired_or_missing: 'El código venció o no existe. Pide uno nuevo.',
+  wrong_code: 'Código incorrecto. Revísalo e inténtalo otra vez.',
+  too_many_attempts: 'Demasiados intentos. Espera un momento y pide otro código.',
+  ambiguous_phone: 'Ese número está en más de una cuenta. Escríbenos para ayudarte.',
+  rate_limited: 'Espera un momento antes de pedir otro código.',
+}
+export const phoneLoginError = (code, fallback = 'No se pudo completar la operación.') =>
+  PHONE_LOGIN_ERRORS[code] || fallback
+
 export async function startPhoneLogin(phone) {
   if (!LIVE) return { ok: true, simulated: true }
   const { data, error } = await supabase.functions.invoke('wa-login-start', { body: { phone } })
@@ -1703,7 +1714,9 @@ export async function verifyPhoneLogin(phone, code) {
   // One-time password grant → real session in this browser's client.
   const { error: sErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
   if (sErr) return { ok: false, error: sErr.message }
-  return { ok: true }
+  // Passed through so the caller can explain a linked account or a staff member
+  // landing in a buyer session. Additive: existing callers only read `ok`.
+  return { ok: true, linked: !!data.linked, buyerOnly: !!data.buyerOnly }
 }
 
 // Admin: history of WhatsApp messages AutoRD sent. kind = null | 'otp' | 'notif'.
@@ -1713,6 +1726,19 @@ export async function getNotifications(kind = null, limit = 60) {
   if (error) throw error
   return data || []
 }
+// ---------------- Phone + WhatsApp code login -------------------------------
+// The primary way a buyer gets back in: most were created passwordless from a
+// WhatsApp flow and were never told an email or a password, so before this they
+// simply could not return to their own account.
+const LOGIN_ERRORS = {
+  expired_or_missing: 'El código venció o no existe. Pide uno nuevo.',
+  wrong_code: 'Código incorrecto. Revísalo e inténtalo otra vez.',
+  too_many_attempts: 'Demasiados intentos. Espera un momento y pide otro código.',
+  ambiguous_phone: 'Ese número está en más de una cuenta. Escríbenos para ayudarte.',
+  rate_limited: 'Espera un momento antes de pedir otro código.',
+}
+const loginError = (code, fallback) => LOGIN_ERRORS[code] || fallback
+
 export async function verifyPhoneOtp(phone, code) {
   if (!LIVE) return { ok: true, verified: true, simulated: true }
   const { data, error } = await supabase.functions.invoke('wa-verify-otp', { body: { phone, code } })
