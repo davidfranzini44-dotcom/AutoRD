@@ -4,13 +4,14 @@ import {
   AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, FileText, Landmark,
   MessageCircle, Phone, Plus, Save, Search, ShieldCheck, X,
 } from 'lucide-react'
-import { getDealerLeads, updateLead, ibMessages, LIVE, getDealerSalespeople, getDealerPipeline, saveDealerLead } from '../data/api'
+import { getDealerLeads, updateLead, ibMessages, LIVE, getDealerSalespeople, getDealerPipeline, saveDealerLead, getDealerData } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import { LEAD_STAGES, buildLeads, kycLink } from '../data/dealerDemo'
 import { mergeLeadSources } from '../data/leads'
+import { leadReadiness, readinessRank, matchVehicles } from '../data/leadScoring'
 import './DealerLeads.css'
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
@@ -107,6 +108,7 @@ export default function DealerLeads() {
   const { profile } = useAuth() || {}
   const [leads, setLeads] = useState([])
   const [team, setTeam] = useState([])
+  const [inventory, setInventory] = useState([])
   const [loading, setLoading] = useState(true)
   const [reload, setReload] = useState(0)
   const [q, setQ] = useState('')
@@ -147,6 +149,10 @@ export default function DealerLeads() {
   useEffect(() => {
     let alive = true
     getDealerSalespeople(profile?.dealer_id).then((list) => { if (alive) setTeam(list) })
+    // Stock, so a lead detail can recommend cars the buyer can actually finance.
+    getDealerData(profile?.dealer_id)
+      .then((d) => { if (alive) setInventory(d?.inventory || []) })
+      .catch(() => { if (alive) setInventory([]) })
     return () => { alive = false }
   }, [profile?.dealer_id])
   const refetch = () => setReload((x) => x + 1)
@@ -347,7 +353,7 @@ export default function DealerLeads() {
         </section>
       )}
 
-      {active && <LeadDrawer lead={active} onClose={() => setActive(null)} onChange={refetch} setLeads={setLeads} />}
+      {active && <LeadDrawer lead={active} onClose={() => setActive(null)} onChange={refetch} setLeads={setLeads} inventory={inventory} />}
       {manualOpen && <ManualLeadModal onClose={() => setManualOpen(false)} onCreate={addManualLead} />}
     </div>
   )
@@ -399,6 +405,17 @@ function PriorityLeadCard({ lead, onOpen }) {
         </div>
         <span className={`dl-pill ${action.tone}`}>{action.label}</span>
       </div>
+      {/* Readiness: what the record says about how close this buyer is, and why.
+          Financing state comes from the bank; nothing here is inferred. */}
+      {(() => {
+        const r = leadReadiness(lead)
+        return (
+          <div className="dl-ready">
+            <span className={`chip chip-${r.tone === 'slate' ? '' : r.tone}`.trim()}>{r.label}</span>
+            {r.reasons[0] && <span className="tiny muted">{r.reasons[0]}</span>}
+          </div>
+        )
+      })()}
       <div className="dl-lead-meta">
         {lead.vehicle?.name || 'Vehículo por confirmar'}{lead.vehicle?.price ? ` · ${fmtMoney(lead.vehicle.price, lead.vehicle.currency)}` : ''}
       </div>
@@ -472,7 +489,7 @@ function PipelineLeadCardV2({ lead, busy, onOpen, onMove }) {
   )
 }
 
-function LeadDrawer({ lead, onClose, onChange, setLeads }) {
+function LeadDrawer({ lead, onClose, onChange, setLeads, inventory = [] }) {
   const [stage, setStage] = useState(lead.stage)
   const [salesperson, setSalesperson] = useState(lead.salesperson || '')
   const [notes, setNotes] = useState(noteOf(lead))
@@ -571,6 +588,30 @@ function LeadDrawer({ lead, onClose, onChange, setLeads }) {
             <SectionTitle>Nota interna</SectionTitle>
             <textarea className="input dl-note" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Detalles del cliente, acuerdos, seguimiento..." />
             <button className="btn btn-outline btn-sm" onClick={saveNote} disabled={savingNote || notes === noteOf(lead)}><Save size={14} /> {savingNote ? 'Guardando...' : 'Guardar nota'}</button>
+          </div>
+
+          <div className="dl-detail-block">
+            <SectionTitle>Vehículos recomendados para este cliente</SectionTitle>
+            {(() => {
+              const { matches, message } = matchVehicles(lead, inventory)
+              if (message) return <div className="tiny muted">{message}</div>
+              return (
+                <div className="dl-matches">
+                  {matches.map((m) => (
+                    <div className="dl-match" key={m.vehicle.id}>
+                      <div className="grow" style={{ minWidth: 0 }}>
+                        <div className="strong small">{m.vehicle.make} {m.vehicle.model} {m.vehicle.year}</div>
+                        <div className="tiny muted">
+                          {fmtMoney(m.vehicle.price, m.vehicle.currency)} · inicial {fmtMoney(m.fit.down, m.vehicle.currency)} · {fmtMoney(m.fit.monthly, m.vehicle.currency)}/mes
+                        </div>
+                        <div className="tiny muted">{m.reason}</div>
+                      </div>
+                      <span className={`chip chip-${m.tone === 'slate' ? '' : m.tone}`.trim()}>{m.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           <div className="dl-detail-block">
