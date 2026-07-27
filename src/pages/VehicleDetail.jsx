@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Heart, Share2, MapPin, BadgeCheck, Gauge, Cog, Fuel, Palette,
   Calculator, Info, Check, ChevronRight, ShieldCheck, Landmark, Loader2, Scale, Navigation,
@@ -19,10 +19,15 @@ import { recordRecentlyViewed } from '../data/recentlyViewed'
 import { shareVehicle } from '../data/shareVehicle'
 import { mileageLabel } from '../data/vehicleLabels'
 import { pickSimilar } from '../data/similar'
+import { useAuth } from '../context/AuthContext'
+import { isInstitutionProfile } from '../data/roles'
 
 export default function VehicleDetail() {
   const { id } = useParams()
   const nav = useNavigate()
+  const location = useLocation()
+  const { profile } = useAuth() || {}
+  const institutionUser = isInstitutionProfile(profile)
   const [v, setV] = useState(undefined)
   const [similar, setSimilar] = useState([])
   const [active, setActive] = useState(0)
@@ -48,11 +53,21 @@ export default function VehicleDetail() {
       setSimilar(pickSimilar(enriched || { id }, all, 4))
     })
     // Does the logged-in buyer already have an open pre-approval (no car yet)?
-    getMyFinancing()
-      .then((d) => { if (alive && d && d.isPreapproval && !d.vehicle) setPreApp(d) })
-      .catch(() => {})
+    // Dealer/bank users browsing the marketplace only get the cuota calculator.
+    if (!institutionUser) {
+      getMyFinancing()
+        .then((d) => { if (alive && d && d.isPreapproval && !d.vehicle) setPreApp(d) })
+        .catch(() => {})
+    } else {
+      setPreApp(null)
+    }
     return () => { alive = false }
-  }, [id])
+  }, [id, institutionUser])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('calc') === '1') setCalcOpen(true)
+  }, [location.search])
 
   if (v === undefined) {
     return <main className="page"><div className="container muted">Cargando vehículo…</div></main>
@@ -238,7 +253,7 @@ export default function VehicleDetail() {
               {/* Pre-approval aware CTA: flags interest (and notifies the dealer)
                   when the buyer is already approved for this car. */}
               <div style={{ marginTop: 14 }}>
-                <PreapprovalCta vehicle={v} onNavigate={() => trackEvent(v.id, 'financing')} />
+                <PreapprovalCta vehicle={v} onNavigate={() => trackEvent(v.id, 'financing')} onCalculator={() => setCalcOpen(true)} />
               </div>
 
               {/* Committing to THIS car — converts the interest and archives the rest. */}
@@ -340,7 +355,11 @@ export default function VehicleDetail() {
           <div className="tiny muted">Desde</div>
           <div className="strong" style={{ fontSize: 16, color: 'var(--teal-800)' }}>{money(v.monthly)}/mes</div>
         </div>
-        {preApp && canUsePre ? (
+        {institutionUser ? (
+          <button className="btn btn-primary" style={{ flex: 1.4 }} onClick={() => setCalcOpen(true)}>
+            <Calculator size={16} /> Calcular cuota
+          </button>
+        ) : preApp && canUsePre ? (
           <button className="btn btn-primary" style={{ flex: 1.4 }} disabled={attaching} onClick={usePreapproval}>
             {attaching ? <><Loader2 size={16} className="spin" /> Vinculando…</> : 'Usar mi pre-aprobación'}
           </button>

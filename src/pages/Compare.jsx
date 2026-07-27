@@ -7,6 +7,8 @@ import { fmtMoney } from '../data/demo'
 import { carDefaultMonthly } from '../data/finance'
 import { clearCompare, getCompareIds, removeCompare } from '../data/compare'
 import { mileageLabel } from '../data/vehicleLabels'
+import { useAuth } from '../context/AuthContext'
+import { isInstitutionProfile } from '../data/roles'
 
 // dir: 'low' = smaller wins, 'high' = bigger wins; money rows only score when currencies match.
 const ROWS = [
@@ -23,6 +25,21 @@ const ROWS = [
   { label: 'Dealer', value: (v) => v.dealer || '—' },
 ]
 
+function cleanCompareText(value) {
+  return String(value ?? '')
+    .replace(/\u00c3\u00b1/g, 'ñ')
+    .replace(/\u00c3\u0091/g, 'Ñ')
+    .replace(/\u00c3\u00a1/g, 'á')
+    .replace(/\u00c3\u00a9/g, 'é')
+    .replace(/\u00c3\u00ad/g, 'í')
+    .replace(/\u00c3\u00b3/g, 'ó')
+    .replace(/\u00c3\u00ba/g, 'ú')
+    .replace(/\u00c2\u00bf/g, '¿')
+    .replace(/\u00c2\u00b7/g, '·')
+    .replace(/\u00e2\u20ac\u201d/g, '—')
+    .replace(/\u00e2\u20ac\u00a6/g, '…')
+}
+
 // Returns the set of vehicle indices that win a given row (empty if not comparable / all equal).
 function winnersFor(row, vehicles, sameCurrency) {
   if (!row.dir) return new Set()
@@ -36,6 +53,8 @@ function winnersFor(row, vehicles, sameCurrency) {
 }
 
 export default function Compare() {
+  const { profile } = useAuth() || {}
+  const institutionUser = isInstitutionProfile(profile)
   const [ids, setIds] = useState(() => getCompareIds())
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -84,7 +103,7 @@ export default function Compare() {
               <Scale size={24} color="var(--teal-700)" />
               <h1 style={{ fontSize: 26 }}>Comparar vehículos</h1>
             </div>
-            <p className="muted small" style={{ margin: '4px 0 0' }}>Compara hasta 4 opciones antes de solicitar financiamiento.</p>
+            <p className="muted small" style={{ margin: '4px 0 0' }}>{institutionUser ? 'Compara hasta 4 opciones y calcula cuotas sin iniciar KYC.' : 'Compara hasta 4 opciones antes de solicitar financiamiento.'}</p>
           </div>
           <div className="row gap-8">
             {vehicles.length > 0 && <button className="btn btn-outline" onClick={clear}><Trash2 size={16} /> Limpiar</button>}
@@ -103,7 +122,7 @@ export default function Compare() {
           <>
             {/* Análisis rápido — highlights + per-car strengths */}
             {scoring && (
-              <div className="card card-pad" style={{ marginBottom: 16 }}>
+              <div className="card card-pad compare-analysis" style={{ marginBottom: 16 }}>
                 <div className="row center gap-8" style={{ marginBottom: 10 }}>
                   <Sparkles size={16} color="var(--teal-700)" />
                   <div className="strong">Análisis rápido</div>
@@ -119,14 +138,14 @@ export default function Compare() {
                 {!scoring.sameCurrency && (
                   <p className="tiny muted" style={{ margin: '0 0 6px' }}>Precio y cuota no se comparan porque están en monedas distintas (RD$ / US$).</p>
                 )}
-                <div className="grid" style={{ gridTemplateColumns: `repeat(${vehicles.length}, minmax(0,1fr))`, gap: 10, marginTop: 8 }}>
+                <div className="compare-analysis-grid" style={{ '--compare-cols': vehicles.length }}>
                   {vehicles.map((v, i) => {
-                    const strengths = ROWS.filter((row, ri) => scoring.rowWinners[ri].has(i)).map((row) => row.label)
+                    const strengths = ROWS.filter((row, ri) => scoring.rowWinners[ri].has(i)).map((row) => cleanCompareText(row.label))
                     const best = i === scoring.bestIdx
                     return (
-                      <div key={v.id} className="card" style={{ padding: 12, border: best ? '1.5px solid var(--teal-600, #0d9488)' : '1px solid var(--line-2, #e2e8f0)' }}>
+                      <div key={v.id} className="card compare-analysis-card" style={{ border: best ? '1.5px solid var(--teal-600, #0d9488)' : '1px solid var(--line-2, #e2e8f0)' }}>
                         <div className="row between center gap-6">
-                          <div className="strong small" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.make} {v.model}</div>
+                          <div className="strong small">{v.make} {v.model}</div>
                           {best && <span className="chip chip-teal" style={{ flex: 'none' }}><Trophy size={12} /> Recomendado</span>}
                         </div>
                         <div className="tiny muted" style={{ marginTop: 6 }}>
@@ -162,13 +181,13 @@ export default function Compare() {
 
                 {ROWS.map((row, ri) => (
                   <div className="compare-row" key={row.label}>
-                    <div className="compare-label">{row.label}</div>
+                    <div className="compare-label">{cleanCompareText(row.label)}</div>
                     <div className="compare-values" style={{ '--compare-cols': vehicles.length }}>
                       {vehicles.map((v, i) => {
                         const win = scoring?.rowWinners[ri].has(i)
                         return (
                           <div className="compare-cell" key={`${v.id}-${row.label}`} style={win ? { color: 'var(--teal-700)', fontWeight: 700 } : undefined}>
-                            {win && <Check size={14} style={{ verticalAlign: -2, marginRight: 2 }} />}{row.value(v)}
+                            {win && <Check size={14} style={{ verticalAlign: -2, marginRight: 2 }} />}{cleanCompareText(row.value(v))}
                           </div>
                         )
                       })}
@@ -182,9 +201,15 @@ export default function Compare() {
                     {vehicles.map((v) => (
                       <div className="compare-cell" key={`${v.id}-actions`}>
                         <Link to={`/vehiculo/${v.id}`} className="btn btn-outline btn-sm btn-block">Ver ficha</Link>
-                        <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-sm btn-block" style={{ marginTop: 8 }}>
-                          <Gauge size={14} /> Financiar
-                        </Link>
+                        {institutionUser ? (
+                          <Link to={`/vehiculo/${v.id}?calc=1`} className="btn btn-primary btn-sm btn-block" style={{ marginTop: 8 }}>
+                            <Gauge size={14} /> Calcular cuota
+                          </Link>
+                        ) : (
+                          <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-sm btn-block" style={{ marginTop: 8 }}>
+                            <Gauge size={14} /> Financiar
+                          </Link>
+                        )}
                       </div>
                     ))}
                   </div>

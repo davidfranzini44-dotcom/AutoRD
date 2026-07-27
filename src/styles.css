@@ -613,6 +613,22 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   margin: 24px auto 0;
   text-align: center;
 }
+.compare-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--compare-cols), minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.compare-analysis-card {
+  min-width: 0;
+  padding: 12px;
+}
+.compare-analysis-card .strong,
+.compare-analysis-card .tiny {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .compare-scroll {
   overflow-x: auto;
   padding-bottom: 8px;
@@ -686,15 +702,33 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   font-size: 13.5px;
   font-weight: 650;
   border-right: 1px solid var(--line-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .compare-cell:last-child { border-right: 0; }
 /* On phones the 220px columns force a wide scroll where barely one vehicle
    shows. Shrink the per-column minimum so two cars fill the screen (and stretch
    when there are only two), while 3+ scroll with a clear peek of the next. */
 @media (max-width: 640px) {
+  .compare-analysis { padding: 14px; }
+  .compare-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+  .compare-analysis-card .row {
+    align-items: flex-start;
+  }
+  .compare-analysis-card .chip {
+    white-space: nowrap;
+  }
   .compare-grid,
   .compare-values {
-    grid-template-columns: repeat(var(--compare-cols), minmax(150px, 1fr));
+    grid-template-columns: repeat(var(--compare-cols), minmax(168px, 1fr));
+  }
+  .compare-car-body { padding: 12px; }
+  .compare-car-body h2 { font-size: 15px; }
+  .compare-cell {
+    font-size: 12.5px;
+    line-height: 1.35;
   }
 }
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   MapPin, Heart, Bell, Menu, X, ChevronDown,
   Home, Search, Landmark, User, LogOut, LayoutDashboard, Scale,
+  Calculator,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { FichaProvider } from '../context/FichaContext'
@@ -10,6 +11,7 @@ import VehicleFicha from './VehicleFicha'
 import autordLogo from '../assets/autord-logo-reference.png'
 import { compareCount } from '../data/compare'
 import { savedSearchCount } from '../data/savedSearches'
+import { isInstitutionProfile } from '../data/roles'
 
 function Logo() {
   return (
@@ -63,6 +65,7 @@ export default function Layout() {
   const [alerts, setAlerts] = useState(savedSearchCount())
   const { user, profile, signOut } = useAuth() || {}
   const loc = useLocation()
+  const institutionUser = isInstitutionProfile(profile)
   useEffect(() => { setMenu(false); window.scrollTo(0, 0) }, [loc.pathname])
   useEffect(() => {
     const sync = () => setCmp(compareCount())
@@ -79,7 +82,9 @@ export default function Layout() {
     { to: '/', label: 'Comprar', end: true },
     { to: '/dealers', label: 'Dealers' },
     { to: '/ingresar', label: 'Vender' },
-    { to: '/financiamiento', label: 'Financiamiento' },
+    institutionUser
+      ? { to: '/?calculadora=1', label: 'Calculadora' }
+      : { to: '/financiamiento', label: 'Financiamiento' },
     { to: '/como-funciona', label: 'Cómo funciona' },
   ]
 
@@ -150,13 +155,15 @@ export default function Layout() {
 
       <Outlet />
 
-      <Footer />
+      <Footer institutionUser={institutionUser} />
 
       <nav className="bottom-nav">
         <NavLink to="/" end><Home size={20} /> Inicio</NavLink>
         <NavLink to="/buscar"><Search size={20} /> Buscar</NavLink>
         <NavLink to="/comparar"><Scale size={20} /> Comparar</NavLink>
-        <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>
+        {institutionUser
+          ? <NavLink to="/?calculadora=1"><Calculator size={20} /> Calculadora</NavLink>
+          : <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>}
         <NavLink to={user ? '/mi-cuenta' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
 
@@ -166,7 +173,7 @@ export default function Layout() {
   )
 }
 
-function Footer() {
+function Footer({ institutionUser = false }) {
   return (
     <footer style={{ background: '#0c2033', color: '#c6d3df', marginTop: 40 }}>
       <div className="container" style={{ padding: '30px 22px' }}>
@@ -181,7 +188,7 @@ function Footer() {
           <div className="row gap-24 wrap" style={{ fontSize: 13.5 }}>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Producto</strong>
-              <Link to="/">Comprar</Link><Link to="/financiamiento">Financiamiento</Link><Link to="/como-funciona">Cómo funciona</Link>
+              <Link to="/">Comprar</Link><Link to={institutionUser ? '/?calculadora=1' : '/financiamiento'}>{institutionUser ? 'Calculadora' : 'Financiamiento'}</Link><Link to="/como-funciona">Cómo funciona</Link>
             </div>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Aliados</strong>

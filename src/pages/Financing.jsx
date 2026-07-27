@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useSearchParams, useLocation } from 'react-router-dom'
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import {
   IdCard, ScanFace, FileSignature, Send, Check, Loader2, ShieldCheck,
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
 import CarImage from '../components/CarImage'
+import { isInstitutionProfile } from '../data/roles'
 
 const CONSENT = 'Autorizo a AutoRD a compartir mi información personal, datos de identidad verificados, documentos suministrados y solicitud de financiamiento con las entidades financieras seleccionadas por mí para fines de evaluación crediticia. Autorizo expresamente a dichas entidades financieras a consultar mi historial crediticio exclusivamente para evaluar esta solicitud de financiamiento de vehículo.'
 
@@ -49,15 +50,21 @@ const numStr = (n) => (n != null && n !== '' ? String(n) : '')
 export default function Financing() {
   const [params] = useSearchParams()
   const location = useLocation()
+  const nav = useNavigate()
   const vehiculoSlug = params.get('vehiculo')
   const isPreapproval = !vehiculoSlug
   const { profile, user, configured, signInAnon, refreshProfile } = useAuth() || {}
+  const institutionUser = isInstitutionProfile(profile)
   // Identity verification needs a user id (the KYC session is tied to it), but
   // NOT a signup — we create an anonymous session on demand. `authed` just
   // controls whether we still offer a "log in" shortcut for returning users.
   const authed = !configured || !!user
   const loginHref = `/ingresar?next=${encodeURIComponent(location.pathname + location.search)}`
   const [editAll, setEditAll] = useState(false)
+
+  useEffect(() => {
+    if (institutionUser) nav('/?calculadora=1', { replace: true })
+  }, [institutionUser, nav])
 
   // Reuse whatever the customer entered on the homepage calculator (URL params
   // first, then a saved calc session) so we don't ask for it again.

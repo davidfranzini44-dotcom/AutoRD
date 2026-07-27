@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Search, Car, BadgeCheck, ShieldCheck, ArrowRight,
   Clock, MonitorSmartphone, Landmark,
@@ -20,6 +20,8 @@ import { fmtRD } from '../data/demo'
 import { BANK_RATES, estimateMonthly, affordablePrice, fmtMoneyInput } from '../data/finance'
 import { getRecentlyViewedIds } from '../data/recentlyViewed'
 import { mileageLabel } from '../data/vehicleLabels'
+import { useAuth } from '../context/AuthContext'
+import { isInstitutionProfile } from '../data/roles'
 
 const SEARCH_TABS = [
   { id: 'todos', label: 'Todos los vehículos', shortLabel: 'Todos', icon: Car },
@@ -65,6 +67,11 @@ const HOME_TRUST_STEPS = [
   { icon: FileCheck, title: 'Autorización crediticia online', text: 'Das permiso al banco para evaluar tu solicitud sin papeleo.' },
   { icon: Landmark, title: 'Respuesta de bancos en minutos', text: 'Recibe opciones reales para avanzar con el vehículo elegido.' },
 ]
+const INSTITUTION_CALC_STEPS = [
+  { icon: Calculator, title: 'Calculadora sin KYC', text: 'Orienta al cliente con una cuota estimada sin iniciar solicitud.' },
+  { icon: Landmark, title: 'Tasa referencial', text: 'Usa parámetros de banco para conversar con más claridad.' },
+  { icon: Search, title: 'Buscar por presupuesto', text: 'Convierte la cuota estimada en un rango de vehículos.' },
+]
 const BODY_TYPE_PRICES = {
   SUV: 'Desde RD$ 650K',
   Pickup: 'Desde RD$ 720K',
@@ -77,6 +84,9 @@ const BODY_TYPE_PRICES = {
 }
 export default function Home() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { profile } = useAuth() || {}
+  const institutionUser = isInstitutionProfile(profile)
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [segment, setSegment] = useState('todos')
@@ -182,6 +192,14 @@ export default function Home() {
   const preapLink = incomeNum > 0
     ? `/financiamiento?ingreso=${incomeNum}&monto=${preapprovalAmount}&plazo=${calcYears}`
     : '/financiamiento'
+  const confidenceItems = institutionUser
+    ? [
+        { icon: Calculator, text: 'Solo cálculo de cuota' },
+        { icon: ShieldCheck, text: 'Sin KYC para staff' },
+        { icon: Search, text: 'Útil para orientar clientes' },
+      ]
+    : FINANCE_CONFIDENCE
+  const trustSteps = institutionUser ? INSTITUTION_CALC_STEPS : HOME_TRUST_STEPS
   const marketplaceStats = [
     {
       icon: Car,
@@ -215,6 +233,16 @@ export default function Home() {
     } catch { /* ignore storage errors */ }
   }, [incomeNum, preapprovalAmount, calcYears])
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('calculadora') === '1') {
+      setShowCalculator(true)
+      window.setTimeout(() => {
+        document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+    }
+  }, [location.search])
+
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
     setAnioRange(''); setPrecioMax(''); setUbicacion('')
@@ -241,6 +269,12 @@ export default function Home() {
       document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 40)
   }
+  const openCalculator = () => {
+    setShowCalculator(true)
+    window.setTimeout(() => {
+      document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 40)
+  }
 
   return (
     <main className="page">
@@ -259,7 +293,11 @@ export default function Home() {
             </div>
             <div className="hero2-actions">
               <button type="button" className="btn btn-primary" onClick={runSearch}><Search size={16} /> Buscar vehículos</button>
-              <Link to="/financiamiento" className="btn btn-outline">Solicitar pre-aprobación</Link>
+              {institutionUser ? (
+                <button type="button" className="btn btn-outline" onClick={openCalculator}><Calculator size={16} /> Calculadora de cuota</button>
+              ) : (
+                <Link to="/financiamiento" className="btn btn-outline">Solicitar pre-aprobación</Link>
+              )}
             </div>
           </div>
         </section>
@@ -363,25 +401,31 @@ export default function Home() {
           </div>
 
           <aside className="finance-eligibility-card">
-            <h2>¿Cuánto puedes financiar?</h2>
-            <p>Verifica tu elegibilidad sin afectar tu puntaje de crédito.</p>
+            <h2>{institutionUser ? 'Calculadora de cuota' : '¿Cuánto puedes financiar?'}</h2>
+            <p>{institutionUser ? 'Calcula una cuota estimada para orientar clientes sin iniciar KYC ni solicitud.' : 'Verifica tu elegibilidad sin afectar tu puntaje de crédito.'}</p>
 
             <div className="finance-eligibility-pills">
-              {FINANCE_CONFIDENCE.map((item) => {
+              {confidenceItems.map((item) => {
                 const Icon = item.icon
                 return <span key={item.text}><Icon size={14} /> {item.text}</span>
               })}
             </div>
 
             <div className="finance-eligibility-actions">
-              <Link to={preapLink} className={`btn btn-primary eligibility-cta ${approvedEstimate > 0 ? 'has-estimate' : ''}`}>
-                {approvedEstimate > 0 ? (
-                  <>
-                    <span>Solicitar pre-aprobación</span>
-                    <strong>{fmtRD(approvedEstimate)}</strong>
-                  </>
-                ) : 'Verificar elegibilidad'}
-              </Link>
+              {institutionUser ? (
+                <button type="button" className="btn btn-primary eligibility-cta" onClick={openCalculator}>
+                  <Calculator size={16} /> Abrir calculadora de cuota
+                </button>
+              ) : (
+                <Link to={preapLink} className={`btn btn-primary eligibility-cta ${approvedEstimate > 0 ? 'has-estimate' : ''}`}>
+                  {approvedEstimate > 0 ? (
+                    <>
+                      <span>Solicitar pre-aprobación</span>
+                      <strong>{fmtRD(approvedEstimate)}</strong>
+                    </>
+                  ) : 'Verificar elegibilidad'}
+                </Link>
+              )}
               <button
                 type="button"
                 className={`btn btn-outline calc-toggle ${showCalculator ? 'active' : ''}`}
@@ -451,10 +495,16 @@ export default function Home() {
                   {approvedSearchLimit > 0 && <div><span>Rango sugerido (+10%)</span><b>{fmtRD(approvedSearchLimit)}</b></div>}
                 </div>
                 <div className="inline-calc-actions">
-                  <Link to={preapLink} className="btn btn-primary">
-                    {approvedEstimate > 0 ? `Solicitar pre-aprobación por ${fmtRD(approvedEstimate)}` : 'Solicitar pre-aprobación'}
-                  </Link>
-                  {approvedSearchLimit > 0 && (
+                  {institutionUser ? (
+                    <Link to={approvedSearchLimit > 0 ? `/buscar?precioMax=${approvedSearchLimit}` : '/buscar'} className="btn btn-primary">
+                      {approvedSearchLimit > 0 ? `Ver vehículos hasta ${fmtRD(approvedSearchLimit)}` : 'Buscar vehículos'}
+                    </Link>
+                  ) : (
+                    <Link to={preapLink} className="btn btn-primary">
+                      {approvedEstimate > 0 ? `Solicitar pre-aprobación por ${fmtRD(approvedEstimate)}` : 'Solicitar pre-aprobación'}
+                    </Link>
+                  )}
+                  {!institutionUser && approvedSearchLimit > 0 && (
                     <Link to={`/buscar?precioMax=${approvedSearchLimit}`} className="btn btn-outline">
                       Ver vehículos hasta {fmtRD(approvedSearchLimit)}
                     </Link>
@@ -466,7 +516,7 @@ export default function Home() {
         )}
 
         <section className="home-trust-strip" aria-label="Proceso seguro de financiamiento">
-          {HOME_TRUST_STEPS.map((step) => {
+          {trustSteps.map((step) => {
             const Icon = step.icon
             return (
               <article className="home-trust-item" key={step.title}>
