@@ -1,16 +1,18 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search, ShieldCheck, FileCheck2,
   Car, Upload, Info, Send, FileText, ExternalLink, Plus, Clock, Users,
   AlertTriangle, ChevronLeft, UserCheck, Phone, Mail, MapPin, Briefcase, Eye, X,
-  MessageSquare, ClipboardList, Filter, TimerReset, WalletCards, BadgeCheck,
+  MessageSquare, ClipboardList, Filter, TimerReset, WalletCards, BadgeCheck, Pencil,
 } from 'lucide-react'
 import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
   getOrCreateFinancingToken, getFinancingEvents, getApplicationCedula,
+  getBankClientInfo, saveBankClientInfo, realEmail,
 } from '../data/api'
+import { PROVINCIAS, formatAddress } from '../data/provincias'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -374,16 +376,109 @@ function RequestInfoButton({ app, field }) {
   )
 }
 
-function InfoRequestLine({ app, label, value, field }) {
-  const hasValue = value != null && value !== ''
+// One Cliente row: the effective value, where it came from, and a way to chase
+// it if it is missing. A value the bank recorded takes precedence over the
+// client's declared one for that bank only.
+function ClientInfoLine({ app, label, declared, recorded, field }) {
+  const value = recorded || declared || null
+  const source = recorded ? 'Registrado por tu banco' : (declared ? 'Declarado por el cliente' : null)
   return (
     <div className="bankx-infoline bankx-infoline-action">
       <span>{label}</span>
       <b>
-        <span>{hasValue ? value : <span className="muted tiny">No registrado</span>}</span>
-        <RequestInfoButton app={app} field={field || label.toLowerCase()} />
+        <span className="bankx-info-val">
+          {value || <span className="muted tiny">No registrado</span>}
+          {source && <em className="bankx-info-src">{source}</em>}
+        </span>
+        {!value && <RequestInfoButton app={app} field={field || label.toLowerCase()} />}
       </b>
     </div>
+  )
+}
+
+// The Cliente panel. Chasing the client on WhatsApp is only half a loop — when
+// they answer, the analyst needs somewhere to put it. Anything typed here is
+// private to this bank (RLS on bank_client_details): what BHD researches is
+// never handed to Popular bidding on the same client. The client's own declared
+// values come live from their profile and are shared with every bank they
+// consented to.
+function ClientInfoPanel({ app }) {
+  const { profile } = useAuth() || {}
+  const bankDbId = profile?.bank_id || null
+  const [info, setInfo] = useState(undefined)
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({ email: '', occupation: '', provincia: '', addressLine: '' })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const load = useCallback(() => {
+    if (!app.applicationId) { setInfo(null); return }
+    getBankClientInfo(app.applicationId).then(setInfo).catch(() => setInfo(null))
+  }, [app.applicationId])
+  useEffect(load, [load])
+
+  const declared = info?.declared || {}
+  const rec = info?.bank || null
+  // The synthetic wa<digits>@autord.local address is not a real inbox.
+  const declaredEmail = realEmail(declared.email)
+  const declaredAddress = formatAddress(declared.addressLine, declared.provincia)
+  const recordedAddress = formatAddress(rec?.addressLine, rec?.provincia)
+
+  const openEdit = () => {
+    setForm({
+      email: rec?.email || '', occupation: rec?.occupation || '',
+      provincia: rec?.provincia || '', addressLine: rec?.addressLine || '',
+    })
+    setErr(''); setEditing(true)
+  }
+
+  const save = async () => {
+    setBusy(true); setErr('')
+    try {
+      await saveBankClientInfo(app.applicationId, bankDbId, form)
+      load(); setEditing(false)
+    } catch (e) {
+      setErr(e?.message || 'No se pudo guardar')
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <>
+      <CedulaLine app={app} />
+      <div className="bankx-infoline"><span>Teléfono</span><b>{app.phone ? `+${String(app.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
+      {info === undefined ? (
+        <div className="bankx-infoline"><span>Cargando</span><b><Loader2 size={14} className="spin muted" /></b></div>
+      ) : editing ? (
+        <div className="bankx-clientedit">
+          <F label="Email"><input className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="cliente@correo.com" /></F>
+          <F label="Ocupación"><input className="input" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ej: Ingeniero, comerciante…" /></F>
+          <F label="Provincia">
+            <select className="select" value={form.provincia} onChange={(e) => setForm({ ...form, provincia: e.target.value })}>
+              <option value="">Sin especificar</option>
+              {PROVINCIAS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </F>
+          <F label="Dirección"><input className="input" value={form.addressLine} onChange={(e) => setForm({ ...form, addressLine: e.target.value })} placeholder="Calle, número, sector" /></F>
+          {err && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{err}</div>}
+          <div className="row gap-8" style={{ marginTop: 12 }}>
+            <button className="btn btn-navy btn-sm" disabled={busy} onClick={save}>{busy ? <Loader2 size={14} className="spin" /> : 'Guardar'}</button>
+            <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setEditing(false)}>Cancelar</button>
+          </div>
+          <div className="tiny muted" style={{ marginTop: 8 }}>Solo tu banco ve lo que registres aquí.</div>
+        </div>
+      ) : (
+        <>
+          <ClientInfoLine app={app} label="Email" declared={declaredEmail} recorded={rec?.email} field="email" />
+          <ClientInfoLine app={app} label="Ocupación" declared={declared.occupation || app.employment} recorded={rec?.occupation} field="ocupación" />
+          <ClientInfoLine app={app} label="Dirección" declared={declaredAddress} recorded={recordedAddress} field="dirección completa" />
+          {app.applicationId && bankDbId && (
+            <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={openEdit}>
+              <Pencil size={13} /> {rec ? 'Editar datos del cliente' : 'Registrar datos del cliente'}
+            </button>
+          )}
+        </>
+      )}
+    </>
   )
 }
 
@@ -417,43 +512,93 @@ function PaymentCapacityTool({ app }) {
   const [term, setTerm] = useState(app.term ? String(app.term) : '7')
   const [rate, setRate] = useState('9.25')
   const [maxRatio, setMaxRatio] = useState('35')
+  const [insurance, setInsurance] = useState('3800')
 
   const amountN = num(amount)
   const incomeN = num(income)
   const termN = Number(term) || 7
   const rateN = Number(String(rate).replace(',', '.')) || 0
   const maxRatioN = Number(String(maxRatio).replace(',', '.')) || 35
+  const insuranceN = num(insurance) || 0
   const monthly = amountN ? estimateMonthly(amountN, rateN, termN * 12) : null
   const ratio = monthly && incomeN ? Math.round((monthly / incomeN) * 100) : null
+  const monthlyWithInsurance = monthly ? monthly + insuranceN : null
+  const ratioWithInsurance = monthlyWithInsurance && incomeN ? Math.round((monthlyWithInsurance / incomeN) * 100) : null
   const maxMonthly = incomeN ? incomeN * (maxRatioN / 100) : null
   const maxFinance = monthly && amountN && maxMonthly ? Math.round(amountN * (maxMonthly / monthly)) : null
+  const lowerMonthly = amountN ? estimateMonthly(amountN, rateN, 8 * 12) : null
+  const ringPct = ratio == null || !maxRatioN ? 0 : Math.min(100, Math.round((ratio / maxRatioN) * 100))
+  const insuredPct = ratioWithInsurance == null || !maxRatioN ? 0 : Math.min(100, Math.round((ratioWithInsurance / maxRatioN) * 100))
   const tone = ratio == null ? '' : ratio <= maxRatioN ? 'green' : ratio <= maxRatioN + 10 ? 'amber' : 'red'
   const label = ratio == null ? 'Sin datos' : ratio <= maxRatioN ? 'Dentro de regla' : ratio <= maxRatioN + 10 ? 'Revisar' : 'Fuera de regla'
+  const recommendation = ratio == null
+    ? 'Completa ingreso y monto para simular la capacidad.'
+    : ratio <= maxRatioN
+      ? 'Recomendacion: capacidad favorable. Validar estados de cuenta antes de emitir oferta final.'
+      : ratio <= maxRatioN + 10
+        ? 'Recomendacion: revisar soporte de ingresos o bajar la cuota antes de aprobar.'
+        : 'Recomendacion: fuera de politica. Considera pedir mas inicial, reducir monto o rechazar.'
 
   return (
-    <section className="card pad bankx-capacity-tool">
-      <div className="row between center" style={{ marginBottom: 10 }}>
-        <div><h3 style={{ fontSize: 15, margin: 0 }}>Herramienta de capacidad</h3><div className="tiny muted">Simula lo solicitado contra capacidad de pago.</div></div>
-        <span className={`pill ${tone}`}>{label}</span>
+    <section className="card bankx-capacity-tool">
+      <div className="bankx-capacity-hero">
+        <div>
+          <span className={`pill ${tone}`}>{label}</span>
+          <h3>Herramienta de capacidad de pago</h3>
+          <p>Compara lo que el cliente pidio contra su ingreso declarado, inicial disponible y politica del banco antes de aprobar, pedir documentos o ajustar condiciones.</p>
+          <div className="bankx-capacity-request" style={{ marginTop: 14 }}>
+            <div><span>Monto solicitado</span><b>{amountN ? fmtRD(amountN) : '-'}</b></div>
+            <div><span>Ingreso declarado</span><b>{incomeN ? `${fmtRD(incomeN)}/mes` : '-'}</b></div>
+            <div><span>Inicial disponible</span><b>{app.down ? fmtRD(app.down) : '-'}</b></div>
+          </div>
+        </div>
+        <div className="bankx-capacity-score">
+          <div className="bankx-capacity-ring" style={{ background: `conic-gradient(#22c55e 0 ${ringPct}%, rgba(255,255,255,.18) ${ringPct}% 100%)` }}>
+            <div><span><strong>{ratio != null ? `${ratio}%` : '-'}</strong><small>cuota / ingreso</small></span></div>
+          </div>
+          <div className="small strong" style={{ marginTop: 10, color: '#fff' }}>{ratio == null ? 'Sin datos' : ratio <= maxRatioN ? 'Margen saludable' : 'Necesita revision'}</div>
+          <div className="tiny" style={{ color: 'rgba(255,255,255,.72)' }}>Regla banco: max {maxRatioN}%</div>
+        </div>
       </div>
-      <div className="bankx-capacity-request">
-        <div><span>Solicitado</span><b>{amountN ? fmtRD(amountN) : '—'}</b></div>
-        <div><span>Ingreso</span><b>{incomeN ? `${fmtRD(incomeN)}/mes` : '—'}</b></div>
-        <div><span>Plazo</span><b>{termN} años</b></div>
+
+      <div className="bankx-capacity-body">
+        <div className="bankx-capacity-panel">
+          <div>
+            <div className="strong small">Supuestos editables</div>
+            <div className="tiny muted">El analista puede ajustar tasa, plazo, ingreso y politica para simular.</div>
+          </div>
+          <div className="bankx-capacity-inputs">
+            <label><span>Monto</span><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1,800,000" /></label>
+            <label><span>Ingreso</span><input className="input" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="85,000" /></label>
+            <label><span>Plazo</span><select className="select" value={term} onChange={(e) => setTerm(e.target.value)}><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+            <label><span>Tasa</span><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></label>
+            <label><span>Max % ingreso</span><input className="input" value={maxRatio} onChange={(e) => setMaxRatio(e.target.value)} placeholder="35" /></label>
+            <label><span>Seguro estimado</span><input className="input" value={insurance} onChange={(e) => setInsurance(e.target.value)} placeholder="3,800" /></label>
+          </div>
+          <div className="bankx-capacity-result">
+            <div><span>Cuota estimada</span><b>{monthly ? `${fmtRD(Math.round(monthly))}/mes` : '-'}</b></div>
+            <div><span>Puede financiar aprox.</span><b>{maxFinance ? fmtRD(maxFinance) : '-'}</b></div>
+          </div>
+        </div>
+
+        <div className="bankx-capacity-panel">
+          <div>
+            <div className="strong small">Lectura rapida</div>
+            <div className="tiny muted">Visual para decidir si aprueba, ajusta o pide soporte adicional.</div>
+          </div>
+          <div className="bankx-capacity-breakdown">
+            <div className="bankx-capacity-bar-row"><span>Cuota actual</span><div className="bankx-capacity-track"><i style={{ width: `${ringPct}%` }} /></div><b>{ratio != null ? `${ratio}%` : '-'}</b></div>
+            <div className="bankx-capacity-bar-row"><span>Con seguro</span><div className="bankx-capacity-track amber"><i style={{ width: `${insuredPct}%` }} /></div><b>{ratioWithInsurance != null ? `${ratioWithInsurance}%` : '-'}</b></div>
+            <div className="bankx-capacity-bar-row"><span>Limite banco</span><div className="bankx-capacity-track"><i style={{ width: '100%' }} /></div><b>{maxRatioN}%</b></div>
+          </div>
+          <div className="bankx-capacity-scenarios">
+            <div className="bankx-scenario-card active"><b>Aprobar</b><span>{amountN ? fmtRD(amountN) : 'Monto'} · {termN} anos · {rateN}%</span></div>
+            <div className="bankx-scenario-card"><b>Bajar cuota</b><span>8 anos · {lowerMonthly ? `${fmtRD(Math.round(lowerMonthly))}/mes` : 'simular'}</span></div>
+            <div className="bankx-scenario-card"><b>Pedir docs</b><span>Validar ingreso promedio</span></div>
+          </div>
+          <div className={`bankx-capacity-note ${tone === 'red' ? 'red' : tone === 'amber' ? 'amber' : ''}`}>{recommendation}</div>
+        </div>
       </div>
-      <div className="bankx-capacity-inputs">
-        <label><span>Monto</span><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1,800,000" /></label>
-        <label><span>Ingreso</span><input className="input" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="85,000" /></label>
-        <label><span>Plazo</span><select className="select" value={term} onChange={(e) => setTerm(e.target.value)}><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-        <label><span>Tasa</span><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></label>
-        <label><span>Max % ingreso</span><input className="input" value={maxRatio} onChange={(e) => setMaxRatio(e.target.value)} placeholder="35" /></label>
-      </div>
-      <div className="bankx-capacity-result">
-        <div><span>Cuota estimada</span><b>{monthly ? `${fmtRD(Math.round(monthly))}/mes` : '—'}</b></div>
-        <div><span>Cuota / ingreso</span><b>{ratio != null ? `${ratio}%` : '—'}</b></div>
-        <div><span>Puede financiar aprox.</span><b>{maxFinance ? fmtRD(maxFinance) : '—'}</b></div>
-      </div>
-      <p className="tiny muted" style={{ margin: '10px 0 0' }}>Uso interno del banco. No reemplaza buró, políticas internas ni verificación documental.</p>
     </section>
   )
 }
@@ -617,14 +762,10 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
       <div className="bankx-expgrid">
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
-          <CedulaLine app={a} />
-          <div className="bankx-infoline"><span>Teléfono</span><b>{a.phone ? `+${String(a.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
-          <InfoRequestLine app={a} label="Email" value={a.email} field="email" />
-          {/* Dirección and Ocupación are only shown when the customer actually
-              declared them. They used to be filled from a hash — a bank must not
-              see an address or occupation AutoRD invented. */}
-          <InfoRequestLine app={a} label="Ocupación" value={a.employment} field="ocupación" />
-          <InfoRequestLine app={a} label="Dirección" value={a.city} field="dirección completa" />
+          {/* Ocupación and Dirección are never inferred. They show what the client
+              declared, or what this bank recorded itself — they used to be filled
+              from a hash, and a bank must not see details AutoRD invented. */}
+          <ClientInfoPanel app={a} />
         </section>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>

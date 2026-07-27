@@ -1337,6 +1337,64 @@ export async function reorderVehiclePhotos(vehicleDbId, orderedIds) {
 }
 
 // ---------------- Bank panel ----------------
+// A passwordless account gets a deterministic wa<digits>@autord.local address so
+// Supabase Auth has something unique to key on. It is not a real inbox, so it
+// must never be shown to a bank as "the client's email" — that is what made the
+// Cliente panel look like it held contact details it does not have.
+export const isPlaceholderEmail = (e) => !e || /@autord\.local$/i.test(String(e))
+export const realEmail = (e) => (isPlaceholderEmail(e) ? null : e)
+
+// Both halves of the Cliente panel in one round-trip: what the client declared
+// (live from their profile) and what this bank recorded privately. The RPC
+// enforces that the bank is actually routed on the application.
+export async function getBankClientInfo(applicationId) {
+  if (!LIVE || !applicationId) return null
+  const { data, error } = await supabase.rpc('bank_client_info', { p_application_id: applicationId })
+  if (error) throw error
+  return data || null
+}
+
+// Upsert this bank's private record. Callers pass the complete set of fields,
+// not a partial patch — the row is replaced, so a partial would blank the rest.
+export async function saveBankClientInfo(applicationId, bankDbId, values) {
+  if (!LIVE) return null
+  if (!applicationId || !bankDbId) throw new Error('Falta la solicitud o el banco')
+  const clean = (v) => { const s = (v == null ? '' : String(v)).trim(); return s || null }
+  const { data: u } = await supabase.auth.getUser()
+  const { error } = await supabase.from('bank_client_details').upsert({
+    application_id: applicationId,
+    bank_id: bankDbId,
+    email: clean(values.email),
+    occupation: clean(values.occupation),
+    provincia: clean(values.provincia),
+    address_line: clean(values.addressLine),
+    updated_by: u?.user?.id || null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'application_id,bank_id' })
+  if (error) throw error
+}
+
+// The buyer's own profile. Only the columns a user is allowed to change are
+// touched here; 0053 revoked UPDATE on the rest (role, bank_id, permissions,
+// kyc_verified_at...) at the grant level, so the database enforces it too.
+export async function updateMyProfile(patch) {
+  if (!LIVE) return null
+  const { data: u } = await supabase.auth.getUser()
+  const uid = u?.user?.id
+  if (!uid) throw new Error('No hay sesión activa')
+  const clean = (v) => { const s = (v == null ? '' : String(v)).trim(); return s || null }
+  const row = {}
+  if ('fullName' in patch) row.full_name = clean(patch.fullName)
+  if ('email' in patch) row.email = clean(patch.email)
+  if ('phone' in patch) row.phone = clean(patch.phone)
+  if ('occupation' in patch) row.occupation = clean(patch.occupation)
+  if ('provincia' in patch) row.provincia = clean(patch.provincia)
+  if ('addressLine' in patch) row.address_line = clean(patch.addressLine)
+  if (!Object.keys(row).length) return null
+  const { error } = await supabase.from('profiles').update(row).eq('id', uid)
+  if (error) throw error
+}
+
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
@@ -1357,8 +1415,9 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       cedula: null,
       maskedCedula: fin?.cedula_masked || null,
       phone: r.app?.buyer_phone || null,
-      email: r.app?.buyer_email || null,
-      city: null,
+      // Passwordless accounts carry a synthetic wa<digits>@autord.local address.
+      // Surfacing it as a contact email is worse than showing nothing.
+      email: realEmail(r.app?.buyer_email),
       isPreapproval: isPre,
       vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
       dealer: r.app?.dealer?.name, amount: r.app?.requested_amount != null ? Number(r.app.requested_amount) : null,

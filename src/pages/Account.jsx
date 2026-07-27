@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Heart, FileText, ShieldCheck, ShieldAlert, MessageCircle,
-  ChevronRight, LogOut, User, Landmark, Clock, Bell, Loader2, Calculator,
+  ChevronRight, LogOut, User, Landmark, Clock, Bell, Loader2, Calculator, Pencil,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import WhatsAppIcon from '../components/WhatsAppIcon'
-import { getMyFinancing, myUnreadCount, sendPhoneOtp, verifyPhoneOtp } from '../data/api'
+import { getMyFinancing, myUnreadCount, sendPhoneOtp, verifyPhoneOtp, updateMyProfile, isPlaceholderEmail } from '../data/api'
+import { PROVINCIAS, formatAddress } from '../data/provincias'
 import { fmtRD } from '../data/demo'
 import { favoriteCount } from '../data/favorites'
 import { savedSearchCount } from '../data/savedSearches'
@@ -107,6 +108,12 @@ export default function Account() {
             )}
           </div>
         </div>
+
+        {/* Mis datos — the client's own declaration, and the only version of
+            these fields that every authorised bank sees. A bank can also record
+            its own copy while working a case, but that stays private to it, so
+            filling this in is what saves the client repeating themselves. */}
+        {!institutionUser && <ProfileCard profile={profile} onSaved={refreshProfile} />}
 
         <div className="col gap-12">
           {/* Notifications (bank responses etc.) */}
@@ -305,5 +312,89 @@ function HubRow({ to, icon, tone = 'teal', title, sub, badge }) {
         <ChevronRight size={18} className="muted" />
       </div>
     </Link>
+  )
+}
+
+// The client's own declaration of the details banks ask for. Read-only until
+// "Editar", so the hub still reads as a summary rather than a form.
+//
+// Phone is deliberately not editable here: it is the WhatsApp identity the OTP
+// and the passwordless account are keyed on, so changing it needs re-verification
+// rather than a text box.
+function ProfileCard({ profile, onSaved }) {
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({ fullName: '', email: '', occupation: '', provincia: '', addressLine: '' })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [ok, setOk] = useState(false)
+
+  const current = {
+    fullName: profile?.full_name || '',
+    email: isPlaceholderEmail(profile?.email) ? '' : (profile?.email || ''),
+    occupation: profile?.occupation || '',
+    provincia: profile?.provincia || '',
+    addressLine: profile?.address_line || '',
+  }
+
+  const open = () => { setForm(current); setErr(''); setOk(false); setEditing(true) }
+
+  const save = async () => {
+    setBusy(true); setErr('')
+    try {
+      await updateMyProfile(form)
+      await onSaved?.()
+      setEditing(false); setOk(true)
+    } catch (e) {
+      setErr(e?.message || 'No se pudo guardar')
+    } finally { setBusy(false) }
+  }
+
+  const Row = ({ label, value }) => (
+    <div className="bankx-infoline"><span>{label}</span>
+      <b>{value || <span className="muted tiny">Sin completar</span>}</b>
+    </div>
+  )
+
+  return (
+    <div className="card card-pad" style={{ marginBottom: 16 }}>
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <div>
+          <div className="strong">Mis datos</div>
+          <div className="tiny muted">Los bancos que autorices verán esta información.</div>
+        </div>
+        {!editing && <button className="btn btn-outline btn-sm" onClick={open}><Pencil size={14} /> Editar</button>}
+      </div>
+
+      {editing ? (
+        <>
+          <div className="field"><label>Nombre completo</label>
+            <input className="input" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Como aparece en tu cédula" /></div>
+          <div className="field" style={{ marginTop: 10 }}><label>Email</label>
+            <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="tucorreo@ejemplo.com" /></div>
+          <div className="field" style={{ marginTop: 10 }}><label>Ocupación</label>
+            <input className="input" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} placeholder="Ej: Ingeniero, comerciante…" /></div>
+          <div className="field" style={{ marginTop: 10 }}><label>Provincia</label>
+            <select className="select" value={form.provincia} onChange={(e) => setForm({ ...form, provincia: e.target.value })}>
+              <option value="">Sin especificar</option>
+              {PROVINCIAS.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select></div>
+          <div className="field" style={{ marginTop: 10 }}><label>Dirección</label>
+            <input className="input" value={form.addressLine} onChange={(e) => setForm({ ...form, addressLine: e.target.value })} placeholder="Calle, número, sector" /></div>
+          {err && <div className="tiny" style={{ color: '#b91c1c', marginTop: 10 }}>{err}</div>}
+          <div className="row gap-8" style={{ marginTop: 12 }}>
+            <button className="btn btn-primary btn-sm" disabled={busy} onClick={save}>{busy ? <Loader2 size={15} className="spin" /> : 'Guardar'}</button>
+            <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setEditing(false)}>Cancelar</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <Row label="Nombre" value={current.fullName} />
+          <Row label="Email" value={current.email} />
+          <Row label="Ocupación" value={current.occupation} />
+          <Row label="Dirección" value={formatAddress(current.addressLine, current.provincia)} />
+          {ok && <div className="tiny" style={{ color: 'var(--teal-700)', marginTop: 8 }}>Datos actualizados.</div>}
+        </>
+      )}
+    </div>
   )
 }

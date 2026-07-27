@@ -4599,30 +4599,76 @@ select.preap-input { padding-right: 16px; }
 .bankx-expmini b { font-size: 15px; }
 .bankx-readiness { display: grid; gap: 8px; }
 .bankx-readiness-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center; padding: 10px; border: 1px solid #edf2f7; background: #fbfdff; border-radius: 12px; }
-.bankx-expgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: start; }
+.bankx-expgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .bankx-infoline { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid #edf2f7; }
 .bankx-infoline:last-child { border-bottom: 0; padding-bottom: 0; }
 .bankx-infoline span { color: #64748b; font-size: 12px; font-weight: 800; flex: none; }
 .bankx-infoline b { text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .bankx-infoline-action b { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .bankx-info-btn { height: 26px; padding: 3px 8px; font-size: 11px; }
-.bankx-capacity-tool { display: grid; gap: 10px; }
+.bankx-capacity-tool { grid-column: 1 / -1; display: grid; gap: 0; overflow: hidden; }
+.bankx-capacity-hero {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 14px;
+  align-items: stretch;
+  padding: 16px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 96% 8%, rgba(20, 184, 166, .22), transparent 32%),
+    linear-gradient(135deg, #10233f, #123a5e 55%, var(--bank-accent, #0f766e));
+}
+.bankx-capacity-hero h3 { margin: 8px 0 0; color: #fff; font-size: 20px; letter-spacing: -.02em; }
+.bankx-capacity-hero p { margin: 5px 0 0; color: rgba(255,255,255,.76); line-height: 1.45; max-width: 680px; }
+.bankx-capacity-hero .pill { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.18); width: fit-content; }
+.bankx-capacity-score {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.10);
+  border-radius: 16px;
+  padding: 14px;
+}
+.bankx-capacity-ring {
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 12px rgba(255,255,255,.12);
+}
+.bankx-capacity-ring > div {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #10233f;
+}
+.bankx-capacity-ring strong { display: block; font-size: 25px; line-height: 1; }
+.bankx-capacity-ring small { display: block; margin-top: 2px; color: #64748b; font-size: 10px; font-weight: 800; }
+.bankx-capacity-body { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 14px; padding: 16px; }
+.bankx-capacity-panel { border: 1px solid #edf2f7; background: #fbfdff; border-radius: 16px; padding: 14px; display: grid; gap: 12px; }
 .bankx-capacity-request,
 .bankx-capacity-result {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.bankx-capacity-result { grid-template-columns: 1fr 1fr; }
 .bankx-capacity-request > div,
 .bankx-capacity-result > div {
   border: 1px solid #edf2f7;
-  background: #fbfdff;
-  border-radius: 12px;
-  padding: 10px;
+  background: #fff;
+  border-radius: 13px;
+  padding: 12px;
 }
 .bankx-capacity-request span,
 .bankx-capacity-result span,
-.bankx-capacity-inputs label > span {
+.bankx-capacity-inputs label > span,
+.bankx-capacity-breakdown > span {
   display: block;
   color: #64748b;
   font-size: 10.5px;
@@ -4633,9 +4679,24 @@ select.preap-input { padding-right: 16px; }
 }
 .bankx-capacity-request b,
 .bankx-capacity-result b { display: block; font-size: 13px; color: #10233f; font-variant-numeric: tabular-nums; }
-.bankx-capacity-inputs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bankx-capacity-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .bankx-capacity-inputs .input,
 .bankx-capacity-inputs .select { height: 36px; padding: 6px 9px; }
+.bankx-capacity-breakdown { display: grid; gap: 10px; }
+.bankx-capacity-bar-row { display: grid; grid-template-columns: 116px 1fr 52px; gap: 10px; align-items: center; font-size: 12px; }
+.bankx-capacity-bar-row > span { color: #64748b; font-weight: 850; }
+.bankx-capacity-bar-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.bankx-capacity-track { height: 10px; border-radius: 999px; background: #eaf1f7; overflow: hidden; }
+.bankx-capacity-track i { display: block; height: 100%; border-radius: inherit; background: var(--bank-accent, #0f766e); }
+.bankx-capacity-track.amber i { background: #b45309; }
+.bankx-capacity-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bankx-scenario-card { border: 1px solid #edf2f7; background: #fff; border-radius: 13px; padding: 11px; }
+.bankx-scenario-card.active { border-color: #b7ebe4; background: #effaf8; }
+.bankx-scenario-card b { display: block; color: #10233f; font-size: 13px; }
+.bankx-scenario-card span { color: #64748b; font-size: 11px; line-height: 1.35; }
+.bankx-capacity-note { border: 1px solid #dbeafe; background: #eff6ff; color: #1d4ed8; border-radius: 13px; padding: 10px 12px; font-size: 12px; line-height: 1.45; font-weight: 750; }
+.bankx-capacity-note.amber { border-color: #fde68a; background: #fffbeb; color: #b45309; }
+.bankx-capacity-note.red { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .bankx-docgrid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 16px; align-items: start; }
 .bankx-doclist { display: grid; gap: 9px; }
 .bankx-docrow2 { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; border: 1px solid #edf2f7; background: #fff; border-radius: 13px; padding: 11px; }
@@ -4654,6 +4715,8 @@ select.preap-input { padding-right: 16px; }
   .bankx-qboard, .bankx-exphero, .bankx-expgrid, .bankx-docgrid, .bankx-decpanel { grid-template-columns: 1fr; }
   .bankx-qsummary { position: static; }
   .bankx-dec-wide { grid-column: auto; }
+  .bankx-capacity-hero,
+  .bankx-capacity-body { grid-template-columns: 1fr; }
   .bankx-capacity-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
@@ -4674,8 +4737,12 @@ select.preap-input { padding-right: 16px; }
   .bankx-expmini-grid { grid-template-columns: 1fr 1fr; }
   .bankx-exptitle h2 { font-size: 23px; }
   .bankx-capacity-request,
-  .bankx-capacity-result { grid-template-columns: 1fr; }
+  .bankx-capacity-result,
+  .bankx-capacity-scenarios { grid-template-columns: 1fr; }
   .bankx-capacity-inputs { grid-template-columns: 1fr 1fr; }
+  .bankx-capacity-bar-row { grid-template-columns: 92px 1fr 46px; }
+  .bankx-capacity-body { padding: 12px; }
+  .bankx-capacity-hero { padding: 14px; }
   .bankx-infoline-action b { width: 100%; justify-content: flex-start; text-align: left; }
 }
 
@@ -4729,6 +4796,14 @@ select.preap-input { padding-right: 16px; }
    it a flex box gives one consistent row with real spacing. */
 .bankx-infoline-action b { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .bankx-info-btn { flex: none; height: 26px; padding: 0 9px; font-size: 11px; gap: 4px; }
+
+/* Value plus where it came from. A bank has to be able to tell at a glance
+   whether it is reading the client's own declaration or its own analyst's note,
+   because only the first one is the client's word. */
+.bankx-info-val { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.bankx-info-src { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #94a3b8; }
+.bankx-clientedit { border: 1px dashed #cbd5e1; border-radius: 12px; padding: 12px; background: #f8fafc; }
+.bankx-clientedit .field + .field { margin-top: 10px; }
 
 @media (max-width: 720px) {
   /* On a phone the label, a long value (the generated emails run past 25 chars)
