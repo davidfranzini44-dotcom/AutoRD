@@ -34,6 +34,23 @@ const DOC_STATE = {
   rechazado: 'pending',
 }
 
+// What a bank can ask a client for. Shared by the bank's request modal and the
+// client's checklist so the two always name the same things.
+export const REQUESTABLE_FIELDS = [
+  { id: 'cedula', label: 'Cédula', checklistKey: 'identidad' },
+  { id: 'kyc', label: 'Selfie / KYC', checklistKey: 'identidad' },
+  { id: 'email', label: 'Email', checklistKey: 'email' },
+  { id: 'direccion', label: 'Dirección', checklistKey: 'direccion' },
+  { id: 'ocupacion', label: 'Ocupación', checklistKey: 'ocupacion' },
+  { id: 'estado_civil', label: 'Estado civil', checklistKey: 'estado_civil' },
+  { id: 'comprobante_ingresos', label: 'Comprobante de ingresos', doc: true },
+  { id: 'info_laboral', label: 'Información laboral', doc: true },
+  { id: 'referencias', label: 'Referencias', doc: true },
+  { id: 'inicial_disponible', label: 'Inicial disponible', doc: true },
+  { id: 'otro', label: 'Otro', doc: true },
+]
+const FIELD_BY_ID = Object.fromEntries(REQUESTABLE_FIELDS.map((f) => [f.id, f]))
+
 const has = (v) => v != null && String(v).trim() !== ''
 
 /**
@@ -41,10 +58,18 @@ const has = (v) => v != null && String(v).trim() !== ''
  * @param {object}  input.profile      profiles row (full_name, email, phone, occupation, provincia, address_line, phone_verified_at)
  * @param {boolean} input.kycApproved  whether identity is verified and still valid
  * @param {Array}   input.documents    mapped rows from getApplicationDocuments()
+ * @param {Array}   input.requestedFields  field ids from open financing_info_requests
  * @returns {Array} items: { key, label, sub, state, cta: { label, href } | null, fromBank: boolean }
  */
-export function buildChecklist({ profile = null, kycApproved = false, documents = [] } = {}) {
+export function buildChecklist({ profile = null, kycApproved = false, documents = [], requestedFields = [] } = {}) {
   const items = []
+  // Which checklist rows a bank has explicitly asked for. An item the bank
+  // requested reads "Solicitado por el banco" rather than a generic "Pendiente":
+  // the client needs to know someone is waiting on them, not just that a field
+  // is blank.
+  const asked = new Set(
+    (requestedFields || []).map((id) => FIELD_BY_ID[id]?.checklistKey).filter(Boolean),
+  )
 
   items.push({
     key: 'identidad',
@@ -94,6 +119,29 @@ export function buildChecklist({ profile = null, kycApproved = false, documents 
     cta: occupation ? null : { label: 'Completar ahora', href: '/mi-cuenta' },
     fromBank: false,
   })
+
+  // A requested item that is still missing becomes 'requested'. One already
+  // satisfied stays 'done' — the client should not be chased for something they
+  // have already provided just because a request row is still open.
+  for (const item of items) {
+    if (asked.has(item.key) && item.state === 'pending') {
+      item.state = 'requested'
+      item.sub = `Tu banco pidió este dato. ${item.sub}`
+    }
+  }
+
+  // Requested things with no natural row of their own (estado civil today).
+  for (const id of requestedFields || []) {
+    const f = FIELD_BY_ID[id]
+    if (!f || f.doc || items.some((i) => i.key === f.checklistKey)) continue
+    items.push({
+      key: f.checklistKey, label: f.label,
+      sub: 'Tu banco pidió este dato para continuar.',
+      state: 'requested',
+      cta: { label: 'Completar ahora', href: '/mi-cuenta' },
+      fromBank: true,
+    })
+  }
 
   for (const d of documents) {
     const state = DOC_STATE[d?.status] || 'requested'

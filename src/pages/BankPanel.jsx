@@ -13,10 +13,13 @@ import {
   getBankClientInfo, saveBankClientInfo, realEmail,
   getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
   generateApprovalPackage, getPackageState,
+  requestClientInfo, getOpenInfoRequests,
   UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
 import { riskFlags, riskSummary, assessCapacity, FLAG_LEVEL, CAPACITY_VERDICT } from '../data/underwriting'
+import { REQUESTABLE_FIELDS } from '../data/checklist'
+import { renderWaTemplate, waLink } from '../data/waTemplates'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import BankLogo from '../components/BankLogo'
@@ -843,6 +846,10 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
         </section>
 
         <section className="card pad">
+          <RequestInfoPanel a={a} bank={bank} />
+        </section>
+
+        <section className="card pad">
           <RiskPanel a={a} documents={docs} />
         </section>
 
@@ -1480,6 +1487,125 @@ function PackagePanel({ a }) {
             El cliente y el dealer ven las condiciones en el contrato; las notas internas y el análisis de riesgo nunca se incluyen.
           </div>
         </>
+      )}
+    </>
+  )
+}
+
+// "Solicitar información". An inline panel rather than a modal: this already
+// lives inside the expediente modal, and a dialog on top of a dialog is close to
+// unusable on a phone — which is where these get sent from.
+//
+// It does not send anything by itself. Saving records the request (and creates
+// the document rows the client uploads into); the WhatsApp is a wa.me link an
+// analyst clicks, so a message to a real customer always has a human behind it.
+function RequestInfoPanel({ a, bank }) {
+  const [open, setOpen] = useState(false)
+  const [sel, setSel] = useState([])
+  const [message, setMessage] = useState('')
+  const [urgency, setUrgency] = useState('normal')
+  const [dueDate, setDueDate] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [openReqs, setOpenReqs] = useState([])
+  const [waHref, setWaHref] = useState(null)
+
+  const load = useCallback(() => {
+    if (!a.applicationId) return
+    getOpenInfoRequests(a.applicationId).then(setOpenReqs).catch(() => setOpenReqs([]))
+  }, [a.applicationId])
+  useEffect(load, [load])
+
+  const toggle = (id) => setSel((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+
+  const save = async () => {
+    setBusy(true); setErr(''); setWaHref(null)
+    try {
+      await requestClientInfo(a.applicationId, {
+        fields: sel, message: message.trim() || null, urgency, dueDate: dueDate || null,
+      })
+      // Build the link only after the request exists, so we never send a client
+      // to a page asking for something we failed to record.
+      try {
+        const token = await getOrCreateFinancingToken(a.applicationId)
+        if (token && a.phone) {
+          const body = renderWaTemplate('banco_solicita_info', {
+            cliente: a.customer, banco: bank?.name || 'tu banco',
+            link: `${window.location.origin}/f/${token}`,
+          })
+          setWaHref(waLink(a.phone, body))
+        }
+      } catch (_) { /* the request is saved either way */ }
+      setSel([]); setMessage(''); setUrgency('normal'); setDueDate(''); setOpen(false)
+      load()
+    } catch (e) {
+      setErr(e?.message || 'No se pudo guardar la solicitud')
+    } finally { setBusy(false) }
+  }
+
+  const openFields = [...new Set(openReqs.flatMap((r) => r.fields))]
+  const labelOf = (id) => REQUESTABLE_FIELDS.find((f) => f.id === id)?.label || id
+
+  return (
+    <>
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <h3 style={{ fontSize: 15, margin: 0 }}>Solicitar información</h3>
+        {openFields.length > 0 && <span className="chip chip-blue">{openFields.length} pendiente{openFields.length === 1 ? '' : 's'}</span>}
+      </div>
+
+      {openFields.length > 0 && (
+        <div className="tiny muted" style={{ marginBottom: 10 }}>
+          Ya solicitado: {openFields.map(labelOf).join(', ')}.
+        </div>
+      )}
+
+      {waHref && (
+        <div className="notice" style={{ marginBottom: 10 }}>
+          <MessageSquare size={15} />
+          <span>Solicitud guardada. <a href={waHref} target="_blank" rel="noreferrer"><b>Enviar por WhatsApp</b></a></span>
+        </div>
+      )}
+
+      {!open ? (
+        <button className="btn btn-outline btn-sm" onClick={() => setOpen(true)} disabled={!a.applicationId}>
+          <Send size={14} /> Pedir datos al cliente
+        </button>
+      ) : (
+        <div className="bankx-clientedit">
+          <div className="bankx-reqgrid">
+            {REQUESTABLE_FIELDS.map((f) => (
+              <label key={f.id} className="row center gap-6 small">
+                <input type="checkbox" checked={sel.includes(f.id)} onChange={() => toggle(f.id)} />
+                {f.label}
+              </label>
+            ))}
+          </div>
+          <F label="Mensaje para el cliente (opcional)" style={{ marginTop: 10 }}>
+            <textarea className="input" rows={2} value={message} onChange={(e) => setMessage(e.target.value)}
+              placeholder="Ej: necesitamos el comprobante de los últimos 3 meses." />
+          </F>
+          <div className="bankx-kv-grid" style={{ marginTop: 10 }}>
+            <F label="Urgencia">
+              <select className="select" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
+                <option value="normal">Normal</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </F>
+            <F label="Fecha límite (opcional)">
+              <input className="input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </F>
+          </div>
+          {err && <div className="tiny" style={{ color: '#b91c1c', marginTop: 8 }}>{err}</div>}
+          <div className="row gap-8" style={{ marginTop: 12 }}>
+            <button className="btn btn-navy btn-sm" disabled={busy || !sel.length} onClick={save}>
+              {busy ? <Loader2 size={14} className="spin" /> : 'Guardar solicitud'}
+            </button>
+            <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setOpen(false)}>Cancelar</button>
+          </div>
+          <div className="tiny muted" style={{ marginTop: 8 }}>
+            Aparecerá en la lista del cliente como “Solicitado por el banco”. El WhatsApp lo envías tú.
+          </div>
+        </div>
       )}
     </>
   )

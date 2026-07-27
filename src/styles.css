@@ -4974,3 +4974,9 @@ select.preap-input { padding-right: 16px; }
 .bankx-cap-out > div { flex: 1 1 130px; min-width: 0; }
 .bankx-cap-out span { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #64748b; }
 .bankx-cap-out b { font-size: 15px; overflow-wrap: anywhere; }
+
+/* Requestable fields: two columns on desktop, one on a phone. Checkboxes need a
+   comfortable hit area — these get tapped from the expediente on mobile. */
+.bankx-reqgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.bankx-reqgrid label { padding: 4px 0; cursor: pointer; }
+@media (max-width: 640px) { .bankx-reqgrid { grid-template-columns: 1fr; } }

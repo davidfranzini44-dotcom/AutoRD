@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { buildChecklist, checklistSummary, CHECK_STATE } from '../data/checklist'
 import { resolveFinancingStatus } from '../data/financingStatus'
 import { vehicleFit } from '../data/finance'
-import { listVehicles } from '../data/api'
+import { listVehicles, getOpenInfoRequests } from '../data/api'
 import VehicleCard from '../components/VehicleCard'
 import { kycValidity } from '../data/kyc'
 import { TONE } from '../data/bankDemo'
@@ -41,6 +41,7 @@ export default function MyFinancing() {
   useEffect(() => { reloadInterests() }, [])
 
   const [fitCars, setFitCars] = useState([])
+  const [requestedFields, setRequestedFields] = useState([])
 
   const reloadFinancing = () => getMyFinancing().then((d) => setC(d)).catch(() => {})
 
@@ -72,6 +73,17 @@ export default function MyFinancing() {
     }).catch(() => { if (alive) setFitCars([]) })
     return () => { alive = false }
   }, [c?.approvedAmount, !!c?.vehicle])
+
+  // What banks have explicitly asked this client for, so the checklist can say
+  // "Solicitado por el banco" instead of a generic "Pendiente".
+  useEffect(() => {
+    if (!c?.id) { setRequestedFields([]); return undefined }
+    let alive = true
+    getOpenInfoRequests(c.id)
+      .then((rows) => { if (alive) setRequestedFields([...new Set(rows.flatMap((r) => r.fields))]) })
+      .catch(() => { if (alive) setRequestedFields([]) })
+    return () => { alive = false }
+  }, [c?.id])
 
   useEffect(() => {
     if (c === undefined) return undefined
@@ -117,6 +129,7 @@ export default function MyFinancing() {
     // window — an expired KYC is outstanding work, not a completed step.
     kycApproved: kycValidity(profile).valid || c.kyc === 'aprobado',
     documents: docRows,
+    requestedFields,
   })
   const summary = checklistSummary(checklist)
   const fstatus = resolveFinancingStatus(c, summary.outstanding)

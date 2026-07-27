@@ -1457,6 +1457,35 @@ export async function getInternalNotes(applicationId) {
   }))
 }
 
+// ---------------- Bank -> client information requests -----------------------
+export async function requestClientInfo(applicationId, { fields, message = null, urgency = 'normal', dueDate = null } = {}) {
+  if (!LIVE) return null
+  if (!applicationId) throw new Error('Falta la solicitud')
+  if (!fields?.length) throw new Error('Selecciona al menos un dato')
+  const { data, error } = await supabase.rpc('bank_request_info', {
+    p_application_id: applicationId, p_fields: fields,
+    p_message: message, p_urgency: urgency, p_due_date: dueDate || null,
+  })
+  if (error) throw error
+  return data
+}
+
+// Readable by the bank AND by the buyer — that is what drives "Solicitado por
+// el banco" in the client's checklist. RLS decides which rows each side sees.
+export async function getOpenInfoRequests(applicationId) {
+  if (!LIVE || !applicationId) return []
+  const { data, error } = await supabase
+    .from('financing_info_requests')
+    .select('id, requested_fields, custom_message, urgency, due_date, status, created_at')
+    .eq('application_id', applicationId).eq('status', 'abierta')
+    .order('created_at', { ascending: false })
+  if (error) return []
+  return (data || []).map((r) => ({
+    id: r.id, fields: r.requested_fields || [], message: r.custom_message,
+    urgency: r.urgency, dueDate: r.due_date, createdAt: r.created_at,
+  }))
+}
+
 // ---------------- Approval package ------------------------------------------
 // There is no financing_packages table: the terms already live on
 // application_banks and are already rendered by /contrato/:token. Generating a

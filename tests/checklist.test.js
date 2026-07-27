@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildChecklist, checklistSummary, CHECK_STATE } from '../src/data/checklist.js'
+import { buildChecklist, checklistSummary, CHECK_STATE, REQUESTABLE_FIELDS } from '../src/data/checklist.js'
 
 const complete = {
   full_name: 'Stiven Cabrera',
@@ -115,5 +115,67 @@ describe('checklistSummary', () => {
   it('is safe on empty input', () => {
     expect(checklistSummary().outstanding).toBe(0)
     expect(checklistSummary([]).complete).toBe(true)
+  })
+})
+
+describe('bank info requests reaching the client checklist', () => {
+  const empty = { phone: '1809', phone_verified_at: null }
+
+  it('turns a missing requested field into "solicitado por el banco"', () => {
+    const items = buildChecklist({ profile: empty, requestedFields: ['email'] })
+    expect(find(items, 'email').state).toBe('requested')
+    expect(find(items, 'email').sub).toMatch(/banco/i)
+    expect(CHECK_STATE.requested.label).toBe('Solicitado por el banco')
+  })
+
+  // Chasing someone for what they already gave you is how a request loop turns
+  // into noise the client learns to ignore.
+  it('leaves an already-satisfied field alone even with an open request', () => {
+    const items = buildChecklist({ profile: complete, requestedFields: ['email', 'ocupacion'] })
+    expect(find(items, 'email').state).toBe('done')
+    expect(find(items, 'ocupacion').state).toBe('done')
+  })
+
+  it('maps cédula and selfie onto the single identity row', () => {
+    const items = buildChecklist({ profile: empty, kycApproved: false, requestedFields: ['cedula', 'kyc'] })
+    expect(find(items, 'identidad').state).toBe('requested')
+    expect(items.filter((i) => i.key === 'identidad')).toHaveLength(1)
+  })
+
+  it('adds a row for a requested field that has none of its own', () => {
+    const items = buildChecklist({ profile: complete, kycApproved: true, requestedFields: ['estado_civil'] })
+    const item = find(items, 'estado_civil')
+    expect(item).toBeTruthy()
+    expect(item.state).toBe('requested')
+    expect(item.fromBank).toBe(true)
+  })
+
+  // Document-type requests already arrive as `documents` rows; adding them here
+  // as well would show the client the same ask twice.
+  it('does not duplicate document-type requests', () => {
+    const items = buildChecklist({
+      profile: complete, kycApproved: true,
+      requestedFields: ['comprobante_ingresos'],
+      documents: [{ id: 'd1', type: 'Comprobante de ingresos', status: 'solicitado' }],
+    })
+    expect(items.filter((i) => /Comprobante/i.test(i.label))).toHaveLength(1)
+  })
+
+  it('counts requested items as outstanding work', () => {
+    const s = checklistSummary(buildChecklist({ profile: empty, requestedFields: ['email'] }))
+    expect(s.outstanding).toBeGreaterThan(0)
+    expect(s.complete).toBe(false)
+  })
+
+  it('ignores unknown field ids instead of inventing rows', () => {
+    const before = buildChecklist({ profile: complete, kycApproved: true }).length
+    const after = buildChecklist({ profile: complete, kycApproved: true, requestedFields: ['no_existe'] }).length
+    expect(after).toBe(before)
+  })
+
+  it('every requestable field is either a checklist key or a document', () => {
+    for (const f of REQUESTABLE_FIELDS) {
+      expect(Boolean(f.checklistKey) || Boolean(f.doc), f.id).toBe(true)
+    }
   })
 })
