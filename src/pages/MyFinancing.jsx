@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { buildChecklist, checklistSummary, CHECK_STATE } from '../data/checklist'
+import { kycValidity } from '../data/kyc'
+import { TONE } from '../data/bankDemo'
 import { Link } from 'react-router-dom'
 import {
   Check, ShieldCheck, FileSignature, Send, Landmark, Clock, Loader2,
@@ -21,6 +25,7 @@ const fmtDay = (d) => {
 }
 
 export default function MyFinancing() {
+  const { profile } = useAuth() || {}
   const [c, setC] = useState(undefined)
   const [docs, setDocs] = useState([])
   const [docsLoading, setDocsLoading] = useState(false)
@@ -66,6 +71,9 @@ export default function MyFinancing() {
   }
   const v = c.vehicle
   const offers = c.responses.filter((r) => r.status === 'offer')
+  // ?falta=<key> comes from the bank's "Pedir info" WhatsApp message, so the
+  // client lands on the exact item instead of a page they have to scan.
+  const focusKey = new URLSearchParams(window.location.search).get('falta') || ''
   const docsRequested = c.responses.find((r) => r.status === 'docs')
   const docRows = docs.length ? docs : docsRequested ? [{
     id: 'pending-doc-fallback',
@@ -76,6 +84,14 @@ export default function MyFinancing() {
     demoFallback: true,
   }] : []
   const openDocs = docRows.some((d) => d.status !== 'subido')
+  const checklist = buildChecklist({
+    profile,
+    // Identity counts only while the verification is still inside its 12-month
+    // window — an expired KYC is outstanding work, not a completed step.
+    kycApproved: kycValidity(profile).valid || c.kyc === 'aprobado',
+    documents: docRows,
+  })
+  const summary = checklistSummary(checklist)
   const preApproved = c.approvedAmount && c.approvedAmount > 0
   // The response that grants the ceiling — carries the bank-set validity date.
   const bestPre = c.responses
@@ -184,6 +200,11 @@ export default function MyFinancing() {
                 onUpload={handleUpload}
               />
             )}
+
+            {/* Everything still standing between the client and a decision, in
+                one list: bank document requests used to live here while the
+                profile fields lived in Mi cuenta and were never surfaced. */}
+            <QueFalta items={checklist} summary={summary} focus={focusKey} />
 
             {/* Bank response cards */}
             <div className="card card-pad" id="ofertas">
@@ -489,4 +510,64 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
 }
 function Term({ l, v }) {
   return <div><div className="tiny" style={{ color: 'var(--green)' }}>{l}</div><div className="strong" style={{ fontSize: 14 }}>{v}</div></div>
+}
+
+// "Qué falta": the client's single answer to "what do I still have to do?".
+// Outstanding items sort to the top — a completed list is reassuring but it is
+// not what someone opened this page to find.
+function QueFalta({ items, summary, focus }) {
+  const rank = { requested: 0, pending: 1, review: 2, done: 3 }
+  const sorted = [...items].sort((a, b) => (rank[a.state] ?? 9) - (rank[b.state] ?? 9))
+
+  useEffect(() => {
+    if (!focus) return
+    const el = document.getElementById(`falta-${focus}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focus])
+
+  return (
+    <div className="card card-pad" id="que-falta">
+      <div className="section-title row between center">
+        <h2 style={{ fontSize: 18 }}>Qué falta</h2>
+        <span className="tiny muted">{summary.done} de {summary.total} listo{summary.done === 1 ? '' : 's'}</span>
+      </div>
+
+      {summary.complete ? (
+        <div className="notice" style={{ marginTop: 4 }}>
+          <Info size={16} />
+          <span>{summary.inReview > 0
+            ? 'Ya enviaste todo. Tu banco está revisando la información.'
+            : 'Tienes todo completo. No necesitas hacer nada más por ahora.'}</span>
+        </div>
+      ) : (
+        <p className="muted small" style={{ marginTop: -4, marginBottom: 12 }}>
+          {summary.next?.label
+            ? <>Lo siguiente: <b>{summary.next.label}</b>.</>
+            : 'Completa lo pendiente para que los bancos puedan avanzar.'}
+        </p>
+      )}
+
+      <div className="col gap-8" style={{ marginTop: 10 }}>
+        {sorted.map((i) => {
+          const meta = CHECK_STATE[i.state] || CHECK_STATE.pending
+          const tone = TONE[meta.tone] || TONE.slate
+          return (
+            <div key={i.key} id={`falta-${i.key}`}
+              className={`falta-row${focus === i.key ? ' falta-focus' : ''}${i.state === 'done' ? ' falta-done' : ''}`}>
+              <div className="falta-main">
+                <div className="falta-label">{i.label}</div>
+                <div className="tiny muted falta-sub">{i.sub}</div>
+              </div>
+              <div className="falta-end">
+                <span className="chip" style={{ background: tone.bg, color: tone.fg }}>{meta.label}</span>
+                {i.cta && (i.cta.href.startsWith('#')
+                  ? <a className="btn btn-outline btn-sm" href={i.cta.href}>{i.cta.label}</a>
+                  : <Link className="btn btn-outline btn-sm" to={i.cta.href}>{i.cta.label}</Link>)}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }

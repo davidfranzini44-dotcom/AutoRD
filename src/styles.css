@@ -4841,6 +4841,22 @@ select.preap-input { padding-right: 16px; }
   .hubrow-end .chip { font-size: 10.5px; padding: 2px 8px; height: auto; }
 }
 
+/* "Qué falta" rows: what it is, what state it is in, and the one action.
+   Stacks on phones so a long label and a button never fight over one line. */
+.falta-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.falta-row.falta-done { background: #f8fafc; border-color: #eef2f7; }
+/* The row the client was deep-linked to from WhatsApp. */
+.falta-row.falta-focus { border-color: var(--teal-700); box-shadow: 0 0 0 3px rgba(15, 118, 110, .13); }
+.falta-main { min-width: 0; }
+.falta-label { font-weight: 700; }
+.falta-sub { overflow-wrap: anywhere; }
+.falta-end { display: flex; align-items: center; gap: 8px; flex: none; }
+
+@media (max-width: 640px) {
+  .falta-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .falta-end { justify-content: space-between; }
+}
+
 /* Cliente rows that carry a "Pedir info" action (Email / Ocupación / Dirección).
    The <b> holds a value *and* a button, but it was styled as a plain block, so
    the button was inline content butted straight against the text with no gap,

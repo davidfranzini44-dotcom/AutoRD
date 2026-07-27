@@ -10,6 +10,7 @@ import {
 } from './demo'
 import { withPriceInsights } from './priceInsights'
 import { DR_CITY_COORDS } from './geo'
+import { isPlaceholderEmail, realEmail } from './contact'
 
 export { fmtRD } from './demo'
 export const LIVE = isSupabaseConfigured
@@ -1337,12 +1338,11 @@ export async function reorderVehiclePhotos(vehicleDbId, orderedIds) {
 }
 
 // ---------------- Bank panel ----------------
-// A passwordless account gets a deterministic wa<digits>@autord.local address so
-// Supabase Auth has something unique to key on. It is not a real inbox, so it
-// must never be shown to a bank as "the client's email" — that is what made the
-// Cliente panel look like it held contact details it does not have.
-export const isPlaceholderEmail = (e) => !e || /@autord\.local$/i.test(String(e))
-export const realEmail = (e) => (isPlaceholderEmail(e) ? null : e)
+// Imported (not just re-exported) because realEmail is used below in this file:
+// `export ... from` creates no local binding. Re-exported so existing importers
+// keep working. They live in a Supabase-free module because the financing
+// checklist needs them and has to stay unit testable.
+export { isPlaceholderEmail, realEmail }
 
 // Both halves of the Cliente panel in one round-trip: what the client declared
 // (live from their profile) and what this bank recorded privately. The RPC

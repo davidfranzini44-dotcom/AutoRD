@@ -379,9 +379,13 @@ function CedulaLine({ app }) {
   )
 }
 
-function RequestInfoButton({ app, field }) {
+function RequestInfoButton({ app, field, faltaKey }) {
   if (!app?.phone) return <span className="pill">Sin teléfono</span>
-  const text = `Hola ${app.customer}, para completar tu solicitud ${app.id}, por favor confírmame tu ${field}.`
+  // Deep-link straight to the item in the client's "Qué falta" list. Asking for
+  // a field and then making them hunt for where to enter it is how these
+  // requests go unanswered.
+  const link = faltaKey ? ` ${window.location.origin}/mi-financiamiento?falta=${faltaKey}` : ''
+  const text = `Hola ${app.customer}, para completar tu solicitud ${app.id}, por favor confírmame tu ${field}.${link}`
   return (
     <a className="btn btn-outline btn-sm bankx-info-btn" href={`https://wa.me/${digits(app.phone)}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
       <MessageSquare size={13} /> Pedir info
@@ -392,7 +396,7 @@ function RequestInfoButton({ app, field }) {
 // One Cliente row: the effective value, where it came from, and a way to chase
 // it if it is missing. A value the bank recorded takes precedence over the
 // client's declared one for that bank only.
-function ClientInfoLine({ app, label, declared, recorded, field }) {
+function ClientInfoLine({ app, label, declared, recorded, field, faltaKey }) {
   const value = recorded || declared || null
   const source = recorded ? 'Registrado por tu banco' : (declared ? 'Declarado por el cliente' : null)
   return (
@@ -403,7 +407,7 @@ function ClientInfoLine({ app, label, declared, recorded, field }) {
           {value || <span className="muted tiny">No registrado</span>}
           {source && <em className="bankx-info-src">{source}</em>}
         </span>
-        {!value && <RequestInfoButton app={app} field={field || label.toLowerCase()} />}
+        {!value && <RequestInfoButton app={app} field={field || label.toLowerCase()} faltaKey={faltaKey} />}
       </b>
     </div>
   )
@@ -481,9 +485,9 @@ function ClientInfoPanel({ app }) {
         </div>
       ) : (
         <>
-          <ClientInfoLine app={app} label="Email" declared={declaredEmail} recorded={rec?.email} field="email" />
-          <ClientInfoLine app={app} label="Ocupación" declared={declared.occupation || app.employment} recorded={rec?.occupation} field="ocupación" />
-          <ClientInfoLine app={app} label="Dirección" declared={declaredAddress} recorded={recordedAddress} field="dirección completa" />
+          <ClientInfoLine app={app} label="Email" faltaKey="email" declared={declaredEmail} recorded={rec?.email} field="email" />
+          <ClientInfoLine app={app} label="Ocupación" faltaKey="ocupacion" declared={declared.occupation || app.employment} recorded={rec?.occupation} field="ocupación" />
+          <ClientInfoLine app={app} label="Dirección" faltaKey="direccion" declared={declaredAddress} recorded={recordedAddress} field="dirección completa" />
           {app.applicationId && bankDbId && (
             <button className="btn btn-outline btn-sm" style={{ marginTop: 10 }} onClick={openEdit}>
               <Pencil size={13} /> {rec ? 'Editar datos del cliente' : 'Registrar datos del cliente'}
