@@ -26,6 +26,14 @@ import {
 const appScore = (a) => (a.kyc === 'aprobado' ? 40 : 0) + (a.consent ? 30 : 0) + (a.status !== 'docs' ? 20 : 0) + ((a.hoursWaiting || 0) < 24 ? 10 : 0)
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waMsg = (a) => `Hola ${a.customer}, te contactamos por tu solicitud de financiamiento ${a.id}${a.vehicle ? ` del ${a.vehicle}` : ''}.`
+const cedulaLast4 = (app) => {
+  const raw = digits(app?.cedula || app?.maskedCedula || app?.cedulaMasked || '')
+  return raw.length >= 4 ? raw.slice(-4) : ''
+}
+const maskedCedulaLabel = (app) => {
+  const last4 = cedulaLast4(app)
+  return last4 ? `***-***${last4}` : ''
+}
 const dash = (v) => (v == null || v === '' ? '—' : v)
 
 const FILTERS = [
@@ -342,7 +350,7 @@ function CedulaLine({ app }) {
           <>{full}<span className="chip" style={{ fontSize: 10 }}>verificada</span></>
         ) : (
           <>
-            {app.maskedCedula || <span className="muted tiny">No disponible</span>}
+            {maskedCedulaLabel(app) || <span className="muted tiny">No disponible</span>}
             {app.applicationId && !err && (
               <button className="btn btn-ghost btn-sm" style={{ padding: '2px 8px', height: 24 }} disabled={busy} onClick={reveal}>
                 {busy ? <Loader2 size={12} className="spin" /> : 'Ver completa'}
@@ -351,6 +359,29 @@ function CedulaLine({ app }) {
             {err && <span className="muted tiny">Sin cédula verificada</span>}
           </>
         )}
+      </b>
+    </div>
+  )
+}
+
+function RequestInfoButton({ app, field }) {
+  if (!app?.phone) return <span className="pill">Sin teléfono</span>
+  const text = `Hola ${app.customer}, para completar tu solicitud ${app.id}, por favor confírmame tu ${field}.`
+  return (
+    <a className="btn btn-outline btn-sm bankx-info-btn" href={`https://wa.me/${digits(app.phone)}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+      <MessageSquare size={13} /> Pedir info
+    </a>
+  )
+}
+
+function InfoRequestLine({ app, label, value, field }) {
+  const hasValue = value != null && value !== ''
+  return (
+    <div className="bankx-infoline bankx-infoline-action">
+      <span>{label}</span>
+      <b>
+        <span>{hasValue ? value : <span className="muted tiny">No registrado</span>}</span>
+        <RequestInfoButton app={app} field={field || label.toLowerCase()} />
       </b>
     </div>
   )
@@ -377,6 +408,53 @@ function ClientLinkButton({ applicationId }) {
       {state === 'busy' ? <Loader2 size={14} className="spin" /> : state === 'copied' ? <CheckCircle2 size={14} /> : <ExternalLink size={14} />}
       {state === 'copied' ? 'Enlace copiado' : state === 'error' ? 'Error' : 'Enlace del cliente'}
     </button>
+  )
+}
+
+function PaymentCapacityTool({ app }) {
+  const [amount, setAmount] = useState(app.amount ? String(app.amount) : '')
+  const [income, setIncome] = useState(app.income ? String(app.income) : '')
+  const [term, setTerm] = useState(app.term ? String(app.term) : '7')
+  const [rate, setRate] = useState('9.25')
+  const [maxRatio, setMaxRatio] = useState('35')
+
+  const amountN = num(amount)
+  const incomeN = num(income)
+  const termN = Number(term) || 7
+  const rateN = Number(String(rate).replace(',', '.')) || 0
+  const maxRatioN = Number(String(maxRatio).replace(',', '.')) || 35
+  const monthly = amountN ? estimateMonthly(amountN, rateN, termN * 12) : null
+  const ratio = monthly && incomeN ? Math.round((monthly / incomeN) * 100) : null
+  const maxMonthly = incomeN ? incomeN * (maxRatioN / 100) : null
+  const maxFinance = monthly && amountN && maxMonthly ? Math.round(amountN * (maxMonthly / monthly)) : null
+  const tone = ratio == null ? '' : ratio <= maxRatioN ? 'green' : ratio <= maxRatioN + 10 ? 'amber' : 'red'
+  const label = ratio == null ? 'Sin datos' : ratio <= maxRatioN ? 'Dentro de regla' : ratio <= maxRatioN + 10 ? 'Revisar' : 'Fuera de regla'
+
+  return (
+    <section className="card pad bankx-capacity-tool">
+      <div className="row between center" style={{ marginBottom: 10 }}>
+        <div><h3 style={{ fontSize: 15, margin: 0 }}>Herramienta de capacidad</h3><div className="tiny muted">Simula lo solicitado contra capacidad de pago.</div></div>
+        <span className={`pill ${tone}`}>{label}</span>
+      </div>
+      <div className="bankx-capacity-request">
+        <div><span>Solicitado</span><b>{amountN ? fmtRD(amountN) : '—'}</b></div>
+        <div><span>Ingreso</span><b>{incomeN ? `${fmtRD(incomeN)}/mes` : '—'}</b></div>
+        <div><span>Plazo</span><b>{termN} años</b></div>
+      </div>
+      <div className="bankx-capacity-inputs">
+        <label><span>Monto</span><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1,800,000" /></label>
+        <label><span>Ingreso</span><input className="input" value={income} onChange={(e) => setIncome(e.target.value)} placeholder="85,000" /></label>
+        <label><span>Plazo</span><select className="select" value={term} onChange={(e) => setTerm(e.target.value)}><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+        <label><span>Tasa</span><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></label>
+        <label><span>Max % ingreso</span><input className="input" value={maxRatio} onChange={(e) => setMaxRatio(e.target.value)} placeholder="35" /></label>
+      </div>
+      <div className="bankx-capacity-result">
+        <div><span>Cuota estimada</span><b>{monthly ? `${fmtRD(Math.round(monthly))}/mes` : '—'}</b></div>
+        <div><span>Cuota / ingreso</span><b>{ratio != null ? `${ratio}%` : '—'}</b></div>
+        <div><span>Puede financiar aprox.</span><b>{maxFinance ? fmtRD(maxFinance) : '—'}</b></div>
+      </div>
+      <p className="tiny muted" style={{ margin: '10px 0 0' }}>Uso interno del banco. No reemplaza buró, políticas internas ni verificación documental.</p>
+    </section>
   )
 }
 
@@ -528,7 +606,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
             ))}
           </div>
           <label className="row center gap-6 tiny" style={{ marginTop: 12 }}><UserCheck size={14} className="muted" />
-            <select className="input" style={{ height: 34, fontSize: 12, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
+            <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
               <option value="">Sin analista asignado</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </label>
@@ -541,12 +619,12 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
           <CedulaLine app={a} />
           <div className="bankx-infoline"><span>Teléfono</span><b>{a.phone ? `+${String(a.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
-          <div className="bankx-infoline"><span>Email</span><b>{a.email || <span className="muted tiny">No registrado</span>}</b></div>
+          <InfoRequestLine app={a} label="Email" value={a.email} field="email" />
           {/* Dirección and Ocupación are only shown when the customer actually
               declared them. They used to be filled from a hash — a bank must not
               see an address or occupation AutoRD invented. */}
-          <div className="bankx-infoline"><span>Ocupación</span><b>{a.employment || <span className="muted tiny">No declarada</span>}</b></div>
-          <div className="bankx-infoline"><span>Dirección</span><b>{a.city || <span className="muted tiny">No verificada</span>}</b></div>
+          <InfoRequestLine app={a} label="Ocupación" value={a.employment} field="ocupación" />
+          <InfoRequestLine app={a} label="Dirección" value={a.city} field="dirección completa" />
         </section>
         <section className="card pad">
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
@@ -560,14 +638,7 @@ function Expediente({ a, onAssign, onAddNote, bank }) {
             <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}</b></div>
           </>)}
         </section>
-        <section className="card pad">
-          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Capacidad</h3><span className={`pill ${ratio == null ? '' : ratio <= 35 ? 'green' : 'amber'}`}>{ratio == null ? 'Sin datos' : ratio <= 35 ? 'Apto' : 'Revisar'}</span></div>
-          <div className="bankx-infoline"><span>Ingreso mensual</span><b>{a.income ? fmtRD(a.income) : '—'}</b></div>
-          <div className="bankx-infoline"><span>Cuota estimada</span><b>{cuota ? `${fmtRD(Math.round(cuota))}/mes` : '—'}</b></div>
-          <div className="bankx-infoline"><span>Relación cuota/ingreso</span><b>{ratio != null ? `${ratio}%` : '—'}</b></div>
-          <div className="bankx-infoline"><span>Plazo solicitado</span><b>{a.term ? `${a.term} años` : '—'}</b></div>
-          <div className="bankx-infoline"><span>Tasa sugerida</span><b>9.25%</b></div>
-        </section>
+        <PaymentCapacityTool app={a} />
       </div>
 
       {/* Documentos + Actividad */}
@@ -686,7 +757,7 @@ function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
       <div className="card pad">
         <div className="row wrap between center gap-8">
           <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
-            <select className="input" style={{ height: 34, fontSize: 12, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
+            <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }} value={a.reviewer?.id || ''} onChange={(e) => onAssign(REVIEWERS.find((r) => r.id === e.target.value) || null)}>
               <option value="">Sin analista asignado</option>{REVIEWERS.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </label>
@@ -705,7 +776,7 @@ function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
         <>
           <Block icon={Users} title="Solicitante">
             <KV k="Nombre completo" v={a.customer} />
-            <KV k="Cédula" v={a.maskedCedula} mono />
+            <KV k="Cédula" v={maskedCedulaLabel(a) || 'No disponible'} mono />
             <KV k="Teléfono" v={<span className="row center gap-4"><Phone size={12} /> {a.phone}</span>} />
             <KV k="Correo" v={<span className="row center gap-4"><Mail size={12} /> {a.email}</span>} />
             <KV k="Ciudad" v={<span className="row center gap-4"><MapPin size={12} /> {a.city}</span>} />
@@ -750,6 +821,8 @@ function ApplicationDetail({ a, onBack, onAssign, onAddNote, bank }) {
               </>
             )}
           </Block>
+
+          <PaymentCapacityTool app={a} />
 
           <DocWorkflow app={a} docs={docs} setDocs={setDocs} docStatus={docStatus} setDocStatus={setDocStatus} />
 
