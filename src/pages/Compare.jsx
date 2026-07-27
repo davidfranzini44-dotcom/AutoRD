@@ -9,6 +9,8 @@ import { clearCompare, getCompareIds, removeCompare } from '../data/compare'
 import { mileageLabel } from '../data/vehicleLabels'
 import { useAuth } from '../context/AuthContext'
 import { isInstitutionProfile } from '../data/roles'
+import useApproval from '../hooks/useApproval'
+import { vehicleFit } from '../data/finance'
 
 // dir: 'low' = smaller wins, 'high' = bigger wins; money rows only score when currencies match.
 const ROWS = [
@@ -55,6 +57,38 @@ function winnersFor(row, vehicles, sameCurrency) {
 export default function Compare() {
   const { profile } = useAuth() || {}
   const institutionUser = isInstitutionProfile(profile)
+  const { ceiling, apr, term } = useApproval()
+
+  // The approval row is only added when there is an approval to measure against,
+  // and never for dealer/bank staff — they are not shopping on a personal
+  // ceiling. Built here rather than in the static ROWS because scoring indexes
+  // rowWinners positionally, so both must walk the SAME array.
+  const rows = useMemo(() => {
+    if (!ceiling || institutionUser) return ROWS
+    const fitOf = (v) => vehicleFit({
+      price: v.price, approvedAmount: ceiling,
+      apr: apr ?? undefined, termYears: term ?? undefined,
+    })
+    const fitRow = {
+      label: 'Con tu aprobación',
+      // No `dir`, so winnersFor() leaves it unscored: affordability is context
+      // for the buyer, not a contest one car wins over another.
+      value: (v) => {
+        const f = fitOf(v)
+        if (!f) return '—'
+        return f.fits ? 'Te alcanza' : `Faltan ${fmtMoney(f.extraDownNeeded, v.currency)} de inicial`
+      },
+      render: (v) => {
+        const f = fitOf(v)
+        if (!f) return <span className="muted">—</span>
+        return f.fits
+          ? <span className="chip chip-green">Te alcanza · {fmtMoney(f.monthly, v.currency)}/mes</span>
+          : <span className="chip chip-amber">Faltan {fmtMoney(f.extraDownNeeded, v.currency)}</span>
+      },
+    }
+    // Straight after Precio and Cuota, where the money question already is.
+    return [ROWS[0], ROWS[1], fitRow, ...ROWS.slice(2)]
+  }, [ceiling, apr, term, institutionUser])
   const [ids, setIds] = useState(() => getCompareIds())
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
@@ -80,14 +114,14 @@ export default function Compare() {
   const scoring = useMemo(() => {
     if (vehicles.length < 2) return null
     const sameCurrency = vehicles.every((v) => v.currency === vehicles[0].currency)
-    const rowWinners = ROWS.map((row) => winnersFor(row, vehicles, sameCurrency))
+    const rowWinners = rows.map((row) => winnersFor(row, vehicles, sameCurrency))
     const winCounts = vehicles.map((_, i) => rowWinners.reduce((n, w) => n + (w.has(i) ? 1 : 0), 0))
     const decided = rowWinners.filter((w) => w.size > 0).length
     const maxWins = Math.max(...winCounts, 0)
     const leaders = winCounts.reduce((acc, c, i) => (c === maxWins ? [...acc, i] : acc), [])
     const bestIdx = maxWins > 0 && leaders.length === 1 ? leaders[0] : -1
     return { sameCurrency, rowWinners, winCounts, decided, maxWins, bestIdx }
-  }, [vehicles])
+  }, [vehicles, rows])
 
   const remove = (id) => { removeCompare(id); setIds(getCompareIds()) }
   const clear = () => { clearCompare(); setIds([]) }
@@ -140,7 +174,7 @@ export default function Compare() {
                 )}
                 <div className="compare-analysis-grid" style={{ '--compare-cols': vehicles.length }}>
                   {vehicles.map((v, i) => {
-                    const strengths = ROWS.filter((row, ri) => scoring.rowWinners[ri].has(i)).map((row) => cleanCompareText(row.label))
+                    const strengths = rows.filter((row, ri) => scoring.rowWinners[ri].has(i)).map((row) => cleanCompareText(row.label))
                     const best = i === scoring.bestIdx
                     return (
                       <div key={v.id} className="card compare-analysis-card" style={{ border: best ? '1.5px solid var(--teal-600, #0d9488)' : '1px solid var(--line-2, #e2e8f0)' }}>
@@ -179,7 +213,7 @@ export default function Compare() {
                   </div>
                 ))}
 
-                {ROWS.map((row, ri) => (
+                {rows.map((row, ri) => (
                   <div className="compare-row" key={row.label}>
                     <div className="compare-label">{cleanCompareText(row.label)}</div>
                     <div className="compare-values" style={{ '--compare-cols': vehicles.length }}>
@@ -187,7 +221,8 @@ export default function Compare() {
                         const win = scoring?.rowWinners[ri].has(i)
                         return (
                           <div className="compare-cell" key={`${v.id}-${row.label}`} style={win ? { color: 'var(--teal-700)', fontWeight: 700 } : undefined}>
-                            {win && <Check size={14} style={{ verticalAlign: -2, marginRight: 2 }} />}{cleanCompareText(row.value(v))}
+                            {win && <Check size={14} style={{ verticalAlign: -2, marginRight: 2 }} />}
+                            {row.render ? row.render(v) : cleanCompareText(row.value(v))}
                           </div>
                         )
                       })}
@@ -215,6 +250,45 @@ export default function Compare() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Mobile: one card per vehicle instead of the grid above.
+                .compare-scroll is overflow-x:auto, so on a phone that grid is a
+                528px table inside a 343px viewport — comparing meant swiping
+                back and forth while holding the other car in your head. The same
+                `rows` array drives both layouts, so they cannot disagree. */}
+            <div className="compare-stack">
+              {vehicles.map((v, i) => (
+                <div className="card card-pad compare-stack-card" key={`stack-${v.id}`}>
+                  <div className="row between center gap-8" style={{ marginBottom: 10 }}>
+                    <div>
+                      <div className="strong">{v.make} {v.model}</div>
+                      <div className="tiny muted">{v.year}{v.trim ? ` · ${v.trim}` : ''}</div>
+                    </div>
+                    {scoring?.bestIdx === i && <span className="chip chip-teal">Mejor opción</span>}
+                  </div>
+                  {rows.map((row, ri) => (
+                    <div className="compare-stack-row" key={`${v.id}-${row.label}`}>
+                      <span>{cleanCompareText(row.label)}</span>
+                      <b style={scoring?.rowWinners[ri].has(i) ? { color: 'var(--teal-700)' } : undefined}>
+                        {scoring?.rowWinners[ri].has(i) && <Check size={13} style={{ verticalAlign: -2, marginRight: 2 }} />}
+                        {row.render ? row.render(v) : cleanCompareText(row.value(v))}
+                      </b>
+                    </div>
+                  ))}
+                  <div className="row gap-8" style={{ marginTop: 12 }}>
+                    <Link to={`/vehiculo/${v.id}`} className="btn btn-outline btn-sm grow">Ver ficha</Link>
+                    {institutionUser ? (
+                      <Link to={`/vehiculo/${v.id}?calc=1`} className="btn btn-primary btn-sm grow"><Gauge size={14} /> Calcular cuota</Link>
+                    ) : (
+                      <Link to={`/financiamiento?vehiculo=${v.id}`} className="btn btn-primary btn-sm grow"><Gauge size={14} /> Financiar</Link>
+                    )}
+                  </div>
+                  <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => remove(v.id)}>
+                    <X size={14} /> Quitar de comparar
+                  </button>
+                </div>
+              ))}
             </div>
           </>
         )}

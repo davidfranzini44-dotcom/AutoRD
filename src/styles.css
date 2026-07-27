@@ -4946,3 +4946,19 @@ select.preap-input { padding-right: 16px; }
    under it rather than inside, which wrapped to two lines. */
 .vcard-fin { margin-top: 10px; }
 .vcard-fin-num { margin-top: 4px; font-weight: 700; }
+
+/* Compare: grid on desktop, one card per vehicle on phones.
+   The grid lives in .compare-scroll (overflow-x:auto), which on a 375px screen
+   is a ~528px table you swipe through — you cannot see two cars at once, which
+   is the entire point of comparing. Below 640px the grid is hidden and each
+   vehicle becomes a self-contained card. */
+.compare-stack { display: none; }
+.compare-stack-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef2f7; }
+.compare-stack-row:last-of-type { border-bottom: 0; }
+.compare-stack-row > span { color: #64748b; font-size: 12px; font-weight: 700; flex: none; }
+.compare-stack-row > b { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .compare-scroll { display: none; }
+  .compare-stack { display: grid; gap: 12px; }
+}
