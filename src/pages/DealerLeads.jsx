@@ -4,12 +4,13 @@ import {
   AlertTriangle, ArrowRight, ChevronLeft, ChevronRight, FileText, Landmark,
   MessageCircle, Phone, Plus, Save, Search, ShieldCheck, X,
 } from 'lucide-react'
-import { getDealerLeads, updateLead, ibMessages, LIVE, getDealerSalespeople } from '../data/api'
+import { getDealerLeads, updateLead, ibMessages, LIVE, getDealerSalespeople, getDealerPipeline, saveDealerLead } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import { LEAD_STAGES, buildLeads, kycLink } from '../data/dealerDemo'
+import { mergeLeadSources } from '../data/leads'
 import './DealerLeads.css'
 
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
@@ -118,10 +119,18 @@ export default function DealerLeads() {
   useEffect(() => {
     let alive = true
     setLoading(true)
-    getDealerLeads()
-      .then((rows) => {
+    // Two sources, deliberately merged: WhatsApp conversations (the only leads
+    // that used to exist) and everyone with real intent toward this dealer's
+    // stock. A buyer who was pre-approved but never messaged was invisible here.
+    Promise.all([
+      getDealerLeads().catch(() => []),
+      getDealerPipeline(profile?.dealer_id).catch(() => []),
+    ])
+      .then(([waRows, pipeRows]) => {
         if (!alive) return
-        const nextRows = !LIVE && (!rows || rows.length === 0) ? buildLeads([]) : (rows || [])
+        const wa = waRows || []
+        const merged = mergeLeadSources(wa, pipeRows || [])
+        const nextRows = !LIVE && merged.length === 0 ? buildLeads([]) : merged
         setLeads(nextRows)
         setLoading(false)
       })
@@ -170,7 +179,10 @@ export default function DealerLeads() {
     setBusyId(l.id)
     const nextStage = LEAD_STAGES[i].key
     try {
-      await updateLead(l.id, { stage: nextStage })
+      // A WhatsApp lead is keyed on its conversation; a pipeline lead on the
+      // buyer. Sending one to the other's RPC silently writes nothing.
+      if (l.buyerId && !l.conversationId) await saveDealerLead(profile?.dealer_id, l.buyerId, { stage: nextStage })
+      else await updateLead(l.id, { stage: nextStage })
       setLeads((rows) => rows.map((row) => row.id === l.id ? { ...row, stage: nextStage } : row))
       refetch()
     } catch (e) {
@@ -478,7 +490,12 @@ function LeadDrawer({ lead, onClose, onChange, setLeads }) {
 
   const patch = async (fields) => {
     try {
-      await updateLead(lead.id, fields)
+      if (lead.buyerId && !lead.conversationId) {
+        await saveDealerLead(profile?.dealer_id, lead.buyerId, {
+          stage: fields.stage, salespersonId: fields.salespersonId,
+          nextAction: fields.notes, nextActionDate: fields.followUp,
+        })
+      } else await updateLead(lead.id, fields)
       setLeads((rows) => rows.map((row) => row.id === lead.id ? { ...row, ...fields } : row))
       onChange?.()
     } catch (e) {
