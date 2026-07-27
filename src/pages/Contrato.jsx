@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
-import { getPublicContract, getContractIdentity } from '../data/api'
+import { Check } from 'lucide-react'
+import { getPublicContract, getContractIdentity, acceptContractTerms } from '../data/api'
 import { fmtRD } from '../data/demo'
 import BankLogo from '../components/BankLogo'
 
@@ -16,6 +17,11 @@ export default function Contrato() {
   const { token = '' } = useParams()
   const [params] = useSearchParams()
   const bankSlug = (params.get('banco') || '').trim()
+  // When the customer arrives from the verified portal (/f/:token), it passes
+  // its token along so they can accept without signing in again.
+  const portalToken = (params.get('portal') || '').trim() || null
+  const [accepting, setAccepting] = useState(false)
+  const [acceptErr, setAcceptErr] = useState('')
   const [state, setState] = useState('loading') // loading | ok | notfound
   const [c, setC] = useState(null)
   // Identity images: null while loading, then { authorized, idUrl, livenessUrl }.
@@ -59,6 +65,23 @@ export default function Contrato() {
   const requested = scoped ? details[0]?.slug : bankSlug
   const bank = requested ? details.find((b) => b.slug === requested) : null
   const banksText = bank ? bank.name : (banks.length ? banks.join(', ') : 'los bancos seleccionados')
+  const acceptedAt = c.accepted_at || bank?.acceptedAt || null
+
+  // One acceptance covers every routed bank (each keeps its own record + hash),
+  // matching how the signatures are issued. Banks never see this action.
+  const accept = async () => {
+    setAccepting(true); setAcceptErr('')
+    const r = await acceptContractTerms(token, portalToken)
+    setAccepting(false)
+    if (r?.ok) {
+      const fresh = await getPublicContract(token)
+      if (fresh) setC(fresh)
+    } else {
+      setAcceptErr(r?.reason === 'not_authorized' || r?.reason === 'not_verified'
+        ? 'Para aceptar, entra a tu cuenta o usa el enlace seguro que te enviamos por WhatsApp.'
+        : 'No pudimos registrar tu aceptación. Intenta de nuevo.')
+    }
+  }
 
   return (
     <main className="fc-page">
@@ -184,6 +207,35 @@ export default function Contrato() {
             </div>
           </section>
 
+          {/* The customer's affirmative act. Hidden for banks — they read the
+              authorization, they don't grant it. */}
+          {!scoped && (
+            <section className={`fc-accept ${acceptedAt ? 'done' : ''} fc-noprint`}>
+              {acceptedAt ? (
+                <div className="row center gap-10">
+                  <span className="fc-accept-ic"><Check size={16} /></span>
+                  <div>
+                    <b className="small">Aceptaste estos términos</b>
+                    <div className="tiny muted">{fmtDate(acceptedAt)}{bank ? ` · ${bank.name}` : ''}</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <b className="small">¿Estás de acuerdo?</b>
+                  <p className="tiny muted" style={{ margin: '4px 0 10px', lineHeight: 1.45 }}>
+                    Al aceptar confirmas que leíste este contrato y autorizas la consulta de tu
+                    historial crediticio a {banksText}. Queda registrado con la fecha y el sello
+                    de este documento.
+                  </p>
+                  {acceptErr && <div className="tiny" style={{ color: '#b91c1c', marginBottom: 8 }}>{acceptErr}</div>}
+                  <button className="btn btn-primary" disabled={accepting} onClick={accept}>
+                    {accepting ? 'Registrando…' : 'Acepto los términos'}
+                  </button>
+                </>
+              )}
+            </section>
+          )}
+
           <section className="fc-signature">
             <div>
               <small>
@@ -233,6 +285,10 @@ const CSS = `
 .fc-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #334155; font-size: 14px; }
 .fc-print { border: 0; border-radius: 10px; background: #0f766e; color: #fff; padding: 9px 15px; font-weight: 800; font-size: 13px; cursor: pointer; }
 .fc-doc { overflow: hidden; border: 1px solid #dfe7f0; border-radius: 22px; background: #fff; box-shadow: 0 12px 36px rgba(15,23,42,.08); color: #172033; font: 12px/1.55 system-ui, -apple-system, Segoe UI, Arial, sans-serif; }
+.fc-accept { margin: 0 23px 4px; padding: 16px 18px; border: 1px solid #d9e2ec; border-radius: 12px; background: #f8fbff; }
+.fc-accept.done { background: #f0fdf4; border-color: #bbf7d0; }
+.fc-accept-ic { width: 28px; height: 28px; border-radius: 50%; background: #dcfce7; color: #166534; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+@media (max-width: 560px) { .fc-accept { margin: 0 14px 4px; padding: 14px; } }
 .fc-bankpick { margin-bottom: 12px; }
 .fc-bankpick-label { display: block; font-size: 11.5px; color: #64748b; margin-bottom: 6px; }
 .fc-bankpick-row { display: flex; flex-wrap: wrap; gap: 6px; }

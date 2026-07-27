@@ -756,6 +756,19 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// The customer's explicit acceptance of the contract. Authorised server-side:
+// the signed-in buyer, or a FULLY verified portal token (last-4 cédula + OTP).
+// Holding the contract link alone is not enough.
+export async function acceptContractTerms(contractToken, portalToken = null) {
+  if (!LIVE) return { ok: true, demo: true }
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : null
+  const { data, error } = await supabase.rpc('accept_contract_terms', {
+    p_contract_token: contractToken, p_portal_token: portalToken, p_user_agent: ua,
+  })
+  if (error) return { ok: false, reason: 'error' }
+  return data
+}
+
 // Full cédula for a bank routed on the application (audited server-side).
 // Masked everywhere by default; revealed only when the analyst asks for it.
 export async function getApplicationCedula(applicationId) {

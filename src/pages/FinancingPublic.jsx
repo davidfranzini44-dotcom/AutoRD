@@ -319,6 +319,13 @@ function Portal({ full, token, onReload }) {
         {kind === 'approved' && full.vehicle && (
           <Link to={`/vehiculo/${full.vehicle.slug || full.vehicle.id}`} className="btn btn-outline btn-block">Continuar con la compra <ChevronRight size={16} /></Link>
         )}
+        {/* Carries the portal token so the (already verified) customer can accept
+            the terms without signing in again. */}
+        {full.contractToken && (
+          <Link to={`/contrato/${full.contractToken}?portal=${token}`} className="btn btn-outline btn-block">
+            <FileText size={16} /> {full.termsAcceptedAt ? 'Ver contrato' : 'Ver y aceptar contrato'}
+          </Link>
+        )}
         <a className="btn btn-block" style={{ background: '#25D366', color: '#fff', border: 'none' }} href={waHref} target="_blank" rel="noreferrer"><WhatsAppIcon size={16} /> Preguntar por WhatsApp</a>
       </div>
 
