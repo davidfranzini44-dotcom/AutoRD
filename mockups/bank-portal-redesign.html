@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD Banco - Redesign Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #10233f;
+      --navy-2: #19345b;
+      --teal: #0f766e;
+      --teal-2: #14b8a6;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #dbe4ee;
+      --line-2: #edf2f7;
+      --bg: #f5f8fb;
+      --panel: #ffffff;
+      --green-bg: #dcfce7;
+      --green: #166534;
+      --amber-bg: #fef3c7;
+      --amber: #b45309;
+      --red-bg: #fee2e2;
+      --red: #b91c1c;
+      --blue-bg: #dbeafe;
+      --blue: #1d4ed8;
+      --shadow: 0 18px 55px rgba(15, 35, 63, .10);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #e9eef5;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      color: var(--ink);
+    }
+    button, input, select, textarea { font: inherit; }
+    .mock-page { padding: 28px; overflow-x: auto; }
+    .caption { max-width: 1440px; margin: 0 auto 12px; color: var(--navy); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .desktop-frame {
+      width: 1440px;
+      max-width: 1440px;
+      min-height: 920px;
+      margin: 0 auto 38px;
+      background: var(--bg);
+      border: 1px solid #cbd7e5;
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+    }
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--line);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .bank-logo {
+      width: 46px; height: 46px; border-radius: 13px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #0f766e, #10233f);
+      color: #fff; font-weight: 900;
+    }
+    .brand strong { display: block; font-size: 15px; }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .nav-section { display: grid; gap: 8px; }
+    .nav-label { margin: 12px 8px 2px; color: #8aa0b9; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+    .nav-item {
+      border: 0; background: transparent; width: 100%;
+      border-radius: 12px; padding: 12px 12px; text-align: left;
+      display: flex; align-items: center; gap: 11px;
+      color: #334155; font-weight: 750; cursor: pointer;
+    }
+    .nav-item.active, .nav-item:hover { background: #eef7f6; color: var(--teal); }
+    .nav-ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; background: #f1f5f9; }
+    .profile-mini { margin-top: auto; border-top: 1px solid var(--line-2); padding-top: 16px; display: flex; align-items: center; gap: 10px; }
+    .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 900; }
+    .main { min-width: 0; }
+    .topbar {
+      height: 72px; background: rgba(255,255,255,.88); border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 26px;
+    }
+    .search { position: relative; width: min(460px, 44vw); }
+    .search input {
+      width: 100%; height: 42px; border: 1px solid var(--line); border-radius: 12px;
+      padding: 0 14px 0 40px; outline: 0; color: var(--ink); background: #f8fafc;
+    }
+    .search span { position: absolute; left: 14px; top: 11px; color: #8aa0b9; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      border: 1px solid var(--line);
+      background: #fff; color: var(--navy);
+      min-height: 40px; border-radius: 11px;
+      padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font-weight: 800; cursor: pointer; white-space: nowrap;
+    }
+    .btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+    .btn.navy { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .btn.danger { color: var(--red); border-color: #fecaca; }
+    .content { padding: 24px 26px 34px; }
+    .page-head { display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+    p { margin: 0; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .tiny { font-size: 12px; }
+    .strong { font-weight: 850; }
+    .tabs { display: flex; gap: 7px; padding: 5px; border: 1px solid var(--line); background: #fff; border-radius: 13px; }
+    .tab { border: 0; background: transparent; border-radius: 10px; padding: 9px 12px; font-size: 13px; font-weight: 850; color: #475569; cursor: pointer; }
+    .tab.active { background: var(--navy); color: #fff; }
+    .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 25px rgba(15, 23, 42, .04);
+    }
+    .pad { padding: 16px; }
+    .kpi { padding: 15px; display: grid; gap: 7px; min-height: 118px; }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .kpi strong { font-size: 26px; letter-spacing: 0; }
+    .delta { font-size: 11px; font-weight: 900; border-radius: 99px; padding: 4px 8px; width: fit-content; background: var(--green-bg); color: var(--green); }
+    .command { display: grid; grid-template-columns: 1.25fr .75fr; gap: 16px; margin-bottom: 16px; }
+    .priority-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .priority-card {
+      border: 1px solid var(--line); border-radius: 13px; padding: 13px; text-align: left;
+      background: #fff; min-height: 108px;
+    }
+    .priority-card b { font-size: 26px; display: block; margin-bottom: 4px; }
+    .priority-card span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .heat { display: grid; gap: 9px; margin-top: 12px; }
+    .heat-row { display: grid; grid-template-columns: 96px 1fr 42px; align-items: center; gap: 10px; font-size: 12px; }
+    .bar { height: 9px; border-radius: 999px; background: #eaf1f7; overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: inherit; background: var(--teal); }
+    .work { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; align-items: start; }
+    .list-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+    .filter-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px; min-height: 28px;
+      padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 850;
+      background: #f1f5f9; color: #475569; border: 1px solid transparent;
+    }
+    .pill.active { background: var(--navy); color: #fff; }
+    .pill.green { background: var(--green-bg); color: var(--green); }
+    .pill.amber { background: var(--amber-bg); color: var(--amber); }
+    .pill.red { background: var(--red-bg); color: var(--red); }
+    .pill.blue { background: var(--blue-bg); color: var(--blue); }
+    .app-row {
+      display: grid; grid-template-columns: 1.15fr .95fr .76fr .78fr .66fr;
+      gap: 14px; padding: 14px 16px; align-items: center; border-bottom: 1px solid var(--line-2);
+    }
+    .app-row.head { color: #8aa0b9; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; background: #fbfdff; }
+    .app-row.selected { background: #eefaf8; border-left: 4px solid var(--teal); padding-left: 12px; }
+    .nowrap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .money { text-align: right; font-variant-numeric: tabular-nums; }
+    .detail { position: sticky; top: 88px; display: grid; gap: 12px; }
+    .detail-hero { padding: 18px; background: linear-gradient(135deg, #10233f, #0f766e); color: #fff; border-radius: var(--radius); }
+    .detail-hero .pill { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.2); }
+    .split { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .kv { border: 1px solid var(--line-2); border-radius: 11px; padding: 10px; background: #fbfdff; }
+    .kv span { display: block; color: var(--muted); font-size: 11px; font-weight: 750; margin-bottom: 3px; }
+    .kv b { display: block; font-size: 13px; }
+    .checklist { display: grid; gap: 9px; }
+    .check-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center; padding: 10px; border-radius: 11px; border: 1px solid var(--line-2); }
+    .check-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-weight: 900; }
+    .ok { background: var(--green-bg); color: var(--green); }
+    .warn { background: var(--amber-bg); color: var(--amber); }
+    .bad { background: var(--red-bg); color: var(--red); }
+    .decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .credit-workspace { display: grid; gap: 16px; }
+    .queue-board { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; }
+    .queue-summary {
+      display: grid; gap: 10px; padding: 16px; border-radius: var(--radius);
+      background: linear-gradient(135deg, #10233f, #0f766e); color: #fff;
+    }
+    .queue-summary .pill { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.18); }
+    .queue-summary strong { font-size: 34px; letter-spacing: -.04em; }
+    .queue-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+    .queue-actions .btn { min-height: 38px; }
+    .credit-table { display: grid; }
+    .credit-row {
+      width: 100%; border: 0; border-bottom: 1px solid var(--line-2); background: #fff; color: inherit;
+      display: grid; grid-template-columns: 1.05fr 1.05fr .9fr .78fr .72fr .52fr;
+      gap: 14px; align-items: center; padding: 14px 16px; text-align: left; cursor: pointer;
+    }
+    .credit-row.head {
+      cursor: default; color: #8aa0b9; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em;
+      background: #fbfdff;
+    }
+    .credit-row.selected { background: #eefaf8; box-shadow: inset 4px 0 0 var(--teal); }
+    .credit-row:not(.head):hover { background: #f8fcfb; }
+    .risk-badge {
+      display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+      border-radius: 11px; font-weight: 950; font-size: 12px;
+      background: var(--green-bg); color: var(--green);
+    }
+    .risk-badge.amber { background: var(--amber-bg); color: var(--amber); }
+    .risk-badge.red { background: var(--red-bg); color: var(--red); }
+    .exp-full { display: grid; gap: 16px; }
+    .exp-hero {
+      display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: stretch;
+    }
+    .exp-hero-main {
+      border-radius: 18px; padding: 20px; color: #fff;
+      background:
+        radial-gradient(circle at 92% 20%, rgba(20,184,166,.28), transparent 28%),
+        linear-gradient(135deg, #10233f 0%, #14365f 52%, #0f766e 100%);
+      box-shadow: var(--shadow);
+    }
+    .exp-title-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    .exp-title-row h2 { margin: 7px 0 6px; font-size: 31px; line-height: 1.05; letter-spacing: -.035em; }
+    .exp-hero-main p { color: rgba(255,255,255,.76); line-height: 1.5; }
+    .exp-hero-main .pill { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.18); }
+    .exp-mini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+    .exp-mini {
+      border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.10);
+      border-radius: 13px; padding: 11px;
+    }
+    .exp-mini span { display: block; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.64); margin-bottom: 5px; }
+    .exp-mini b { font-size: 15px; }
+    .decision-card { display: grid; gap: 12px; }
+    .readiness-list { display: grid; gap: 8px; }
+    .readiness-row {
+      display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center;
+      padding: 10px; border: 1px solid var(--line-2); background: #fbfdff; border-radius: 12px;
+    }
+    .exp-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: start; }
+    .info-card { display: grid; gap: 12px; }
+    .info-line { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line-2); }
+    .info-line:last-child { border-bottom: 0; padding-bottom: 0; }
+    .info-line span { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .info-line b { text-align: right; }
+    .doc-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 16px; align-items: start; }
+    .doc-list { display: grid; gap: 9px; }
+    .doc-row {
+      display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center;
+      border: 1px solid var(--line-2); background: #fff; border-radius: 13px; padding: 11px;
+    }
+    .timeline { display: grid; gap: 0; }
+    .timeline-item { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 0 0 14px; position: relative; }
+    .timeline-item:before { content: ""; position: absolute; left: 10px; top: 23px; bottom: -1px; width: 2px; background: var(--line-2); }
+    .timeline-item:last-child:before { display: none; }
+    .timeline-dot { width: 22px; height: 22px; border-radius: 50%; background: var(--teal); border: 4px solid #dff7f2; z-index: 1; }
+    .timeline-dot.amber { background: var(--amber); border-color: var(--amber-bg); }
+    .decision-panel { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: start; }
+    .decision-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+    .note-box { border: 1px solid var(--line-2); background: #fbfdff; border-radius: 13px; padding: 12px; display: grid; gap: 8px; }
+    .field { display: grid; gap: 6px; margin-top: 10px; }
+    label { color: #475569; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 11px; background: #fff;
+      padding: 10px 11px; outline: 0; color: var(--ink);
+    }
+    textarea { resize: vertical; min-height: 68px; }
+    .rate-layout { display: grid; grid-template-columns: 310px 1fr; gap: 16px; }
+    .fuel-list { display: grid; gap: 9px; }
+    .fuel { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #fff; }
+    .fuel.active { border-color: var(--teal); background: #effaf8; }
+    .rate-table { display: grid; gap: 8px; }
+    .rate-row { display: grid; grid-template-columns: .7fr 1fr 1fr .8fr; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: #fff; }
+    .rate-row.head { background: #f8fafc; color: #8aa0b9; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .report-hero {
+      display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: stretch;
+      margin-bottom: 16px;
+    }
+    .report-hero-main {
+      border-radius: 18px; padding: 22px;
+      color: #fff; background:
+        radial-gradient(circle at 86% 18%, rgba(20,184,166,.34), transparent 28%),
+        linear-gradient(135deg, #10233f 0%, #14365f 52%, #0f766e 100%);
+      box-shadow: var(--shadow);
+    }
+    .report-hero-main h2 { margin: 12px 0 8px; font-size: 31px; line-height: 1.08; letter-spacing: -.03em; max-width: 720px; }
+    .report-hero-main p { color: rgba(255,255,255,.76); max-width: 650px; line-height: 1.55; }
+    .report-period { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .report-period button {
+      border: 1px solid rgba(255,255,255,.2); color: #fff; background: rgba(255,255,255,.10);
+      min-height: 38px; padding: 0 12px; border-radius: 999px; font-weight: 850; cursor: pointer;
+    }
+    .report-period .active { background: #fff; color: var(--navy); border-color: #fff; }
+    .readiness { display: grid; gap: 12px; }
+    .readiness-score {
+      display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center;
+      padding: 14px; border-radius: 14px; background: #f8fbff; border: 1px solid var(--line-2);
+    }
+    .score-ring {
+      width: 78px; height: 78px; border-radius: 50%; display: grid; place-items: center;
+      background: conic-gradient(var(--teal) 0 74%, #e7eef6 74% 100%);
+      position: relative; font-size: 18px; font-weight: 950; color: var(--navy);
+    }
+    .score-ring:before { content: ""; position: absolute; inset: 8px; border-radius: inherit; background: #fff; }
+    .score-ring span { position: relative; }
+    .report-kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .report-kpi {
+      padding: 15px; min-height: 128px; display: grid; align-content: space-between; gap: 10px;
+      background: #fff; border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 8px 24px rgba(15,23,42,.04);
+    }
+    .report-kpi strong { font-size: 24px; letter-spacing: -.02em; }
+    .report-kpi .label { color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }
+    .report-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) 380px; gap: 16px; align-items: start; }
+    .report-stack { display: grid; gap: 16px; }
+    .panel-title { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 13px; }
+    .panel-title h3 { margin: 0; font-size: 16px; letter-spacing: -.01em; }
+    .funnel { display: grid; gap: 10px; }
+    .funnel-step {
+      display: grid; grid-template-columns: 150px 1fr 54px; gap: 12px; align-items: center;
+      padding: 11px 12px; border-radius: 13px; background: #fbfdff; border: 1px solid var(--line-2);
+    }
+    .funnel-step .bar { height: 12px; }
+    .dealer-score { display: grid; gap: 8px; }
+    .dealer-score-row {
+      display: grid; grid-template-columns: 1.2fr .55fr .7fr .55fr .55fr; gap: 12px; align-items: center;
+      padding: 12px; border-radius: 13px; border: 1px solid var(--line-2); background: #fff;
+    }
+    .dealer-score-row.head { background: #f8fafc; color: #8aa0b9; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .range-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .range-card { padding: 13px; border: 1px solid var(--line-2); border-radius: 13px; background: #fbfdff; display: grid; gap: 8px; }
+    .range-card b { font-size: 20px; }
+    .action-list, .analyst-list { display: grid; gap: 9px; }
+    .action-item, .analyst-item {
+      display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center;
+      padding: 11px; border: 1px solid var(--line-2); border-radius: 13px; background: #fff;
+    }
+    .action-dot {
+      width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+      color: #fff; font-size: 12px; font-weight: 950; background: var(--teal);
+    }
+    .action-dot.amber { background: var(--amber); }
+    .action-dot.red { background: var(--red); }
+    .sla-chip { font-size: 11px; font-weight: 900; border-radius: 999px; padding: 5px 8px; background: #eef7f6; color: var(--teal); }
+    .report-callout { border: 1px solid #b7ebe4; background: #effaf8; border-radius: 15px; padding: 14px; display: grid; gap: 8px; }
+    .spark-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px; height: 70px; align-items: end; margin-top: 10px; }
+    .spark-bars i { display: block; border-radius: 999px 999px 4px 4px; background: linear-gradient(180deg, var(--teal-2), var(--teal)); min-height: 10px; }
+    .chart-lines { display: grid; gap: 13px; margin-top: 12px; }
+    .chat-layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+    .thread { display: grid; gap: 8px; }
+    .thread-item { padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .message { max-width: 72%; padding: 11px 13px; border-radius: 14px; margin: 8px 0; font-size: 13px; line-height: 1.45; }
+    .message.in { background: #f1f5f9; }
+    .message.out { background: #dff7f2; margin-left: auto; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .phone-wrap { max-width: 430px; margin: 0 auto 30px; }
+    .phone {
+      width: 390px; min-height: 844px; margin: 0 auto;
+      border-radius: 36px; border: 9px solid #0a1020;
+      overflow: hidden; background: var(--bg); box-shadow: var(--shadow);
+      position: relative;
+    }
+    .phone .content { padding: 16px 14px 86px; }
+    .phone-top { padding: 16px 14px 12px; background: #fff; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .phone-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+    .mobile-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+    .mobile-app { display: grid; gap: 10px; }
+    .bottom-nav {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 72px; background: rgba(255,255,255,.94);
+      border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr);
+      backdrop-filter: blur(14px);
+    }
+    .bottom-nav button { border: 0; background: transparent; display: grid; place-items: center; gap: 3px; color: #64748b; font-size: 10px; font-weight: 800; }
+    .bottom-nav .active { color: var(--teal); }
+    .hide { display: none !important; }
+    @media (max-width: 900px) {
+      .queue-board, .exp-hero, .exp-grid, .doc-grid, .decision-panel { grid-template-columns: 1fr; }
+      .report-hero, .report-layout { grid-template-columns: 1fr; }
+      .report-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .credit-row { grid-template-columns: 1fr; gap: 7px; }
+      .credit-row.head { display: none; }
+      .exp-mini-grid, .range-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-page">
+    <div class="caption">AutoRD Banco - Desktop command center</div>
+    <div class="desktop-frame">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="bank-logo">BHD</div>
+          <div><strong>Banco BHD</strong><span>Portal de banco</span></div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Operacion</div>
+          <button class="nav-item active" data-go="solicitudes"><span class="nav-ic">in</span> Solicitudes</button>
+          <button class="nav-item" data-go="tasas"><span class="nav-ic">%</span> Tasas y reglas</button>
+          <button class="nav-item" data-go="whatsapp"><span class="nav-ic">wa</span> WhatsApp</button>
+          <button class="nav-item" data-go="reportes"><span class="nav-ic">ch</span> Reportes</button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">Atajos</div>
+          <button class="nav-item"><span class="nav-ic">kyc</span> KYC aprobado</button>
+          <button class="nav-item"><span class="nav-ic">doc</span> Docs pendientes</button>
+          <button class="nav-item"><span class="nav-ic">sla</span> SLA en riesgo</button>
+        </div>
+        <div class="profile-mini">
+          <div class="avatar">LF</div>
+          <div><div class="strong small">Laura Fernandez</div><div class="tiny muted">Analista senior</div></div>
+        </div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <div class="search"><span>⌕</span><input placeholder="Buscar cliente, cedula, dealer, vehiculo o solicitud..." /></div>
+          <div class="top-actions">
+            <button class="btn">Filtros</button>
+            <button class="btn primary">Revisar listas</button>
+          </div>
+        </header>
+        <section class="content">
+          <div class="page-head">
+            <div>
+              <h1>Mesa de credito</h1>
+              <p class="muted small">Solicitudes listas, documentos y SLA en una sola cola de decision.</p>
+            </div>
+            <div class="tabs">
+              <button class="tab active" data-go="solicitudes">Solicitudes</button>
+              <button class="tab" data-go="tasas">Tasas</button>
+              <button class="tab" data-go="whatsapp">WhatsApp</button>
+              <button class="tab" data-go="reportes">Reportes</button>
+            </div>
+          </div>
+
+          <div class="view active" id="solicitudes">
+            <div class="kpis">
+              <div class="card kpi"><div class="kpi-top">Nuevas hoy <span>↗</span></div><strong>18</strong><span class="delta">+6 vs ayer</span></div>
+              <div class="card kpi"><div class="kpi-top">Listas decision <span>✓</span></div><strong>9</strong><span class="delta">KYC + consentimiento</span></div>
+              <div class="card kpi"><div class="kpi-top">Pendiente docs <span>!</span></div><strong>7</strong><span class="pill amber">Requiere accion</span></div>
+              <div class="card kpi"><div class="kpi-top">SLA +24 h <span>⏱</span></div><strong>4</strong><span class="pill red">Prioridad alta</span></div>
+              <div class="card kpi"><div class="kpi-top">Aprobado mes <span>RD$</span></div><strong>RD$24.8M</strong><span class="delta">41 ofertas</span></div>
+            </div>
+
+            <div class="command">
+              <div class="card pad">
+                <div class="split">
+                  <div><div class="strong">Cola inteligente</div><p class="tiny muted">Cada tarjeta filtra la lista para que el analista empiece por lo mas importante.</p></div>
+                  <button class="btn navy">Asignar a mi</button>
+                </div>
+                <div class="priority-grid">
+                  <button class="priority-card"><b>9</b><span>Listas para decision</span></button>
+                  <button class="priority-card"><b>4</b><span>SLA en riesgo</span></button>
+                  <button class="priority-card"><b>7</b><span>Faltan documentos</span></button>
+                  <button class="priority-card"><b>3</b><span>Sin analista asignado</span></button>
+                </div>
+              </div>
+              <div class="card pad">
+                <div class="strong">Carga por analista</div>
+                <div class="heat">
+                  <div class="heat-row"><span>Laura</span><div class="bar"><i style="width:82%"></i></div><b>14</b></div>
+                  <div class="heat-row"><span>Miguel</span><div class="bar"><i style="width:55%"></i></div><b>9</b></div>
+                  <div class="heat-row"><span>Ana</span><div class="bar"><i style="width:37%"></i></div><b>6</b></div>
+                </div>
+                <p class="tiny muted" style="margin-top:12px">Rebalancea solicitudes sin abrir hojas externas.</p>
+              </div>
+            </div>
+
+            <div class="credit-workspace">
+              <div class="queue-board">
+                <section class="card">
+                  <div class="list-toolbar">
+                    <div>
+                      <div class="strong">Solicitudes activas</div>
+                      <p class="tiny muted">Selecciona un cliente y revisa el expediente completo debajo.</p>
+                    </div>
+                    <div class="filter-pills">
+                      <button class="pill active">Todas 38</button>
+                      <button class="pill green">Listas 9</button>
+                      <button class="pill amber">Docs 7</button>
+                      <button class="pill red">SLA 4</button>
+                      <button class="pill blue">Pre-aprobadas 12</button>
+                    </div>
+                  </div>
+                  <div class="credit-table">
+                    <div class="credit-row head"><span>Cliente</span><span>Vehiculo</span><span>Dealer</span><span class="money">Monto</span><span>Estado</span><span>Riesgo</span></div>
+                    <button class="credit-row selected">
+                      <div class="nowrap"><b>Wendy Fernandez</b><div class="tiny muted">***-*******-2 · KYC aprobado · 7.4 h</div></div>
+                      <div class="nowrap">Toyota Grand Highlander 2024<div class="tiny muted">Inicial RD$450,000</div></div>
+                      <div class="nowrap">Joselito Auto Import<div class="tiny muted">Dealer verificado</div></div>
+                      <div class="money"><b>RD$2.35M</b><div class="tiny muted">Ingreso RD$145K</div></div>
+                      <span class="pill green">Lista decision</span>
+                      <span class="risk-badge">82</span>
+                    </button>
+                    <button class="credit-row">
+                      <div class="nowrap"><b>Hector Beltre</b><div class="tiny muted">***-*******-8 · KYC aprobado · 19.2 h</div></div>
+                      <div class="nowrap">Lexus RX 350 F Sport 2022<div class="tiny muted">Seguro pendiente</div></div>
+                      <div class="nowrap">Premium Motors</div>
+                      <div class="money"><b>RD$1.82M</b><div class="tiny muted">Ingreso RD$98K</div></div>
+                      <span class="pill amber">Pide docs</span>
+                      <span class="risk-badge amber">64</span>
+                    </button>
+                    <button class="credit-row">
+                      <div class="nowrap"><b>Rosa Mateo</b><div class="tiny muted">***-*******-5 · consentimiento pendiente</div></div>
+                      <div class="nowrap">Pre-aprobacion sin vehiculo<div class="tiny muted">Cliente directo</div></div>
+                      <div class="nowrap">Directo AutoRD</div>
+                      <div class="money"><b>RD$1.40M</b><div class="tiny muted">Ingreso RD$82K</div></div>
+                      <span class="pill blue">Nueva</span>
+                      <span class="risk-badge">78</span>
+                    </button>
+                    <button class="credit-row">
+                      <div class="nowrap"><b>Carlos Mota</b><div class="tiny muted">***-*******-0 · KYC aprobado · 31.5 h</div></div>
+                      <div class="nowrap">Lexus LX 600 Luxury 2024<div class="tiny muted">Monto alto</div></div>
+                      <div class="nowrap">Joselito Auto Import</div>
+                      <div class="money"><b>RD$4.90M</b><div class="tiny muted">Ingreso RD$210K</div></div>
+                      <span class="pill red">SLA riesgo</span>
+                      <span class="risk-badge red">48</span>
+                    </button>
+                  </div>
+                </section>
+
+                <aside class="queue-summary">
+                  <span class="pill">Proxima mejor accion</span>
+                  <div>
+                    <strong>9</strong>
+                    <div class="small" style="color:rgba(255,255,255,.78)">clientes listos para decision, ordenados por SLA y completitud.</div>
+                  </div>
+                  <div class="kv-grid" style="grid-template-columns:1fr 1fr;margin-top:0">
+                    <div class="exp-mini"><span>Sin analista</span><b>3</b></div>
+                    <div class="exp-mini"><span>Docs</span><b>7</b></div>
+                  </div>
+                  <div class="queue-actions">
+                    <button class="btn">Rebalancear</button>
+                    <button class="btn primary">Asignar a mi</button>
+                  </div>
+                </aside>
+              </div>
+
+              <section class="exp-full">
+                <div class="exp-hero">
+                  <div class="exp-hero-main">
+                    <div class="exp-title-row">
+                      <div>
+                        <span class="pill">Solicitud ARD-1048</span>
+                        <h2>Wendy Fernandez</h2>
+                        <p>Toyota Grand Highlander 2024 · Joselito Auto Import · Dealer verificado · expediente listo para decision.</p>
+                      </div>
+                      <span class="pill green">Lista decision</span>
+                    </div>
+                    <div class="exp-mini-grid">
+                      <div class="exp-mini"><span>Monto</span><b>RD$2,350,000</b></div>
+                      <div class="exp-mini"><span>Inicial</span><b>RD$450,000</b></div>
+                      <div class="exp-mini"><span>Ingreso</span><b>RD$145,000</b></div>
+                      <div class="exp-mini"><span>Score interno</span><b>82/100</b></div>
+                    </div>
+                  </div>
+
+                  <aside class="card pad decision-card">
+                    <div class="panel-title" style="margin-bottom:0">
+                      <div>
+                        <h3>Resumen para decidir</h3>
+                        <div class="tiny muted">Todo lo critico antes de aprobar</div>
+                      </div>
+                      <span class="pill green">3/4 ok</span>
+                    </div>
+                    <div class="readiness-list">
+                      <div class="readiness-row"><span class="check-ic ok">✓</span><div><b class="small">KYC DIDIT aprobado</b><div class="tiny muted">Cedula + prueba de vida</div></div><button class="btn">Ver</button></div>
+                      <div class="readiness-row"><span class="check-ic ok">✓</span><div><b class="small">Consentimiento firmado</b><div class="tiny muted">Banco autorizado para evaluar</div></div><button class="btn">Contrato</button></div>
+                      <div class="readiness-row"><span class="check-ic warn">!</span><div><b class="small">Estados de cuenta</b><div class="tiny muted">Recibido, falta validar promedio</div></div><button class="btn">Revisar</button></div>
+                    </div>
+                  </aside>
+                </div>
+
+                <div class="exp-grid">
+                  <section class="card pad info-card">
+                    <div class="panel-title" style="margin-bottom:0"><h3>Cliente</h3><span class="pill green">Verificado</span></div>
+                    <div class="info-line"><span>Cedula</span><b>***-*******-2</b></div>
+                    <div class="info-line"><span>Telefono</span><b>(809) 555-0184</b></div>
+                    <div class="info-line"><span>Email</span><b>w.fernandez@mail.com</b></div>
+                    <div class="info-line"><span>Direccion</span><b>Santo Domingo Este</b></div>
+                    <div class="info-line"><span>Ocupacion</span><b>Gerente comercial</b></div>
+                  </section>
+
+                  <section class="card pad info-card">
+                    <div class="panel-title" style="margin-bottom:0"><h3>Vehiculo</h3><span class="pill blue">Importado</span></div>
+                    <div class="info-line"><span>Modelo</span><b>Toyota Grand Highlander 2024</b></div>
+                    <div class="info-line"><span>VIN</span><b>JT3H8***2041</b></div>
+                    <div class="info-line"><span>Precio venta</span><b>RD$3,150,000</b></div>
+                    <div class="info-line"><span>Inicial</span><b>RD$450,000</b></div>
+                    <div class="info-line"><span>Dealer</span><b>Joselito Auto Import</b></div>
+                  </section>
+
+                  <section class="card pad info-card">
+                    <div class="panel-title" style="margin-bottom:0"><h3>Capacidad</h3><span class="pill green">Apto</span></div>
+                    <div class="info-line"><span>Ingreso mensual</span><b>RD$145,000</b></div>
+                    <div class="info-line"><span>Cuota estimada</span><b>RD$38,920</b></div>
+                    <div class="info-line"><span>Relacion cuota/ingreso</span><b>26.8%</b></div>
+                    <div class="info-line"><span>Plazo solicitado</span><b>7 anos</b></div>
+                    <div class="info-line"><span>Tasa sugerida</span><b>9.25%</b></div>
+                  </section>
+                </div>
+
+                <div class="doc-grid">
+                  <section class="card pad">
+                    <div class="panel-title">
+                      <div><h3>Documentos y validaciones</h3><div class="tiny muted">Todo visible sin abrir una ficha lateral</div></div>
+                      <button class="btn">Solicitar faltantes</button>
+                    </div>
+                    <div class="doc-list">
+                      <div class="doc-row"><span class="check-ic ok">✓</span><div><b>Cedula frontal y trasera</b><div class="tiny muted">Validada por KYC · rostro coincide</div></div><button class="btn">Abrir</button></div>
+                      <div class="doc-row"><span class="check-ic ok">✓</span><div><b>Prueba de vida</b><div class="tiny muted">DIDIT aprobado hace 2 horas</div></div><button class="btn">Ver</button></div>
+                      <div class="doc-row"><span class="check-ic warn">!</span><div><b>Estados de cuenta</b><div class="tiny muted">Subido, pendiente revision del analista</div></div><button class="btn navy">Revisar</button></div>
+                      <div class="doc-row"><span class="check-ic ok">✓</span><div><b>Autorizacion de consulta</b><div class="tiny muted">Firmado digitalmente por el cliente</div></div><button class="btn">Contrato</button></div>
+                    </div>
+                  </section>
+
+                  <section class="card pad">
+                    <div class="panel-title">
+                      <div><h3>Actividad y comunicacion</h3><div class="tiny muted">Historial de banco, dealer y cliente</div></div>
+                      <button class="btn primary">WhatsApp</button>
+                    </div>
+                    <div class="timeline">
+                      <div class="timeline-item"><span class="timeline-dot"></span><div><b>Cliente subio estados de cuenta</b><div class="tiny muted">Hoy 10:42 AM · WhatsApp</div></div></div>
+                      <div class="timeline-item"><span class="timeline-dot"></span><div><b>Consentimiento firmado</b><div class="tiny muted">Hoy 9:17 AM · portal publico</div></div></div>
+                      <div class="timeline-item"><span class="timeline-dot amber"></span><div><b>Analista marco revision pendiente</b><div class="tiny muted">Ayer 5:06 PM · Laura Fernandez</div></div></div>
+                      <div class="timeline-item"><span class="timeline-dot"></span><div><b>Dealer envio solicitud</b><div class="tiny muted">Ayer 2:31 PM · Joselito Auto Import</div></div></div>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="decision-panel">
+                  <section class="card pad">
+                    <div class="panel-title" style="margin-bottom:10px"><h3>Registrar respuesta</h3><span class="pill green">Lista</span></div>
+                    <div class="decision-actions">
+                      <button class="btn navy">Pre-aprobar</button>
+                      <button class="btn">Pedir docs</button>
+                      <button class="btn">En evaluacion</button>
+                      <button class="btn danger">Rechazar</button>
+                    </div>
+                    <div class="kv-grid">
+                      <div class="field"><label>Monto aprobado</label><input value="2350000" /></div>
+                      <div class="field"><label>Tasa APR</label><input value="9.25%" /></div>
+                      <div class="field"><label>Cuota</label><input value="RD$ 38,920" /></div>
+                      <div class="field"><label>Vence</label><input value="2026-08-05" /></div>
+                    </div>
+                  </section>
+
+                  <section class="card pad">
+                    <div class="panel-title" style="margin-bottom:10px"><h3>Notas internas</h3><span class="pill">Banco</span></div>
+                    <div class="note-box">
+                      <b>Laura Fernandez</b>
+                      <div class="small muted">Buen perfil. Confirmar promedio de estados de cuenta antes de notificar oferta final.</div>
+                    </div>
+                    <div class="field"><label>Nueva nota</label><textarea>Escribir nota visible solo para el banco...</textarea></div>
+                  </section>
+
+                  <section class="card pad">
+                    <div class="panel-title" style="margin-bottom:10px"><h3>Mensaje al cliente</h3><span class="pill green">WhatsApp listo</span></div>
+                    <textarea>Hola Wendy, tu solicitud fue pre-aprobada sujeta a seguro y validacion final de ingresos. Te enviamos los detalles por este medio.</textarea>
+                    <button class="btn primary" style="width:100%;margin-top:12px">Confirmar y notificar</button>
+                  </section>
+                </div>
+              </section>
+            </div>
+
+            <div class="work hide">
+              <section class="card">
+                <div class="list-toolbar">
+                  <div class="filter-pills">
+                    <button class="pill active">Todas 38</button>
+                    <button class="pill green">Listas 9</button>
+                    <button class="pill amber">Docs 7</button>
+                    <button class="pill red">SLA 4</button>
+                    <button class="pill blue">Pre-aprobadas 12</button>
+                  </div>
+                  <button class="btn">Exportar</button>
+                </div>
+                <div class="app-row head"><span>Cliente</span><span>Vehiculo</span><span>Dealer</span><span class="money">Monto</span><span>Estado</span></div>
+                <div class="app-row selected">
+                  <div class="nowrap"><b>Wendy Fernandez</b><div class="tiny muted">***-*******-2 · KYC aprobado</div></div>
+                  <div class="nowrap">Toyota Grand Highlander 2024<div class="tiny muted">Inicial RD$ 450,000</div></div>
+                  <div class="nowrap">Joselito Auto Import</div>
+                  <div class="money"><b>RD$2.35M</b><div class="tiny muted">Ingreso RD$145K</div></div>
+                  <span class="pill green">Lista decision</span>
+                </div>
+                <div class="app-row">
+                  <div class="nowrap"><b>Hector Beltre</b><div class="tiny muted">***-*******-8 · KYC aprobado</div></div>
+                  <div class="nowrap">Lexus RX 350 F Sport 2022</div>
+                  <div class="nowrap">Premium Motors</div>
+                  <div class="money"><b>RD$1.82M</b></div>
+                  <span class="pill amber">Pide docs</span>
+                </div>
+                <div class="app-row">
+                  <div class="nowrap"><b>Rosa Mateo</b><div class="tiny muted">***-*******-5 · consentimiento pendiente</div></div>
+                  <div class="nowrap">Pre-aprobacion sin vehiculo</div>
+                  <div class="nowrap">Directo AutoRD</div>
+                  <div class="money"><b>RD$1.40M</b></div>
+                  <span class="pill blue">Nueva</span>
+                </div>
+                <div class="app-row">
+                  <div class="nowrap"><b>Carlos Mota</b><div class="tiny muted">***-*******-0 · KYC aprobado</div></div>
+                  <div class="nowrap">Lexus LX 600 Luxury 2024</div>
+                  <div class="nowrap">Joselito Auto Import</div>
+                  <div class="money"><b>RD$4.90M</b></div>
+                  <span class="pill red">SLA riesgo</span>
+                </div>
+              </section>
+
+              <aside class="detail">
+                <div class="detail-hero">
+                  <div class="split">
+                    <div><div class="tiny">Solicitud ARD-1048</div><h2 style="margin:4px 0 0;font-size:22px">Wendy Fernandez</h2></div>
+                    <span class="pill">Lista decision</span>
+                  </div>
+                  <p class="small" style="margin-top:10px;color:#dff7f2">Toyota Grand Highlander 2024 · Joselito Auto Import</p>
+                </div>
+                <div class="card pad">
+                  <div class="strong">Expediente</div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Monto solicitado</span><b>RD$2,350,000</b></div>
+                    <div class="kv"><span>Inicial</span><b>RD$450,000</b></div>
+                    <div class="kv"><span>Ingreso mensual</span><b>RD$145,000</b></div>
+                    <div class="kv"><span>Plazo deseado</span><b>7 anos</b></div>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="strong" style="margin-bottom:10px">Requisitos antes de decidir</div>
+                  <div class="checklist">
+                    <div class="check-row"><span class="check-ic ok">✓</span><div><b class="small">KYC DIDIT aprobado</b><div class="tiny muted">Cedula + prueba de vida</div></div><button class="btn">Ver</button></div>
+                    <div class="check-row"><span class="check-ic ok">✓</span><div><b class="small">Consentimiento firmado</b><div class="tiny muted">Banco autorizado para evaluar</div></div><button class="btn">Contrato</button></div>
+                    <div class="check-row"><span class="check-ic warn">!</span><div><b class="small">Estados de cuenta</b><div class="tiny muted">Recibido, pendiente revision</div></div><button class="btn">Revisar</button></div>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="strong" style="margin-bottom:10px">Registrar respuesta</div>
+                  <div class="decision-grid">
+                    <button class="btn navy">Pre-aprobar</button>
+                    <button class="btn">Pedir docs</button>
+                    <button class="btn">En evaluacion</button>
+                    <button class="btn danger">Rechazar</button>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="field"><label>Monto aprobado</label><input value="2350000" /></div>
+                    <div class="field"><label>Tasa APR</label><input value="9.25%" /></div>
+                    <div class="field"><label>Cuota</label><input value="RD$ 38,920" /></div>
+                    <div class="field"><label>Vence</label><input value="2026-08-05" /></div>
+                  </div>
+                  <div class="field"><label>Mensaje al cliente</label><textarea>Pre-aprobado sujeto a seguro y validacion final de ingresos.</textarea></div>
+                  <button class="btn primary" style="width:100%;margin-top:12px">Confirmar y notificar</button>
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          <div class="view" id="tasas">
+            <div class="rate-layout">
+              <aside class="card pad">
+                <h2 style="margin:0 0 6px">Tasas y reglas</h2>
+                <p class="small muted">Menos tabla gigante, mas reglas claras por combustible y condicion.</p>
+                <div class="kv-grid" style="grid-template-columns:1fr;margin-top:16px">
+                  <div class="kv"><span>Autos nuevos</span><b>Hasta 8 anos</b></div>
+                  <div class="kv"><span>Autos usados</span><b>Hasta 5 anos</b></div>
+                </div>
+                <button class="btn primary" style="width:100%;margin-top:14px">Guardar cambios</button>
+              </aside>
+              <section class="card pad">
+                <div class="fuel-list" style="grid-template-columns:repeat(4,1fr);display:grid;margin-bottom:14px">
+                  <div class="fuel active"><b>Gasolina</b><span class="pill green">Activo</span></div>
+                  <div class="fuel"><b>Gasoil</b><span class="pill">Config</span></div>
+                  <div class="fuel"><b>Hibrido</b><span class="pill">Config</span></div>
+                  <div class="fuel"><b>Electrico</b><span class="pill">Config</span></div>
+                </div>
+                <div class="rate-table">
+                  <div class="rate-row head"><span>Plazo</span><span>APR</span><span>Cuota por RD$1M</span><span>Regla</span></div>
+                  <div class="rate-row"><b>3 anos</b><input value="8.75" /><b>RD$31,670/mes</b><span class="pill green">Nuevo/usado</span></div>
+                  <div class="rate-row"><b>5 anos</b><input value="9.25" /><b>RD$20,880/mes</b><span class="pill green">Nuevo/usado</span></div>
+                  <div class="rate-row"><b>7 anos</b><input value="10.10" /><b>RD$16,620/mes</b><span class="pill amber">Solo nuevo</span></div>
+                  <div class="rate-row"><b>8 anos</b><input value="10.75" /><b>RD$15,410/mes</b><span class="pill amber">Solo nuevo</span></div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div class="view" id="whatsapp">
+            <div class="chat-layout">
+              <aside class="card pad">
+                <div class="strong">Conversaciones</div>
+                <div class="thread" style="margin-top:12px">
+                  <div class="thread-item"><b>Wendy Fernandez</b><div class="tiny muted">Solicitud ARD-1048 · 2 mensajes nuevos</div></div>
+                  <div class="thread-item"><b>Hector Beltre</b><div class="tiny muted">Banco pidio documentos</div></div>
+                  <div class="thread-item"><b>Dealer Joselito</b><div class="tiny muted">Pregunta por estado de pre-aprobacion</div></div>
+                </div>
+              </aside>
+              <section class="card pad">
+                <div class="split"><div><b>Wendy Fernandez</b><div class="tiny muted">WhatsApp conectado a la solicitud ARD-1048</div></div><span class="pill green">Cliente verificado</span></div>
+                <div style="margin-top:18px">
+                  <div class="message in">Hola, ya subi los estados de cuenta. Me avisan si falta algo?</div>
+                  <div class="message out">Recibido, Wendy. Estamos validando tus documentos y te responderemos por aqui.</div>
+                  <div class="message in">Perfecto, gracias.</div>
+                </div>
+                <div class="split" style="margin-top:18px"><input placeholder="Escribir respuesta..." /><button class="btn primary">Enviar</button></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="view" id="reportes">
+            <div class="report-hero">
+              <section class="report-hero-main">
+                <span class="pill green">Reportes ejecutivos</span>
+                <h2>Credito claro: conversion, SLA y donde se tranca cada solicitud.</h2>
+                <p>Una vista para gerencia y analistas: mide volumen aprobado, calidad por dealer, documentos pendientes y velocidad real de decision.</p>
+                <div class="report-period">
+                  <button class="active">Este mes</button>
+                  <button>7 dias</button>
+                  <button>Trimestre</button>
+                  <button>Exportar PDF</button>
+                </div>
+              </section>
+              <aside class="card pad readiness">
+                <div class="panel-title">
+                  <div>
+                    <h3>Salud de cartera</h3>
+                    <div class="tiny muted">Comparado con el mes anterior</div>
+                  </div>
+                  <span class="pill green">Mejorando</span>
+                </div>
+                <div class="readiness-score">
+                  <div class="score-ring"><span>74%</span></div>
+                  <div>
+                    <b>Buen ritmo de aprobacion</b>
+                    <div class="tiny muted" style="margin-top:4px">El mayor problema sigue siendo documentos pendientes y solicitudes sin analista asignado.</div>
+                  </div>
+                </div>
+                <button class="btn navy" style="width:100%">Ver acciones recomendadas</button>
+              </aside>
+            </div>
+
+            <div class="report-kpi-grid">
+              <div class="report-kpi"><span class="label">Solicitudes</span><strong>164</strong><span class="delta">Mes actual</span></div>
+              <div class="report-kpi"><span class="label">Pre-aprobadas</span><strong>41</strong><span class="delta">25% conversion</span></div>
+              <div class="report-kpi"><span class="label">Rechazadas</span><strong>16</strong><span class="pill red">10%</span></div>
+              <div class="report-kpi"><span class="label">Respuesta prom.</span><strong>7.4 h</strong><span class="delta">-1.8 h</span></div>
+              <div class="report-kpi"><span class="label">Volumen aprobado</span><strong>RD$84M</strong><span class="delta">+RD$12M</span></div>
+              <div class="report-kpi"><span class="label">Esperando cliente</span><strong>12</strong><span class="pill amber">Dar seguimiento</span></div>
+            </div>
+
+            <div class="report-layout">
+              <div class="report-stack">
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>Funnel de credito</h3>
+                      <div class="tiny muted">Desde solicitud recibida hasta decision final</div>
+                    </div>
+                    <span class="pill blue">164 total</span>
+                  </div>
+                  <div class="funnel">
+                    <div class="funnel-step"><b>Recibidas</b><div class="bar"><i style="width:100%"></i></div><strong>164</strong></div>
+                    <div class="funnel-step"><b>KYC completo</b><div class="bar"><i style="width:73%"></i></div><strong>119</strong></div>
+                    <div class="funnel-step"><b>En evaluacion</b><div class="bar"><i style="width:28%"></i></div><strong>46</strong></div>
+                    <div class="funnel-step"><b>Piden docs</b><div class="bar"><i style="width:13%; background:var(--amber)"></i></div><strong>21</strong></div>
+                    <div class="funnel-step"><b>Pre-aprobadas</b><div class="bar"><i style="width:25%"></i></div><strong>41</strong></div>
+                    <div class="funnel-step"><b>Rechazadas</b><div class="bar"><i style="width:10%; background:var(--red)"></i></div><strong>16</strong></div>
+                  </div>
+                </section>
+
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>Dealers por calidad de solicitudes</h3>
+                      <div class="tiny muted">Volumen, aprobaciones y velocidad de respuesta</div>
+                    </div>
+                    <button class="btn">Ordenar por SLA</button>
+                  </div>
+                  <div class="dealer-score">
+                    <div class="dealer-score-row head"><span>Dealer</span><span>Solic.</span><span>Aprobado</span><span>SLA</span><span>Estado</span></div>
+                    <div class="dealer-score-row"><b>Joselito Auto Import</b><span>42</span><b>RD$28M</b><span>8.8 h</span><span class="pill green">Fuerte</span></div>
+                    <div class="dealer-score-row"><b>Premium Motors</b><span>31</span><b>RD$20M</b><span>6.4 h</span><span class="pill green">Fuerte</span></div>
+                    <div class="dealer-score-row"><b>Auto Plaza RD</b><span>24</span><b>RD$15M</b><span>11.2 h</span><span class="pill amber">Revisar</span></div>
+                    <div class="dealer-score-row"><b>Caribe Motors</b><span>19</span><b>RD$9M</b><span>18.1 h</span><span class="pill red">Lento</span></div>
+                  </div>
+                </section>
+
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>Volumen por rango financiado</h3>
+                      <div class="tiny muted">Ayuda a ajustar tasas, cupos y requisitos por monto</div>
+                    </div>
+                    <span class="pill blue">RD$84M</span>
+                  </div>
+                  <div class="range-grid">
+                    <div class="range-card"><span class="tiny muted">Hasta RD$1M</span><b>22</b><div class="bar"><i style="width:40%"></i></div></div>
+                    <div class="range-card"><span class="tiny muted">RD$1M - 1.5M</span><b>39</b><div class="bar"><i style="width:70%"></i></div></div>
+                    <div class="range-card"><span class="tiny muted">RD$1.5M - 2M</span><b>48</b><div class="bar"><i style="width:86%"></i></div></div>
+                    <div class="range-card"><span class="tiny muted">Mas de RD$2M</span><b>55</b><div class="bar"><i style="width:100%"></i></div></div>
+                  </div>
+                </section>
+              </div>
+
+              <aside class="report-stack">
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>Cuellos de botella</h3>
+                      <div class="tiny muted">Lo que hoy frena decisiones</div>
+                    </div>
+                  </div>
+                  <div class="action-list">
+                    <div class="action-item"><span class="action-dot red">14</span><div><b>SLA +24h</b><div class="tiny muted">Priorizar antes del cierre</div></div><span class="sla-chip">Urgente</span></div>
+                    <div class="action-item"><span class="action-dot amber">21</span><div><b>Docs pendientes</b><div class="tiny muted">Enviar recordatorio automatico</div></div><span class="sla-chip">WhatsApp</span></div>
+                    <div class="action-item"><span class="action-dot amber">6</span><div><b>Sin analista</b><div class="tiny muted">Asignar por carga actual</div></div><span class="sla-chip">Asignar</span></div>
+                    <div class="action-item"><span class="action-dot">12</span><div><b>Cliente no confirma</b><div class="tiny muted">Pre-aprobado esperando respuesta</div></div><span class="sla-chip">Follow-up</span></div>
+                  </div>
+                </section>
+
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>SLA por analista</h3>
+                      <div class="tiny muted">Carga activa y casos listos</div>
+                    </div>
+                  </div>
+                  <div class="analyst-list">
+                    <div class="analyst-item"><div class="avatar">LF</div><div><b>Laura Fernandez</b><div class="tiny muted">14 activas, 5 listas</div></div><span class="pill green">6.1 h</span></div>
+                    <div class="analyst-item"><div class="avatar">MR</div><div><b>Miguel Rojas</b><div class="tiny muted">9 activas, 2 listas</div></div><span class="pill amber">9.4 h</span></div>
+                    <div class="analyst-item"><div class="avatar">AP</div><div><b>Ana Perez</b><div class="tiny muted">6 activas, 1 lista</div></div><span class="pill red">13.2 h</span></div>
+                  </div>
+                </section>
+
+                <section class="card pad">
+                  <div class="panel-title">
+                    <div>
+                      <h3>Tendencia diaria</h3>
+                      <div class="tiny muted">Solicitudes nuevas por dia</div>
+                    </div>
+                    <span class="pill green">+18%</span>
+                  </div>
+                  <div class="spark-bars">
+                    <i style="height:32%"></i><i style="height:44%"></i><i style="height:38%"></i><i style="height:61%"></i><i style="height:52%"></i><i style="height:68%"></i>
+                    <i style="height:58%"></i><i style="height:76%"></i><i style="height:64%"></i><i style="height:86%"></i><i style="height:72%"></i><i style="height:94%"></i>
+                  </div>
+                </section>
+
+                <div class="report-callout">
+                  <b>Recomendacion</b>
+                  <div class="small muted">Crear regla: si KYC esta completo y documentos estan correctos, mover automaticamente a "Lista para decision".</div>
+                  <button class="btn primary">Crear regla</button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="caption">AutoRD Banco - Mobile bank queue</div>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-top">
+          <div class="brand"><div class="bank-logo" style="width:38px;height:38px;border-radius:12px;font-size:12px">BHD</div><div><strong>Mesa de credito</strong><span>9 listas para decidir</span></div></div>
+          <button class="btn" style="min-height:36px;padding:0 10px">Filtros</button>
+        </div>
+        <div class="content">
+          <div class="search" style="width:100%"><span>⌕</span><input placeholder="Buscar solicitud..." /></div>
+          <div class="mobile-kpis">
+            <div class="card kpi" style="min-height:96px"><div class="kpi-top">Listas</div><strong>9</strong><span class="delta">Decidir</span></div>
+            <div class="card kpi" style="min-height:96px"><div class="kpi-top">SLA</div><strong>4</strong><span class="pill red">Urgente</span></div>
+          </div>
+          <div class="filter-pills" style="margin-bottom:12px;overflow:auto;flex-wrap:nowrap">
+            <span class="pill active">Todas</span><span class="pill green">KYC ok</span><span class="pill amber">Docs</span><span class="pill red">+24 h</span>
+          </div>
+          <div class="phone-card mobile-app">
+            <div class="split"><b>Wendy Fernandez</b><span class="pill green">Lista</span></div>
+            <div class="tiny muted">Toyota Grand Highlander 2024 · Joselito Auto Import</div>
+            <div class="kv-grid">
+              <div class="kv"><span>Monto</span><b>RD$2.35M</b></div>
+              <div class="kv"><span>Ingreso</span><b>RD$145K</b></div>
+            </div>
+            <div class="check-row"><span class="check-ic ok">✓</span><div><b class="small">KYC + consentimiento</b><div class="tiny muted">Completo para evaluar</div></div><span>›</span></div>
+            <button class="btn primary" style="width:100%">Abrir expediente</button>
+          </div>
+          <div class="phone-card mobile-app">
+            <div class="split"><b>Hector Beltre</b><span class="pill amber">Docs</span></div>
+            <div class="tiny muted">Lexus RX 350 F Sport 2022 · Premium Motors</div>
+            <div class="check-row"><span class="check-ic warn">!</span><div><b class="small">Estados de cuenta pendientes</b><div class="tiny muted">Enviar recordatorio WhatsApp</div></div><span>›</span></div>
+          </div>
+          <div class="phone-card mobile-app">
+            <div class="split"><b>Carlos Mota</b><span class="pill red">SLA</span></div>
+            <div class="tiny muted">Lexus LX 600 Luxury 2024 · Joselito Auto Import</div>
+            <button class="btn navy" style="width:100%">Revisar ahora</button>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <button class="active">⌂<span>Inicio</span></button>
+          <button>%<span>Tasas</span></button>
+          <button>wa<span>Chat</span></button>
+          <button>▦<span>Reportes</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll('[data-go]');
+    const views = document.querySelectorAll('.view');
+    const navButtons = document.querySelectorAll('.nav-item[data-go]');
+    const tabButtons = document.querySelectorAll('.tab[data-go]');
+    function show(id) {
+      views.forEach((v) => v.classList.toggle('active', v.id === id));
+      navButtons.forEach((b) => b.classList.toggle('active', b.dataset.go === id));
+      tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.go === id));
+      if (location.hash.slice(1) !== id) history.replaceState(null, '', `#${id}`);
+    }
+    buttons.forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));
+    function showFromHash() {
+      const initialView = location.hash.slice(1);
+      if (initialView && document.getElementById(initialView)) show(initialView);
+    }
+    showFromHash();
+    window.addEventListener('hashchange', showFromHash);
+    window.addEventListener('load', showFromHash);
+  </script>
+</body>
+</html>
