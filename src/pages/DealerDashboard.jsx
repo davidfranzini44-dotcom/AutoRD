@@ -4,7 +4,10 @@ import {
   Plus, MessageCircle, Users, Landmark, Bell, TrendingUp,
   BadgeCheck, ChevronRight, Eye, AlertTriangle, Clock, CheckCircle2, CalendarClock,
 } from 'lucide-react'
-import { getDealerData, getMyDealer, getDealerLeads } from '../data/api'
+import {
+  getDealerData, getMyDealer, getDealerLeads, getDealerApplications,
+  getDealerVehicleEventCounts, getDealerRecentEvents, LIVE,
+} from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney, fmtRD } from '../data/demo'
 import DealerLogo from '../components/DealerLogo'
@@ -15,12 +18,43 @@ import { buildFinancing, buildActivity, dashboardStats, listingScore } from '../
 const ACT_IC = { lead: Users, financing: Landmark, offer: BadgeCheck, message: MessageCircle, view: Eye, sale: CheckCircle2 }
 const TAREA_FG = { amber: '#b45309', red: '#b91c1c', blue: '#1d4ed8' }
 
+const relTime = (at) => {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(at).getTime()) / 60000))
+  if (mins < 1) return 'Ahora mismo'
+  if (mins < 60) return `Hace ${mins} min`
+  const h = Math.round(mins / 60)
+  if (h < 24) return `Hace ${h} h`
+  const d = Math.round(h / 24)
+  return d === 1 ? 'Ayer' : `Hace ${d} días`
+}
+
+// Real activity from vehicle_events (views, shares, WhatsApp clicks, financing
+// clicks) — replaces a hardcoded feed that named invented customers.
+const EVENT_TEXT = {
+  view: (v) => `Alguien vio tu ${v}`,
+  share: (v) => `Compartieron tu ${v}`,
+  contact: (v) => `Un comprador pidió contacto por ${v}`,
+  financing: (v) => `Un comprador abrió financiamiento para ${v}`,
+}
+const EVENT_KIND = { view: 'view', share: 'view', contact: 'message', financing: 'financing' }
+function realActivity(events) {
+  return (events || []).map((e) => ({
+    kind: EVENT_KIND[e.kind] || 'view',
+    text: (EVENT_TEXT[e.kind] || EVENT_TEXT.view)(e.vehicle),
+    time: relTime(e.at),
+  }))
+}
+
 export default function DealerDashboard() {
   const { profile } = useAuth() || {}
   const [dealer, setDealer] = useState(null)
   const [inventory, setInventory] = useState([])
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
+  const [realApps, setRealApps] = useState([])
+  const [eventCounts, setEventCounts] = useState({})
+  const [recentEvents, setRecentEvents] = useState([])
+  const isDemo = !LIVE
 
   useEffect(() => {
     let alive = true
@@ -28,18 +62,25 @@ export default function DealerDashboard() {
       getDealerData(profile?.dealer_id),
       getMyDealer(profile?.dealer_id).catch(() => null),
       getDealerLeads().catch(() => []),
-    ]).then(([d, dl, ld]) => {
+      getDealerApplications(profile?.dealer_id).catch(() => []),
+      getDealerVehicleEventCounts().catch(() => ({})),
+      getDealerRecentEvents(10).catch(() => []),
+    ]).then(([d, dl, ld, apps, counts, events]) => {
       if (!alive) return
       setInventory(d.inventory || [])
       setDealer(dl)
       setLeads(ld)
+      setRealApps(apps)
+      setEventCounts(counts)
+      setRecentEvents(events)
       setLoading(false)
     }).catch(() => { if (alive) setLoading(false) })
     return () => { alive = false }
   }, [profile?.dealer_id])
 
-  const financing = buildFinancing(inventory)
-  const activity = buildActivity(inventory)
+  // Real applications + real engagement. Demo shapes remain only offline.
+  const financing = isDemo ? buildFinancing(inventory) : realApps
+  const activity = isDemo ? buildActivity(inventory) : realActivity(recentEvents)
   const { tareas } = dashboardStats(inventory, leads, financing)
   const inventoryValue = inventory.reduce((sum, v) => sum + (Number(v.price) || 0), 0)
   const published = inventory.filter((v) => (v.status || 'publicado') === 'publicado').length
@@ -57,14 +98,19 @@ export default function DealerDashboard() {
   const unreadLeads = leads.filter((l) => Number(l.unread || 0) > 0 || l.unread === true).length
   const hotLeads = leads.filter((l) => l.hot || ['financiamiento', 'negociando', 'reservado'].includes(l.stage)).length
   const followUps = leads.filter((l) => l.followUpAt || l.next).length
+  // 'preaprobado'/'documentos' are the shared FIN_STAGES keys that
+  // getDealerApplications derives too, so these counts work for real data.
   const financeOffers = financing.filter((f) => f.status === 'preaprobado').length
   const financeDocs = financing.filter((f) => f.status === 'documentos').length
   const healthLabel = avgQuality >= 85 ? 'Excelente' : avgQuality >= 70 ? 'Buen estado' : 'Por mejorar'
 
+  // Real engagement per vehicle. (Offline demo keeps illustrative numbers so the
+  // console isn't empty without a backend.)
   const topVehicles = [...inventory]
     .map((v, i) => ({
       ...v,
-      views: [214, 142, 98, 76, 52][i] || 30,
+      views: isDemo ? ([214, 142, 98, 76, 52][i] || 30) : (eventCounts[v.dbId]?.view || 0),
+      contacts: isDemo ? 0 : (eventCounts[v.dbId]?.contact || 0),
       leadCount: leads.filter((l) => l.vehicle?.id === v.id).length,
     }))
     .sort((a, b) => b.views - a.views)
@@ -166,17 +212,18 @@ export default function DealerDashboard() {
               </div>
               <div className="table-wrap" style={{ overflowX: 'auto' }}>
                 <table className="table">
-                  <thead><tr><th>Vehículo</th><th className="num">Precio</th><th className="num">Vistas</th><th className="num">Leads</th></tr></thead>
+                  <thead><tr><th>Vehículo</th><th className="num">Precio</th><th className="num">Vistas</th><th className="num">Contactos</th><th className="num">Leads</th></tr></thead>
                   <tbody>
                     {topVehicles.map((v) => (
                       <tr key={v.id}>
                         <td><div className="row center gap-8"><span className="dlrx-photo"><CarImage make={v.make} model={v.model} bodyType={v.bodyType} seed={v.id} tone={v.tone} photo={v.coverPhoto} /></span><b className="small">{v.make} {v.model} {v.year}</b></div></td>
                         <td className="num small">{fmtMoney(v.price, v.currency)}</td>
                         <td className="num"><span className="row center gap-3" style={{ justifyContent: 'flex-end' }}><Eye size={12} className="muted" /> {v.views}</span></td>
+                        <td className="num">{v.contacts}</td>
                         <td className="num strong">{v.leadCount}</td>
                       </tr>
                     ))}
-                    {topVehicles.length === 0 && <tr><td colSpan={4} className="muted tiny" style={{ textAlign: 'center', padding: 20 }}>Publica tu primer vehículo para ver métricas.</td></tr>}
+                    {topVehicles.length === 0 && <tr><td colSpan={5} className="muted tiny" style={{ textAlign: 'center', padding: 20 }}>Publica tu primer vehículo para ver métricas.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -203,6 +250,11 @@ export default function DealerDashboard() {
                     <div key={i} className="row gap-10 dash-activity"><div className="dash-act-ic"><Icon size={14} /></div><div className="grow"><div className="small">{a.text}</div><div className="tiny muted">{a.time}</div></div></div>
                   )
                 })}
+                {activity.length === 0 && (
+                  <div className="tiny muted" style={{ padding: '6px 0', lineHeight: 1.45 }}>
+                    Aún no hay actividad. Cuando alguien vea, comparta o pida financiamiento por tus vehículos, aparecerá aquí.
+                  </div>
+                )}
               </div>
             </section>
           </div>

@@ -727,6 +727,35 @@ export async function getDealerPreapprovalInterests() {
   }))
 }
 
+// ---------------- Dealer: real engagement (vehicle_events) ----------------
+// Real view/share/contact/financing counts per vehicle. The dashboard used to
+// show invented view numbers ([214, 142, 98, …]) against real cars.
+export async function getDealerVehicleEventCounts() {
+  if (!LIVE) return {}
+  const { data, error } = await supabase.rpc('my_dealer_vehicle_events')
+  if (error || !Array.isArray(data)) return {}
+  const map = {}
+  data.forEach((r) => { (map[r.vehicle_id] ||= {})[r.kind] = Number(r.total) || 0 })
+  return map
+}
+
+// Recent real engagement, newest first (RLS scopes it to this dealer).
+export async function getDealerRecentEvents(limit = 12) {
+  if (!LIVE) return []
+  const { data, error } = await supabase
+    .from('vehicle_events')
+    .select('kind, created_at, vehicle:vehicles(slug, make, model, year)')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error || !Array.isArray(data)) return []
+  return data.map((e) => ({
+    kind: e.kind,
+    at: e.created_at,
+    vehicle: e.vehicle ? `${e.vehicle.make} ${e.vehicle.model} ${e.vehicle.year}` : 'Un vehículo',
+    slug: e.vehicle?.slug || null,
+  }))
+}
+
 // ---------------- Dealer: real financing applications ----------------
 // The dealer console used to render a hardcoded demo pipeline, so a real dealer
 // saw invented customers and none of their actual applications. This returns the
