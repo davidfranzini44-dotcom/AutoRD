@@ -3,7 +3,7 @@ import {
   Inbox, Loader2, FileWarning, CheckCircle2, XCircle, Search, ShieldCheck, FileCheck2,
   Car, Upload, Info, Send, FileText, ExternalLink, Plus, Clock, Users,
   AlertTriangle, ChevronLeft, UserCheck, Phone, Mail, MapPin, Briefcase, Eye, X,
-  MessageSquare, ClipboardList, Filter, TimerReset, WalletCards, BadgeCheck, Pencil,
+  MessageSquare, ClipboardList, Filter, TimerReset, WalletCards, BadgeCheck, Pencil, User,
 } from 'lucide-react'
 import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
