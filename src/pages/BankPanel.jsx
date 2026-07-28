@@ -493,19 +493,6 @@ function ClientInfoPanel({ app }) {
   }, [app.applicationId])
   useEffect(load, [load])
 
-  // The DIDIT liveness selfie, so an analyst can see who they are deciding on
-  // without opening the contract. Reuses get_contract_identity, which decides
-  // for itself whether this caller may see the images -- no second path to KYC
-  // photos, and an unauthorised caller simply gets nothing.
-  const [face, setFace] = useState(null)
-  useEffect(() => {
-    let alive = true
-    if (!app.contractToken) { setFace(null); return undefined }
-    getContractIdentity(app.contractToken)
-      .then((r) => { if (alive) setFace(r?.authorized ? r.livenessUrl : null) })
-      .catch(() => { if (alive) setFace(null) })
-    return () => { alive = false }
-  }, [app.contractToken])
 
   const declared = info?.declared || {}
   const rec = info?.bank || null
@@ -534,17 +521,6 @@ function ClientInfoPanel({ app }) {
 
   return (
     <>
-      <div className="bankx-face-row">
-        {face
-          ? <img className="bankx-face" src={face} alt="" />
-          : <span className="bankx-face bankx-face-empty"><User size={18} /></span>}
-        <div style={{ minWidth: 0 }}>
-          <div className="strong">{app.customer || 'Cliente'}</div>
-          <div className="tiny muted">
-            {face ? 'Selfie verificada por DIDIT' : app.kyc === 'aprobado' ? 'Verificado · foto no disponible' : 'Identidad sin verificar'}
-          </div>
-        </div>
-      </div>
       <CedulaLine app={app} />
       <div className="bankx-infoline"><span>Teléfono</span><b>{app.phone ? `+${String(app.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
       {info === undefined ? (
@@ -765,6 +741,19 @@ const fmtEventWhen = (at) => {
 }
 
 function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
+  // The photo from the client's cédula, beside their name — so an analyst sees
+  // who the file is about without opening the contract. get_contract_identity
+  // decides for itself whether this caller may see it, so there is exactly one
+  // authorisation rule for identity images and an unauthorised caller gets none.
+  const [idFace, setIdFace] = useState(null)
+  useEffect(() => {
+    let alive = true
+    if (!a.contractToken) { setIdFace(null); return undefined }
+    getContractIdentity(a.contractToken)
+      .then((r) => { if (alive) setIdFace(r?.authorized ? r.idUrl : null) })
+      .catch(() => { if (alive) setIdFace(null) })
+    return () => { alive = false }
+  }, [a.contractToken])
   const [docs, setDocs] = useState([])
   const [docStatus, setDocStatus] = useState({})
   const [noteInput, setNoteInput] = useState('')
@@ -806,10 +795,15 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
       <div className="bankx-exphero">
         <div className="bankx-exphero-main">
           <div className="bankx-exptitle">
-            <div>
+            <div className="bankx-heroname">
+              {idFace
+                ? <img className="bankx-face" src={idFace} alt="" />
+                : <span className="bankx-face bankx-face-empty" title={a.kyc === 'aprobado' ? 'Verificado · foto no disponible' : 'Identidad sin verificar'}><User size={20} /></span>}
+              <div style={{ minWidth: 0 }}>
               <span className="pill">Solicitud {a.id}</span>
               <h2>{a.customer}</h2>
               <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
+              </div>
               {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval) || a.clientAccepted) && (
                 <div className="row wrap gap-6" style={{ marginTop: 8 }}>
                   {a.validUntil && (
