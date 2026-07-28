@@ -296,6 +296,8 @@ function ClientHistoryDealer({ buyerId }) {
 }
 
 function AppDrawer({ app, onClose }) {
+  const banks = Array.isArray(app.banks) ? app.banks : []
+  const missing = Array.isArray(app.missing) ? app.missing : []
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', zIndex: 70, display: 'flex', justifyContent: 'flex-end' }} onClick={onClose}>
       <aside style={{ width: 'min(460px, 100%)', height: '100%', background: 'var(--surface, #fff)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -334,9 +336,9 @@ function AppDrawer({ app, onClose }) {
 
           <div>
             <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', marginBottom: 6 }}>Bancos</div>
-            {app.banks.length ? (
+            {banks.length ? (
               <div className="col gap-6">
-                {app.banks.map((b) => {
+                {banks.map((b) => {
                   const info = BANK_STATUS[b.status] || BANK_STATUS.en_evaluacion
                   const t = TONE[info.tone] || TONE.blue
                   return (
@@ -358,18 +360,18 @@ function AppDrawer({ app, onClose }) {
             </div>
           )}
 
-          {app.missing.length > 0 && (
+          {missing.length > 0 && (
             <div>
               <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', marginBottom: 6 }}>Documentos faltantes</div>
               <div className="col gap-4">
-                {app.missing.map((m) => <div key={m} className="row center gap-6 small"><AlertTriangle size={13} color="#b45309" /> {m}</div>)}
+                {missing.map((m) => <div key={m} className="row center gap-6 small"><AlertTriangle size={13} color="#b45309" /> {m}</div>)}
               </div>
             </div>
           )}
 
           <div className="row wrap gap-8">
             {app.status === 'kyc_pendiente' && <a className="btn btn-navy btn-block" href={waLink(app.phone, kycAppMsg(app))} target="_blank" rel="noreferrer"><ShieldCheck size={15} /> Solicitar verificación (KYC)</a>}
-            {app.missing.length > 0 && app.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-block" href={waLink(app.phone, docMsg(app))} target="_blank" rel="noreferrer"><FileText size={15} /> Solicitar documentos</a>}
+            {missing.length > 0 && app.status !== 'kyc_pendiente' && <a className="btn btn-outline btn-block" href={waLink(app.phone, docMsg(app))} target="_blank" rel="noreferrer"><FileText size={15} /> Solicitar documentos</a>}
             <a className="btn btn-primary btn-block" href={waLink(app.phone, offerMsg(app))} target="_blank" rel="noreferrer"><Send size={15} /> Enviar oferta al cliente</a>
           </div>
         </div>

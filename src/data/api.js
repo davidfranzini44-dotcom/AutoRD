@@ -936,6 +936,7 @@ export async function getDealerApplications(dealerDbId) {
       createdAt: a.created_at,
       // Dealers cannot read documents (RLS) — surface only that a bank asked.
       docsRequested: responses.some((r) => r.status === 'pendiente_docs'),
+      missing: responses.some((r) => r.status === 'pendiente_docs') ? ['Documentos solicitados por el banco'] : [],
     }
   })
 }
