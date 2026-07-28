@@ -98,10 +98,10 @@ export default function MyFinancing() {
     return () => { alive = false }
   }, [c])
 
-  if (c === undefined) return <main className="page"><div className="container muted">Cargando…</div></main>
+  if (c === undefined) return <main className="page finance-hub-page"><div className="container muted">Cargando…</div></main>
   if (!c) {
     return (
-      <main className="page"><div className="container">
+      <main className="page finance-hub-page"><div className="container finance-hub">
         <div className="card card-pad" style={{ textAlign: 'center' }}>
           <h2 style={{ marginBottom: 8 }}>Aún no tienes una solicitud</h2>
           <p className="muted small" style={{ marginBottom: 16 }}>Inicia una solicitud de financiamiento desde cualquier vehículo.</p>
@@ -140,6 +140,13 @@ export default function MyFinancing() {
     .slice().sort((a, b) => (b.approvedAmount || 0) - (a.approvedAmount || 0))[0] || null
   const preValidUntil = bestPre?.validUntil ? fmtDay(bestPre.validUntil) : null
   const preExpired = !!bestPre?.expired
+  const sentDate = c.createdAt ? new Date(c.createdAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }) : null
+  const moneyLabel = fstatus.amount || c.approvedAmount || c.requestedAmount
+    ? fmtRD(fstatus.amount || c.approvedAmount || c.requestedAmount)
+    : 'Pendiente'
+  const nextStepLabel = summary.complete
+    ? (summary.inReview > 0 ? 'Banco revisando' : 'Todo completo')
+    : (summary.next?.label || `${summary.outstanding} pendiente${summary.outstanding === 1 ? '' : 's'}`)
 
   async function handleUpload(doc, file) {
     if (!file) return
@@ -159,21 +166,27 @@ export default function MyFinancing() {
   }
 
   return (
-    <main className="page">
-      <div className="container" style={{ maxWidth: 1080 }}>
-        <div className="row between center wrap gap-12" style={{ marginBottom: 8 }}>
-          <div>
-            <h1 style={{ fontSize: 24 }}>{c.isPreapproval ? 'Mi pre-aprobación' : 'Mi financiamiento'}</h1>
-            <p className="muted small" style={{ marginTop: 4 }}>{c.isPreapproval ? 'Pre-aprobación' : 'Solicitud'} #{c.code}{c.createdAt ? ` · Enviada el ${new Date(c.createdAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</p>
+    <main className="page finance-hub-page">
+      <div className="container finance-hub" style={{ maxWidth: 1080 }}>
+        <div className="finance-hub-hero">
+          <div className="finance-hub-copy">
+            <span className={`chip finance-status-pill finance-status-${fstatus.key}`}>{fstatus.label}</span>
+            <h1>{c.isPreapproval ? 'Mi pre-aprobación' : 'Mi financiamiento'}</h1>
+            <p>{c.isPreapproval ? 'Pre-aprobación' : 'Solicitud'} #{c.code}{sentDate ? ` · Enviada el ${sentDate}` : ''}</p>
           </div>
-          <div className="row gap-8">
+          <div className="finance-hub-actions">
             <StatusChip status="aprobado">KYC aprobado</StatusChip>
             <span className="chip chip-teal"><Landmark size={13} /> {c.responses.length} bancos</span>
             {c.contractToken && <a className="chip" href={`/contrato/${c.contractToken}`} target="_blank" rel="noreferrer" style={{ cursor: 'pointer' }}><FileSignature size={13} /> Ver contrato</a>}
           </div>
+          <div className="finance-hub-snapshot" aria-label="Resumen de financiamiento">
+            <FinanceSnapshot label={fstatus.amount ? (fstatus.key === 'aprobado' ? 'Aprobado' : 'Pre-aprobado') : 'Monto'} value={moneyLabel} />
+            <FinanceSnapshot label="Siguiente paso" value={nextStepLabel} />
+            <FinanceSnapshot label="Bancos" value={`${c.responses.length}`} sub={c.responses.length === 1 ? 'respuesta' : 'respuestas'} />
+          </div>
         </div>
 
-        <div className="split" style={{ gridTemplateColumns: '1fr 340px' }}>
+        <div className="split finance-layout">
           <div className="col gap-16">
             {/* One status card. This used to be three independent banners
                 (pre-aprobación / ofertas / documentos) that could all render at
@@ -229,7 +242,7 @@ export default function MyFinancing() {
           </div>
 
           {/* Right: timeline + vehicle */}
-          <aside className="side-panel col gap-16">
+          <aside className="side-panel finance-side-panel col gap-16">
             <div className="card card-pad">
               <div className="panel-title">Estado de la solicitud</div>
               <div className="timeline">
@@ -442,8 +455,8 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
     else setAcceptErr('No pudimos registrar tu aceptación. Intenta de nuevo.')
   }
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
-      <div className="row center gap-12" style={{ padding: '14px 16px' }}>
+    <div className="card finance-bank-response" style={{ padding: 0, overflow: 'hidden', boxShadow: 'none', borderColor: hasTerms ? 'var(--green-bd)' : 'var(--line)' }}>
+      <div className="finance-bank-head row center gap-12" style={{ padding: '14px 16px' }}>
         <BankLogo slug={b.id} name={b.name} initials={b.initials} color={b.color} size={22} />
         <div className="grow">
           <div className="strong small">{b.name}</div>
@@ -463,7 +476,7 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
               )}
             </div>
           ) : null}
-          <div className="grid grid-4" style={{ gap: 10 }}>
+          <div className="finance-term-grid">
             <Term l="Tasa" v={r.apr ? `${r.apr}%` : '—'} />
             <Term l="Plazo" v={r.term ? `${r.term} años` : '—'} />
             <Term l="Inicial requerido" v={r.down ? fmtRD(r.down) : '—'} />
@@ -519,7 +532,17 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
   )
 }
 function Term({ l, v }) {
-  return <div><div className="tiny" style={{ color: 'var(--green)' }}>{l}</div><div className="strong" style={{ fontSize: 14 }}>{v}</div></div>
+  return <div className="finance-term"><div className="tiny" style={{ color: 'var(--green)' }}>{l}</div><div className="strong" style={{ fontSize: 14 }}>{v}</div></div>
+}
+
+function FinanceSnapshot({ label, value, sub }) {
+  return (
+    <div className="finance-snapshot-card">
+      <span>{label}</span>
+      <b>{value}</b>
+      {sub ? <small>{sub}</small> : null}
+    </div>
+  )
 }
 
 // "Qué falta": the client's single answer to "what do I still have to do?".
