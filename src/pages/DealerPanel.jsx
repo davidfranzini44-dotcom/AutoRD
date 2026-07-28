@@ -4,11 +4,13 @@ import {
   Boxes, Users, Landmark, UserCheck, TrendingUp, Search, Plus,
   Phone, UserPlus, Pencil, CheckCircle2, Eye, ShieldCheck, MoreHorizontal, ChevronRight, ChevronLeft,
   MessageCircle, Share2, FileText, RotateCcw, Trash2, ExternalLink, X, Filter, Star, UploadCloud, ImageOff,
+  DownloadCloud, Loader2,
 } from 'lucide-react'
 import { fmtRD, fmtMoney } from '../data/demo'
 import {
   getDealerData, getDealerLeadCounts, setVehicleStatus, updateVehicleFields, deleteVehicle,
   getVehiclePhotos, addVehiclePhotos, deleteVehiclePhoto, setVehicleCover, reorderVehiclePhotos,
+  previewSuperCarrosDealerImport, importSuperCarrosVehicles,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -262,6 +264,148 @@ function EditVehicleModal({ vehicle, onClose, onSaved, onChanged }) {
   )
 }
 
+function SuperCarrosImportModal({ onClose, onImported }) {
+  const [url, setUrl] = useState('https://www.supercarros.com/Dealers/joselitoautoimport/')
+  const [preview, setPreview] = useState(null)
+  const [selected, setSelected] = useState({})
+  const [mode, setMode] = useState('new')
+  const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [err, setErr] = useState('')
+  const vehicles = preview?.vehicles || []
+  const selectedVehicles = vehicles.filter((v, i) => selected[v.sourceUrl || i])
+
+  async function runPreview() {
+    setBusy(true)
+    setErr('')
+    setPreview(null)
+    try {
+      const data = await previewSuperCarrosDealerImport(url, { detailLimit: 12 })
+      setPreview(data)
+      const next = {}
+      ;(data.vehicles || []).forEach((v, i) => { next[v.sourceUrl || i] = !v.duplicate })
+      setSelected(next)
+    } catch (e) {
+      setErr(e?.message || 'No se pudo leer SuperCarros.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function runImport() {
+    if (!selectedVehicles.length) return
+    setImporting(true)
+    setErr('')
+    try {
+      const res = await importSuperCarrosVehicles(selectedVehicles, { mode })
+      onImported?.(res)
+    } catch (e) {
+      setErr(e?.message || 'No se pudo importar el inventario.')
+      setImporting(false)
+    }
+  }
+
+  const toggle = (v, i) => {
+    const key = v.sourceUrl || i
+    setSelected((p) => ({ ...p, [key]: !p[key] }))
+  }
+  const allVisible = vehicles.length > 0 && vehicles.every((v, i) => selected[v.sourceUrl || i])
+  const setAll = (value) => {
+    const next = {}
+    vehicles.forEach((v, i) => { next[v.sourceUrl || i] = value })
+    setSelected(next)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.54)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div className="card" style={{ width: '100%', maxWidth: 860, maxHeight: '92vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="row between center" style={{ padding: '16px 18px', borderBottom: '1px solid var(--line-2, #e2e8f0)' }}>
+          <div>
+            <h3 className="row center gap-8"><DownloadCloud size={18} color="var(--teal-700)" /> Importar desde SuperCarros</h3>
+            <p className="tiny muted">Pega el inventario del dealer. AutoRD revisa duplicados antes de guardar.</p>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
+        </div>
+
+        <div className="col gap-12" style={{ padding: 18 }}>
+          <div className="card" style={{ background: 'var(--surface-2, #f8fafc)', padding: 12 }}>
+            <label className="tiny strong">URL del dealer en SuperCarros</label>
+            <div className="row gap-8 wrap" style={{ marginTop: 6 }}>
+              <input className="input grow" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.supercarros.com/Dealers/..." style={{ minWidth: 260 }} />
+              <button className="btn btn-primary" onClick={runPreview} disabled={busy || importing}>
+                {busy ? <Loader2 size={16} className="spin" /> : <Search size={16} />}
+                {busy ? 'Leyendo...' : 'Vista previa'}
+              </button>
+            </div>
+            <div className="tiny muted" style={{ marginTop: 7 }}>La clave de Firecrawl vive en Supabase Secrets como FIRECRAWL_API_KEY.</div>
+          </div>
+
+          {err && <div className="notice" style={{ borderColor: '#fecaca', background: '#fff1f2', color: '#991b1b' }}><ShieldCheck size={16} /> {err}</div>}
+
+          {preview && (
+            <>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+                <div className="metric-card"><div className="mc-v">{preview.dealerName || 'Dealer'}</div><div className="mc-l">Dealer detectado</div></div>
+                <div className="metric-card"><div className="mc-v">{vehicles.length}</div><div className="mc-l">Vehículos encontrados</div></div>
+                <div className="metric-card"><div className="mc-v">{vehicles.filter((v) => v.duplicate).length}</div><div className="mc-l">Duplicados</div></div>
+                <div className="metric-card"><div className="mc-v">{preview.pagesScanned || 1}</div><div className="mc-l">Páginas leídas</div></div>
+              </div>
+
+              <div className="row between center wrap gap-8">
+                <div className="row center gap-8">
+                  <button className="btn btn-outline btn-sm" onClick={() => setAll(!allVisible)}>{allVisible ? 'Quitar todos' : 'Seleccionar todos'}</button>
+                  <select className="input" value={mode} onChange={(e) => setMode(e.target.value)} style={{ height: 34, width: 190 }}>
+                    <option value="new">Importar solo nuevos</option>
+                    <option value="update">Actualizar duplicados</option>
+                  </select>
+                </div>
+                <span className="tiny muted">{selectedVehicles.length} seleccionados</span>
+              </div>
+
+              <div className="table-wrap" style={{ maxHeight: 380, overflow: 'auto', border: '1px solid var(--line-2, #e2e8f0)', borderRadius: 14 }}>
+                <table className="table">
+                  <thead>
+                    <tr><th></th><th>Vehículo</th><th className="num">Precio</th><th>Datos</th><th>Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    {vehicles.map((v, i) => {
+                      const key = v.sourceUrl || i
+                      const name = v.title || `${v.make || ''} ${v.model || ''} ${v.year || ''}`.trim()
+                      return (
+                        <tr key={key}>
+                          <td><input type="checkbox" checked={!!selected[key]} onChange={() => toggle(v, i)} /></td>
+                          <td>
+                            <div className="strong">{name || 'Vehículo sin título'}</div>
+                            <a className="tiny link-teal" href={v.sourceUrl} target="_blank" rel="noreferrer">Ver fuente <ExternalLink size={11} /></a>
+                          </td>
+                          <td className="num strong">{v.price ? fmtMoney(v.price, v.currency) : '—'}</td>
+                          <td className="tiny muted">
+                            {[v.transmission, v.fuel, v.color, v.bodyType].filter(Boolean).slice(0, 3).join(' · ') || 'Pendiente de detalle'}
+                          </td>
+                          <td>{v.duplicate ? <span className="chip chip-amber">Duplicado</span> : <span className="chip chip-green">Nuevo</span>}</td>
+                        </tr>
+                      )
+                    })}
+                    {vehicles.length === 0 && <tr><td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 24 }}>No se encontraron vehículos en ese inventario.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="row between center" style={{ padding: '12px 18px', borderTop: '1px solid var(--line-2, #e2e8f0)', position: 'sticky', bottom: 0, background: 'var(--surface, #fff)' }}>
+          <button className="btn btn-ghost" onClick={onClose} disabled={importing}>Cancelar</button>
+          <button className="btn btn-primary" onClick={runImport} disabled={!selectedVehicles.length || importing}>
+            {importing ? <Loader2 size={16} className="spin" /> : <DownloadCloud size={16} />}
+            {importing ? 'Importando...' : `Importar ${selectedVehicles.length || ''}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Tiny image-count glyph (avoids adding another lucide import).
 function ImgCount({ size = 14, className }) {
   return (
@@ -278,6 +422,7 @@ export default function DealerPanel({ view = 'resumen' }) {
   const [engagement, setEngagement] = useState({})
   const [reload, setReload] = useState(0)
   const [editing, setEditing] = useState(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [menuFor, setMenuFor] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [q, setQ] = useState('')
@@ -468,7 +613,10 @@ export default function DealerPanel({ view = 'resumen' }) {
                 <button className="btn btn-ghost btn-sm" onClick={() => { setQ(''); setBrand(''); setStatusF(''); setOnlyIncomplete(false) }}><X size={14} /> Limpiar</button>
               )}
             </div>
-            <span className="tiny muted row center gap-4"><Filter size={13} /> {filteredInventory.length} de {inventory.length}</span>
+            <div className="row center gap-8">
+              <button className="btn btn-outline btn-sm" onClick={() => setImportOpen(true)}><DownloadCloud size={14} /> SuperCarros</button>
+              <span className="tiny muted row center gap-4"><Filter size={13} /> {filteredInventory.length} de {inventory.length}</span>
+            </div>
           </div>
           <div className="table-wrap dealer-inventory-table">
             <table className="table">
@@ -579,6 +727,16 @@ export default function DealerPanel({ view = 'resumen' }) {
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); refetch() }}
           onChanged={refetch}
+        />
+      )}
+      {importOpen && (
+        <SuperCarrosImportModal
+          onClose={() => setImportOpen(false)}
+          onImported={(res) => {
+            setImportOpen(false)
+            refetch()
+            alert(`Importación lista: ${res.imported || 0} nuevos, ${res.updated || 0} actualizados, ${res.skipped || 0} omitidos.`)
+          }}
         />
       )}
       </div>

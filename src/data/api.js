@@ -58,6 +58,10 @@ function mapVehicle(r) {
     description: r.description,
     features: Array.isArray(r.features) ? r.features : [],
     status: r.status,
+    source: r.source || null,
+    sourceUrl: r.source_url || null,
+    sourceId: r.source_id || null,
+    sourceLastSyncedAt: r.source_last_synced_at || null,
   }
 }
 
@@ -1258,6 +1262,37 @@ export async function createVehicle(v) {
   if (photos.length) {
     await supabase.from('vehicles').update({ photos_count: photos.length }).eq('id', data.id)
   }
+  return data
+}
+
+export async function previewSuperCarrosDealerImport(url, { detailLimit = 12 } = {}) {
+  if (!LIVE) return {
+    dealerName: 'Joselito Auto Import',
+    source: 'supercarros',
+    url,
+    totalPublished: 80,
+    pagesScanned: 4,
+    vehicles: [
+      { source: 'supercarros', sourceId: '1582180', sourceUrl: 'https://www.supercarros.com/honda-crv/1582180/', title: 'Honda CR-V EXL 2026', year: 2026, make: 'Honda', model: 'CR-V', trim: 'EXL', price: 57900, currency: 'USD', transmission: 'Automática', fuel: 'Gasolina', color: 'Blanco perla', bodyType: 'Jeepeta', condition: 'nuevo', duplicate: false },
+      { source: 'supercarros', sourceId: '1552092', sourceUrl: 'https://www.supercarros.com/honda-crv/1552092/', title: 'Honda CR-V EX 2023', year: 2023, make: 'Honda', model: 'CR-V', trim: 'EX', price: 41900, currency: 'USD', transmission: 'Automática', fuel: 'Gasolina', bodyType: 'Jeepeta', condition: 'usado', duplicate: false },
+      { source: 'supercarros', sourceUrl: 'https://www.supercarros.com/toyota-grand-highlander/preview/', title: 'Toyota Grand Highlander 2024', year: 2024, make: 'Toyota', model: 'Grand Highlander', price: 85500, currency: 'USD', duplicate: true },
+    ],
+  }
+  const { data, error } = await supabase.functions.invoke('supercarros-import', {
+    body: { action: 'preview', url, detailLimit },
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function importSuperCarrosVehicles(vehicles, { mode = 'new' } = {}) {
+  if (!LIVE) return { ok: true, demo: true, imported: vehicles.length, updated: 0, skipped: 0, errors: [] }
+  const { data, error } = await supabase.functions.invoke('supercarros-import', {
+    body: { action: 'import', vehicles, mode },
+  })
+  if (error) throw error
+  if (data?.error) throw new Error(data.error)
   return data
 }
 
