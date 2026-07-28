@@ -99,54 +99,12 @@ export default function Login() {
   return (
     <main className="page">
       <div className="container" style={{ maxWidth: 440 }}>
-        <div className="card card-pad" style={{ marginTop: 20 }}>
-          <div className="row center gap-8" style={{ marginBottom: 4 }}>
+        <div className="card card-pad login-card" style={{ marginTop: 20 }}>
+          <div className="row center gap-8 login-title-row" style={{ marginBottom: 4 }}>
             <div className="verify-ic ok" style={{ background: 'var(--teal-50)', color: 'var(--teal-700)' }}>
               {mode === 'login' ? <LogIn size={20} /> : <UserPlus size={20} />}
             </div>
             <h1 style={{ fontSize: 22 }}>{mode === 'login' ? 'Ingresar' : 'Crear cuenta'}</h1>
-            {phoneMode && (
-              <div className="col gap-10" style={{ marginTop: 14 }}>
-                <p className="muted small" style={{ margin: 0 }}>
-                  Entra con tu número de WhatsApp. No necesitas contraseña.
-                </p>
-                <div className="field">
-                  <label>Número de WhatsApp</label>
-                  <input className="input" inputMode="tel" autoComplete="tel" value={phone}
-                    onChange={(e) => setPhone(e.target.value)} placeholder="809 000 0000" disabled={sent || busy} />
-                </div>
-                {sent && (
-                  <div className="field">
-                    <label>Código de 6 dígitos</label>
-                    <input className="input" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
-                      value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))} placeholder="000000" />
-                  </div>
-                )}
-                {note && <div className="tiny muted">{note}</div>}
-                {err && <div className="tiny" style={{ color: '#b91c1c' }}>{err}</div>}
-                {!sent ? (
-                  <button type="button" className="btn btn-primary btn-block" disabled={busy || phone.replace(/[^0-9]/g, '').length < 10} onClick={sendCode}>
-                    {busy ? 'Enviando…' : 'Enviarme el código'}
-                  </button>
-                ) : (
-                  <>
-                    <button type="button" className="btn btn-primary btn-block" disabled={busy || code.length !== 6} onClick={confirmCode}>
-                      {busy ? 'Verificando…' : 'Entrar'}
-                    </button>
-                    <button type="button" className="btn btn-ghost btn-sm btn-block" disabled={busy}
-                      onClick={() => { setSent(false); setCode(''); setNote('') }}>
-                      Usar otro número
-                    </button>
-                  </>
-                )}
-                {!waOnly && (
-                  <button type="button" className="btn btn-ghost btn-sm btn-block"
-                    onClick={() => { setPhoneMode(false); setErr(''); setNote(''); setSent(false); setCode('') }}>
-                    Entrar con correo y contraseña
-                  </button>
-                )}
-              </div>
-            )}
           </div>
           <p className="muted small" style={{ marginBottom: 16 }}>
             {mode === 'login' ? 'Accede a tu cuenta de AutoRD.' : 'Regístrate para solicitar financiamiento o gestionar tu panel.'}
@@ -156,6 +114,53 @@ export default function Login() {
             <div className="notice" style={{ marginBottom: 14 }}>
               <Info size={16} />
               <span>Modo demo: la autenticación se activa cuando se conecta Supabase. Puedes explorar todo el sitio sin iniciar sesión.</span>
+            </div>
+          )}
+
+          {phoneMode && (
+            <div className="phone-login-panel">
+              <div className="phone-login-head">
+                <div className="phone-login-ic"><ShieldCheck size={19} /></div>
+                <div>
+                  <div className="strong small">Entrar con WhatsApp</div>
+                  <p className="tiny muted">No necesitas contraseña. Te enviamos un código a tu número.</p>
+                </div>
+              </div>
+              <div className="field">
+                <label>Número de WhatsApp</label>
+                <input className="input phone-login-input" inputMode="tel" autoComplete="tel" value={phone}
+                  onChange={(e) => setPhone(e.target.value)} placeholder="809 000 0000" disabled={sent || busy} />
+              </div>
+              {sent && (
+                <div className="field">
+                  <label>Código de 6 dígitos</label>
+                  <input className="input phone-login-input phone-login-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+                    value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))} placeholder="000000" />
+                </div>
+              )}
+              {note && <div className="phone-login-note">{note}</div>}
+              {err && <div className="phone-login-error">{err}</div>}
+              {!sent ? (
+                <button type="button" className="btn btn-primary btn-block btn-lg" disabled={busy || phone.replace(/[^0-9]/g, '').length < 10} onClick={sendCode}>
+                  {busy ? 'Enviando…' : 'Enviarme el código'}
+                </button>
+              ) : (
+                <>
+                  <button type="button" className="btn btn-primary btn-block btn-lg" disabled={busy || code.length !== 6} onClick={confirmCode}>
+                    {busy ? 'Verificando…' : 'Entrar'}
+                  </button>
+                  <button type="button" className="btn btn-ghost btn-sm btn-block" disabled={busy}
+                    onClick={() => { setSent(false); setCode(''); setNote('') }}>
+                    Usar otro número
+                  </button>
+                </>
+              )}
+              {!waOnly && (
+                <button type="button" className="btn btn-outline btn-sm btn-block"
+                  onClick={() => { setPhoneMode(false); setErr(''); setNote(''); setSent(false); setCode('') }}>
+                  Entrar con correo y contraseña
+                </button>
+              )}
             </div>
           )}
 

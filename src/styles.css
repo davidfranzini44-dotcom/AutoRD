@@ -197,6 +197,107 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
 }
 .select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
 
+/* Login: WhatsApp/phone login is a full panel, not content squeezed into the
+   title row. This keeps the customer recovery flow readable on phones. */
+.login-card { overflow: hidden; }
+.login-title-row { min-width: 0; }
+.phone-login-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid #cdeae5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f2fbf9, #ffffff);
+}
+.phone-login-head {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding-bottom: 2px;
+}
+.phone-login-head p {
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+.phone-login-ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--teal-50);
+  color: var(--teal-700);
+}
+.phone-login-input {
+  height: 48px;
+  font-size: 16px;
+}
+.phone-login-code {
+  text-align: center;
+  letter-spacing: .22em;
+  font-weight: 850;
+}
+.phone-login-note {
+  padding: 10px 11px;
+  border: 1px solid var(--blue-bd);
+  border-radius: 11px;
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.phone-login-error {
+  padding: 10px 11px;
+  border: 1px solid var(--red-bd);
+  border-radius: 11px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+@media (max-width: 560px) {
+  .login-card {
+    margin-top: 4px !important;
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .phone-login-panel {
+    margin-left: -2px;
+    margin-right: -2px;
+    padding: 13px;
+    border-radius: 16px;
+  }
+  .phone-login-panel .btn {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .phone-login-panel {
+    border-color: #263449;
+    background: linear-gradient(180deg, #101d2d, #0f1726);
+  }
+  .phone-login-head .strong {
+    color: #eef5ff;
+  }
+  .phone-login-ic {
+    background: rgba(20,184,166,.13);
+    color: #5eead4;
+  }
+  .phone-login-panel .input {
+    background: #08111f;
+    border-color: #334155;
+    color: #e8eef7;
+  }
+  .phone-login-panel .muted,
+  .phone-login-panel .tiny.muted {
+    color: #9fb0c6;
+  }
+}
+
 /* ---------- Header ---------- */
 .header {
   position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,.96);

@@ -3,7 +3,7 @@ import { isPlaceholderEmail } from '../data/contact'
 import autordLogo from '../assets/autord-logo-reference.png'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
-import { getPublicContract, getContractIdentity, acceptContractTerms } from '../data/api'
+import { getPublicContract, getContractIdentity } from '../data/api'
 import { fmtRD } from '../data/demo'
 import BankLogo from '../components/BankLogo'
 
@@ -32,11 +32,6 @@ export default function Contrato() {
   const { token = '' } = useParams()
   const [params] = useSearchParams()
   const bankSlug = (params.get('banco') || '').trim()
-  // When the customer arrives from the verified portal (/f/:token), it passes
-  // its token along so they can accept without signing in again.
-  const portalToken = (params.get('portal') || '').trim() || null
-  const [accepting, setAccepting] = useState(false)
-  const [acceptErr, setAcceptErr] = useState('')
   const [state, setState] = useState('loading') // loading | ok | notfound
   const [c, setC] = useState(null)
   // Identity images: null while loading, then { authorized, idUrl, livenessUrl }.
@@ -80,23 +75,7 @@ export default function Contrato() {
   const requested = scoped ? details[0]?.slug : bankSlug
   const bank = requested ? details.find((b) => b.slug === requested) : null
   const banksText = bank ? bank.name : (banks.length ? banks.join(', ') : 'los bancos seleccionados')
-  const acceptedAt = c.accepted_at || bank?.acceptedAt || null
-
-  // One acceptance covers every routed bank (each keeps its own record + hash),
-  // matching how the signatures are issued. Banks never see this action.
-  const accept = async () => {
-    setAccepting(true); setAcceptErr('')
-    const r = await acceptContractTerms(token, portalToken)
-    setAccepting(false)
-    if (r?.ok) {
-      const fresh = await getPublicContract(token)
-      if (fresh) setC(fresh)
-    } else {
-      setAcceptErr(r?.reason === 'not_authorized' || r?.reason === 'not_verified'
-        ? 'Para aceptar, entra a tu cuenta o usa el enlace seguro que te enviamos por WhatsApp.'
-        : 'No pudimos registrar tu aceptación. Intenta de nuevo.')
-    }
-  }
+  const acceptedAt = c.accepted_at || bank?.acceptedAt || bank?.signedAt || c.consent_at || null
 
   return (
     <main className="fc-page">
@@ -222,32 +201,21 @@ export default function Contrato() {
             </div>
           </section>
 
-          {/* The customer's affirmative act. Hidden for banks — they read the
+          {/* The customer already accepted this authorization before the
+              contract was generated. This page is the sealed record, not a
+              second acceptance step. Hidden for banks — they read the
               authorization, they don't grant it. */}
           {!scoped && (
-            <section className={`fc-accept ${acceptedAt ? 'done' : ''} fc-noprint`}>
-              {acceptedAt ? (
-                <div className="row center gap-10">
-                  <span className="fc-accept-ic"><Check size={16} /></span>
-                  <div>
-                    <b className="small">Aceptaste estos términos</b>
-                    <div className="tiny muted">{fmtDate(acceptedAt)}{bank ? ` · ${bank.name}` : ''}</div>
+            <section className="fc-accept done fc-noprint">
+              <div className="row center gap-10">
+                <span className="fc-accept-ic"><Check size={16} /></span>
+                <div>
+                  <b className="small">Términos aceptados antes de generar este contrato</b>
+                  <div className="tiny muted">
+                    {acceptedAt ? fmtDate(acceptedAt) : 'Contrato sellado con autorización previa'}{bank ? ` · ${bank.name}` : ''}
                   </div>
                 </div>
-              ) : (
-                <>
-                  <b className="small">¿Estás de acuerdo?</b>
-                  <p className="tiny muted" style={{ margin: '4px 0 10px', lineHeight: 1.45 }}>
-                    Al aceptar confirmas que leíste este contrato y autorizas la consulta de tu
-                    historial crediticio a {banksText}. Queda registrado con la fecha y el sello
-                    de este documento.
-                  </p>
-                  {acceptErr && <div className="tiny" style={{ color: '#b91c1c', marginBottom: 8 }}>{acceptErr}</div>}
-                  <button className="btn btn-primary" disabled={accepting} onClick={accept}>
-                    {accepting ? 'Registrando…' : 'Acepto los términos'}
-                  </button>
-                </>
-              )}
+              </div>
             </section>
           )}
 
