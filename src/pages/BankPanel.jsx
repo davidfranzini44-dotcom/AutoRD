@@ -14,7 +14,7 @@ import {
   getBankClientInfo, saveBankClientInfo, realEmail,
   getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
   generateApprovalPackage, getPackageState,
-  requestClientInfo, getOpenInfoRequests,
+  requestClientInfo, getOpenInfoRequests, getContractIdentity,
   UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
@@ -493,6 +493,20 @@ function ClientInfoPanel({ app }) {
   }, [app.applicationId])
   useEffect(load, [load])
 
+  // The DIDIT liveness selfie, so an analyst can see who they are deciding on
+  // without opening the contract. Reuses get_contract_identity, which decides
+  // for itself whether this caller may see the images -- no second path to KYC
+  // photos, and an unauthorised caller simply gets nothing.
+  const [face, setFace] = useState(null)
+  useEffect(() => {
+    let alive = true
+    if (!app.contractToken) { setFace(null); return undefined }
+    getContractIdentity(app.contractToken)
+      .then((r) => { if (alive) setFace(r?.authorized ? r.livenessUrl : null) })
+      .catch(() => { if (alive) setFace(null) })
+    return () => { alive = false }
+  }, [app.contractToken])
+
   const declared = info?.declared || {}
   const rec = info?.bank || null
   // The synthetic wa<digits>@autord.local address is not a real inbox.
@@ -520,6 +534,17 @@ function ClientInfoPanel({ app }) {
 
   return (
     <>
+      <div className="bankx-face-row">
+        {face
+          ? <img className="bankx-face" src={face} alt="" />
+          : <span className="bankx-face bankx-face-empty"><User size={18} /></span>}
+        <div style={{ minWidth: 0 }}>
+          <div className="strong">{app.customer || 'Cliente'}</div>
+          <div className="tiny muted">
+            {face ? 'Selfie verificada por DIDIT' : app.kyc === 'aprobado' ? 'Verificado · foto no disponible' : 'Identidad sin verificar'}
+          </div>
+        </div>
+      </div>
       <CedulaLine app={app} />
       <div className="bankx-infoline"><span>Teléfono</span><b>{app.phone ? `+${String(app.phone).replace(/^\+/, '')}` : <span className="muted tiny">No registrado</span>}</b></div>
       {info === undefined ? (

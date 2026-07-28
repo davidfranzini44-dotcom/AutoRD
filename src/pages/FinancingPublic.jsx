@@ -227,6 +227,7 @@ function Portal({ full, token, onReload }) {
   const accountReady = activated || !!user
   const accepted = !!full.clientAcceptedAt
   const selectedSlug = full.selectedBankSlug
+  const selectedBank = selectedSlug ? full.responses.find((r) => r.bankSlug === selectedSlug) : null
   async function activate() {
     setActivating(true); setActivateErr('')
     const r = await activateFinancingAccount(token)
@@ -297,9 +298,20 @@ function Portal({ full, token, onReload }) {
       {/* Acceptance confirmation */}
       {accepted && (
         <div className="cfp-accepted">
-          <CheckCircle2 size={20} />
-          <div>
-            <div className="strong small">Aceptaste {selectedSlug ? `la oferta de ${(full.responses.find((r) => r.bankSlug === selectedSlug) || {}).bankName || 'tu banco'}` : 'tu oferta'}</div>
+          <div className="cfp-accepted-ic"><CheckCircle2 size={17} /></div>
+          <div className="cfp-accepted-copy">
+            <div className="cfp-accepted-kicker">Oferta aceptada</div>
+            <div className="cfp-accepted-title">
+              {selectedBank ? (
+                <>
+                  <span>Aceptaste la oferta de</span>
+                  <span className="cfp-accepted-bank">
+                    <BankLogo slug={selectedBank.bankSlug} name={selectedBank.bankName} initials={selectedBank.bankInitials} color={selectedBank.bankColor} size={18} />
+                    {selectedBank.bankName}
+                  </span>
+                </>
+              ) : 'Aceptaste tu oferta'}
+            </div>
             <div className="tiny">El dealer y el banco fueron notificados. Te contactarán para completar seguro, firma y entrega.{full.reservedUntil ? ` Vehículo reservado hasta ${fmtDay(full.reservedUntil)}.` : ''}</div>
           </div>
         </div>
@@ -633,7 +645,12 @@ function PortalStyles() {
       .cfp-condition { display: flex; align-items: flex-start; gap: 6px; margin-top: 14px; font-size: 11px; line-height: 1.45; background: rgba(255,255,255,.12); padding: 9px 11px; border-radius: 9px; }
       .cfp-wallet-veh { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 12px; font-weight: 600; opacity: .95; }
       .cfp-actions { display: flex; flex-direction: column; gap: 8px; }
-      .cfp-accepted { display: flex; align-items: flex-start; gap: 10px; background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 12px 14px; }
+      .cfp-accepted { display: flex; align-items: flex-start; gap: 12px; background: linear-gradient(180deg,#ecfdf5,#f7fff9); border: 1px solid #bbf7d0; color: #166534; border-radius: 15px; padding: 13px 14px; box-shadow: 0 8px 22px rgba(22,101,52,.08); }
+      .cfp-accepted-ic { width: 34px; height: 34px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+      .cfp-accepted-copy { min-width: 0; flex: 1; }
+      .cfp-accepted-kicker { font-size: 10.5px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; color: #15803d; margin-bottom: 2px; }
+      .cfp-accepted-title { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 7px; font-size: 13.5px; font-weight: 850; line-height: 1.25; color: #14532d; }
+      .cfp-accepted-bank { display: inline-flex; align-items: center; gap: 6px; min-width: 0; padding: 4px 8px; border: 1px solid #bbf7d0; border-radius: 999px; background: #fff; color: #14532d; }
       .cfp-accepted .tiny { color: #15803d; line-height: 1.45; margin-top: 2px; }
       .cfp-section { background: #fff; border: 1px solid var(--line,#e2e8f0); border-radius: 14px; padding: 15px; box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,41,63,.05)); }
       .cfp-section h3 { font-size: 14px; margin: 0 0 12px; }
@@ -672,6 +689,119 @@ function PortalStyles() {
       .cfp-account.ready { display: flex; align-items: flex-start; gap: 10px; background: #eef6f3; border-color: #bfe3d8; color: #0f766e; }
       .cfp-account.ready .tiny { color: #0f766e; opacity: .85; margin-top: 2px; }
       .cfp-foot { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; color: var(--muted,#64748b); padding: 8px 0 4px; }
+      @media (prefers-color-scheme: dark) {
+        .cfp-page {
+          color-scheme: dark;
+          --ink: #e8eef7;
+          --muted: #9fb0c6;
+          --line: #273449;
+          --line-2: #1e2a3f;
+          --surface: #0f1726;
+          background:
+            radial-gradient(circle at 16% 0%, rgba(45,212,191,.13), transparent 34%),
+            linear-gradient(180deg,#07111f,#0b1220 260px,#08111f);
+          color: #e8eef7;
+        }
+        .cfp-logo { color: #eef5ff; }
+        .cfp-secure { background: rgba(20,184,166,.14); color: #5eead4; border: 1px solid rgba(45,212,191,.22); }
+        .cfp-preview,
+        .cfp-step,
+        .cfp-section,
+        .cfp-account {
+          background: rgba(15,23,38,.94);
+          border-color: #273449;
+          box-shadow: none;
+          color: #e8eef7;
+        }
+        .cfp-preview .strong,
+        .cfp-step-title,
+        .cfp-section h3,
+        .cfp-section .strong,
+        .cfp-account .strong,
+        .cfp-calc-monthly {
+          color: #eef5ff;
+        }
+        .cfp-preview .muted,
+        .cfp-section .muted,
+        .cfp-step .muted,
+        .cfp-account .muted,
+        .cfp-foot,
+        .cfp-locknote {
+          color: #9fb0c6;
+        }
+        .cfp-locknote,
+        .cfp-calc-out,
+        .cfp-tl-note {
+          border-color: #273449;
+        }
+        .cfp-step-ic,
+        .cfp-doc-ic.info,
+        .cfp-tl-dot {
+          background: #111c2e;
+          border-color: #334155;
+          color: #cbd6e4;
+        }
+        .cfp-code,
+        .cfp-calc-field .input {
+          background: #08111f;
+          border-color: #334155;
+          color: #eef5ff;
+        }
+        .cfp-accepted {
+          background: linear-gradient(180deg, rgba(22,101,52,.25), rgba(15,23,38,.94));
+          border-color: rgba(74,222,128,.28);
+          box-shadow: none;
+          color: #d1fae5;
+        }
+        .cfp-accepted-ic {
+          background: rgba(22,163,74,.18);
+          border-color: rgba(74,222,128,.28);
+          color: #86efac;
+        }
+        .cfp-accepted-kicker,
+        .cfp-accepted .tiny {
+          color: #86efac;
+        }
+        .cfp-accepted-title {
+          color: #dcfce7;
+        }
+        .cfp-accepted-bank {
+          background: rgba(8,17,31,.82);
+          border-color: rgba(74,222,128,.28);
+          color: #dcfce7;
+        }
+        .cfp-offer {
+          background: #101827;
+          border-color: #273449;
+        }
+        .cfp-offer.sel {
+          background: rgba(20,184,166,.10);
+          border-color: rgba(45,212,191,.38);
+        }
+        .cfp-offer .strong,
+        .cfp-offer .tiny.strong {
+          color: #eef5ff !important;
+        }
+        .cfp-offer .muted {
+          color: #9fb0c6;
+        }
+        .cfp-offer-sel {
+          color: #86efac;
+        }
+        .cfp-doc,
+        .cfp-act-row,
+        .cfp-tl-row {
+          color: #e8eef7;
+        }
+        .cfp-account.ready {
+          background: rgba(20,184,166,.12);
+          border-color: rgba(45,212,191,.24);
+          color: #5eead4;
+        }
+        .cfp-account.ready .tiny { color: #99f6e4; }
+        .cfp-calc-fit.ok { background: rgba(22,163,74,.18); color: #86efac; }
+        .cfp-calc-fit.bad { background: rgba(180,83,9,.20); color: #fcd34d; }
+      }
     `}</style>
   )
 }
