@@ -1116,6 +1116,27 @@ export async function getDocumentDownloadUrl(doc) {
   return data?.signedUrl || null
 }
 
+export async function updateApplicationDocumentStatus(doc, status, notes = null) {
+  if (!doc?.id) throw new Error('No se encontro el documento.')
+  const allowed = new Set(['solicitado', 'recibido', 'revision', 'aceptado', 'rechazado'])
+  if (!allowed.has(status)) throw new Error('Estado de documento invalido.')
+
+  if (!LIVE) {
+    return { ...doc, status, notes: notes != null ? notes : doc.notes }
+  }
+
+  const patch = { status }
+  if (notes != null) patch.notes = notes
+  const { data, error } = await supabase
+    .from('documents')
+    .update(patch)
+    .eq('id', doc.id)
+    .select('*, bank:banks(name, slug, color, initials)')
+    .single()
+  if (error) throw error
+  return mapDocument(data)
+}
+
 // Attach a chosen vehicle to an existing (car-agnostic) pre-approval, so the
 // customer can convert "pre-aprobado hasta RD$X" into a real application for a
 // specific car WITHOUT repeating KYC. Reuses the same application row.

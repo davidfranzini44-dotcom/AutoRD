@@ -9,6 +9,7 @@ import { bankStatusMeta, fmtRD } from '../data/demo'
 import {
   getApplicationDocuments, getBankApplications, getDocumentDownloadUrl,
   requestApplicationDocuments, submitBankResponse, getClientHistoryForBank,
+  updateApplicationDocumentStatus,
   getOrCreateFinancingToken, getFinancingEvents, getApplicationCedula,
   getBankClientInfo, saveBankClientInfo, realEmail,
   getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
@@ -35,6 +36,9 @@ import {
 const appScore = (a) => (a.kyc === 'aprobado' ? 40 : 0) + (a.consent ? 30 : 0) + (a.status !== 'docs' ? 20 : 0) + ((a.hoursWaiting || 0) < 24 ? 10 : 0)
 const digits = (p) => String(p || '').replace(/[^\d]/g, '')
 const waMsg = (a) => `Hola ${a.customer}, te contactamos por tu solicitud de financiamiento ${a.id}${a.vehicle ? ` del ${a.vehicle}` : ''}.`
+const docEffectiveStatus = (doc, overlay = {}) => overlay[doc.id] || (doc.status === 'subido' ? 'recibido' : doc.status)
+const docsForReview = (docs = [], overlay = {}) => docs.map((doc) => ({ ...doc, status: docEffectiveStatus(doc, overlay) }))
+const docsMissing = (docs = []) => docs.some((doc) => !['aceptado', 'recibido', 'subido', 'revision'].includes(doc.status))
 // The last four digits, and only from a source that actually contains them.
 //
 // Deliberately NOT derived from cedula_masked: that mask has the shape
@@ -757,6 +761,8 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
   }, [a.applicationId, a.id, a.status])
 
   const sc = appScore(a)
+  const effectiveDocs = useMemo(() => docsForReview(docs, docStatus), [docs, docStatus])
+  const hasMissingDocs = docsMissing(effectiveDocs)
   const cuota = a.amount ? estimateMonthly(a.amount, 9.5, (Number(a.term) || 7) * 12) : null
   const ratio = cuota && a.income ? Math.round((cuota / a.income) * 100) : null
   const precioVenta = (Number(a.amount) || 0) + (Number(a.down) || 0)
@@ -765,7 +771,7 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
   const readiness = [
     { key: 'kyc', ok: a.kyc === 'aprobado', title: 'KYC DIDIT aprobado', sub: a.kyc === 'aprobado' ? 'Cédula + prueba de vida' : 'Identidad sin verificar', href: contractHref, cta: 'Ver' },
     { key: 'consent', ok: !!a.consent, title: 'Consentimiento firmado', sub: a.consent ? 'Banco autorizado para evaluar' : 'Aún no firmado', href: contractHref, cta: 'Contrato' },
-    { key: 'docs', ok: a.status !== 'docs', warn: a.status === 'docs', title: 'Estados de cuenta', sub: a.status === 'docs' ? 'Pendientes del cliente' : 'Sin pendientes' },
+    { key: 'docs', ok: !hasMissingDocs, warn: hasMissingDocs, title: 'Estados de cuenta', sub: hasMissingDocs ? 'Pendientes del cliente' : 'Documentos recibidos' },
   ]
   const okCount = readiness.filter((r) => r.ok).length
 
@@ -855,7 +861,7 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
         </section>
 
         <section className="card pad">
-          <RiskPanel a={a} documents={docs} />
+          <RiskPanel a={a} documents={effectiveDocs} />
         </section>
 
         <section className="card pad">
@@ -947,11 +953,13 @@ function ApplicationDetail({ a, onBack, onAssign, onStage, onAddNote, officers, 
   }, [a.applicationId, a.id, a.status])
 
   const [make, model] = (a.vehicle || '').split(' ')
+  const effectiveDocs = useMemo(() => docsForReview(docs, docStatus), [docs, docStatus])
+  const hasMissingDocs = docsMissing(effectiveDocs)
   // Requisitos-before-deciding checklist state.
   const checklist = [
     { key: 'kyc', ok: a.kyc === 'aprobado', title: 'KYC DIDIT', sub: a.kyc === 'aprobado' ? 'Cédula + prueba de vida' : 'Identidad sin verificar', action: null },
     { key: 'consent', ok: !!a.consent, title: 'Consentimiento', sub: a.consent ? 'Banco autorizado a evaluar' : 'Aún no firmado', action: a.contractToken ? { label: 'Contrato', href: `/contrato/${a.contractToken}` } : null },
-    { key: 'docs', ok: a.status !== 'docs', warn: a.status === 'docs', title: 'Documentos', sub: a.status === 'docs' ? 'Pendientes del cliente' : 'Sin pendientes', action: null },
+    { key: 'docs', ok: !hasMissingDocs, warn: hasMissingDocs, title: 'Documentos', sub: hasMissingDocs ? 'Pendientes del cliente' : 'Documentos recibidos', action: null },
   ]
 
   return (
@@ -1113,13 +1121,40 @@ function DocWorkflow({ app, docs, setDocs, docStatus, setDocStatus }) {
   const [sel, setSel] = useState(['Comprobante de ingresos'])
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [statusBusy, setStatusBusy] = useState(null)
   const [err, setErr] = useState('')
   const [rejecting, setRejecting] = useState(null) // doc id awaiting reason
   const [reason, setReason] = useState('')
 
   const toggle = (d) => setSel((c) => (c.includes(d) ? c.filter((x) => x !== d) : [...c, d]))
-  const statusOf = (doc) => docStatus[doc.id] || (doc.status === 'subido' ? 'recibido' : 'solicitado')
-  const setStatus = (id, s) => setDocStatus((m) => ({ ...m, [id]: s }))
+  const statusOf = (doc) => docEffectiveStatus(doc, docStatus)
+  const applyLocalStatus = (id, status, patch = {}) => {
+    setDocStatus((m) => ({ ...m, [id]: status }))
+    setDocs((cur) => cur.map((d) => (d.id === id ? { ...d, ...patch, status } : d)))
+  }
+  const setStatus = async (doc, status, notes = null) => {
+    const prior = docs.find((d) => d.id === doc.id) || doc
+    const priorOverlay = docStatus[doc.id]
+    setErr('')
+    setStatusBusy(doc.id)
+    applyLocalStatus(doc.id, status, notes != null ? { notes } : {})
+    try {
+      const updated = await updateApplicationDocumentStatus(doc, status, notes)
+      setDocs((cur) => cur.map((d) => (d.id === doc.id ? updated : d)))
+      setDocStatus((m) => ({ ...m, [doc.id]: docEffectiveStatus(updated, {}) }))
+    } catch (e) {
+      setDocs((cur) => cur.map((d) => (d.id === doc.id ? prior : d)))
+      setDocStatus((m) => {
+        const next = { ...m }
+        if (priorOverlay) next[doc.id] = priorOverlay
+        else delete next[doc.id]
+        return next
+      })
+      setErr(e?.message || 'No se pudo actualizar el documento.')
+    } finally {
+      setStatusBusy(null)
+    }
+  }
 
   async function send() {
     setErr(''); setBusy(true)
@@ -1164,14 +1199,14 @@ function DocWorkflow({ app, docs, setDocs, docStatus, setDocStatus }) {
                 {received && (
                   <div className="row gap-4" style={{ width: '100%', marginTop: 6, justifyContent: 'flex-end' }}>
                     <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px' }} onClick={() => open(doc)}><Eye size={13} /> Ver</button>
-                    {st !== 'aceptado' && <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px', color: '#166534' }} onClick={() => setStatus(doc.id, 'aceptado')}><CheckCircle2 size={13} /> Aceptar</button>}
-                    {st !== 'rechazado' && <button className="btn btn-outline btn-sm" style={{ padding: '3px 8px', color: '#b91c1c' }} onClick={() => setRejecting(doc.id)}><XCircle size={13} /> Rechazar</button>}
+                    {st !== 'aceptado' && <button className="btn btn-outline btn-sm" disabled={statusBusy === doc.id} style={{ padding: '3px 8px', color: '#166534' }} onClick={() => setStatus(doc, 'aceptado')}><CheckCircle2 size={13} /> Aceptar</button>}
+                    {st !== 'rechazado' && <button className="btn btn-outline btn-sm" disabled={statusBusy === doc.id} style={{ padding: '3px 8px', color: '#b91c1c' }} onClick={() => setRejecting(doc.id)}><XCircle size={13} /> Rechazar</button>}
                   </div>
                 )}
                 {rejecting === doc.id && (
                   <div className="row gap-4" style={{ width: '100%', marginTop: 6 }}>
                     <input className="input" style={{ height: 34 }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Motivo del rechazo (requerido)" />
-                    <button className="btn btn-navy btn-sm" disabled={!reason.trim()} onClick={() => { setStatus(doc.id, 'rechazado'); setRejecting(null); setReason('') }}>Rechazar</button>
+                    <button className="btn btn-navy btn-sm" disabled={!reason.trim() || statusBusy === doc.id} onClick={() => { setStatus(doc, 'rechazado', reason.trim()); setRejecting(null); setReason('') }}>Rechazar</button>
                   </div>
                 )}
               </div>

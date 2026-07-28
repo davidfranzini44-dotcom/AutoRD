@@ -96,7 +96,8 @@ export function riskFlags(a = {}, ctx = {}) {
   // --- documents ------------------------------------------------------------
   const docs = Array.isArray(ctx.documents) ? ctx.documents : null
   if (docs && docs.length) {
-    const missing = docs.filter((d) => d.status !== 'aceptado' && d.status !== 'recibido')
+    const received = new Set(['aceptado', 'recibido', 'subido', 'revision'])
+    const missing = docs.filter((d) => !received.has(d.status))
     if (missing.length) {
       add('documentos', 'media', 'Documentos faltantes',
         `${missing.length} documento${missing.length === 1 ? '' : 's'} sin recibir.`)
