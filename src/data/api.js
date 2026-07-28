@@ -653,8 +653,18 @@ export async function verifyFinancingCedula(token, last4) {
 
 export async function startFinancingOtp(token) {
   if (!LIVE) return { ok: true, phoneHint: DEMO_PORTAL_PREVIEW.phoneHint }
-  const { data, error } = await supabase.rpc('start_financing_otp', { p_token: token })
+  // Goes through the edge function, not straight to the RPC. The RPC still does
+  // every check and generates the code, but it can only queue into AutoRD's own
+  // wa_outbox, which nothing drains — codes sat there as 'queued' forever and the
+  // customer never got a message. The function calls the same RPC and then hands
+  // the message to the Reparando gateway, which is what actually delivers.
+  const { data, error } = await supabase.functions.invoke('financing-otp-send', { body: { token } })
   if (error) return { ok: false, reason: 'error' }
+  // delivered:false means the code exists but no message went out. Surfacing it
+  // beats telling someone to check a phone that will never ring.
+  if (data?.ok && data.delivered === false && !data.alreadyVerified) {
+    return { ...data, ok: false, reason: data.reason || 'not_delivered' }
+  }
   return data
 }
 
