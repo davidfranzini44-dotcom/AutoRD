@@ -331,7 +331,7 @@ function Portal({ full, token, onReload }) {
 
       {/* Next steps */}
       <Section title="Próximos pasos">
-        <NextSteps kind={kind} hasVehicle={!!full.vehicle} />
+        <NextSteps kind={kind} hasVehicle={!!full.vehicle} hasApproval={ceiling > 0} />
       </Section>
 
       {/* Bank offers — accept one; it becomes the active offer */}
@@ -422,25 +422,46 @@ function Portal({ full, token, onReload }) {
   )
 }
 
-function NextSteps({ kind, hasVehicle }) {
+function NextSteps({ kind, hasVehicle, hasApproval }) {
+  // Only the first three steps are things AutoRD can actually observe.
+  //
+  // "Pre-aprobación" was hardcoded to done, so it showed a green tick to people
+  // with no approval at all. It now follows a real approved amount.
+  //
+  // Seguro / Firma / Entrega happen off-platform and nothing reports them back,
+  // so they were hardcoded false and could never complete — a client who got a
+  // car and an approval would watch the list stop moving forever. They are now
+  // marked untracked and rendered as what they are: what happens next, arranged
+  // with the bank and the dealer, not a checklist AutoRD is driving.
+  //
+  // The signature step especially: clause 3 of the consent contract says AutoRD
+  // does not issue loan contracts or host credit signatures — the credit
+  // relationship is formalised directly between client and bank. Showing it as
+  // an AutoRD step would contradict a document the client already signed.
   const steps = [
-    { t: 'Pre-aprobación', who: 'Banco', done: true },
-    { t: 'Elegir vehículo', who: 'Cliente', done: hasVehicle },
-    { t: 'Validar documentos', who: 'Cliente + Banco', done: kind === 'approved' },
-    { t: 'Seguro', who: 'Cliente', done: false },
-    { t: 'Firma del contrato', who: 'Banco + Cliente', done: false },
-    { t: 'Entrega', who: 'Dealer', done: false },
+    { t: 'Pre-aprobación', who: 'Banco', done: !!hasApproval, tracked: true },
+    { t: 'Elegir vehículo', who: 'Cliente', done: hasVehicle, tracked: true },
+    { t: 'Validar documentos', who: 'Cliente + Banco', done: kind === 'approved', tracked: true },
+    { t: 'Seguro', who: 'Cliente', done: false, tracked: false },
+    { t: 'Firma del contrato', who: 'Banco + Cliente', done: false, tracked: false },
+    { t: 'Entrega', who: 'Dealer', done: false, tracked: false },
   ]
-  const current = steps.findIndex((s) => !s.done)
+  // "Ahora" only ever points at something the client can actually move.
+  const current = steps.findIndex((s) => s.tracked && !s.done)
   return (
     <div className="cfp-timeline">
       {steps.map((s, i) => (
-        <div className="cfp-tl-row" key={i}>
+        <div className={`cfp-tl-row${s.tracked ? '' : ' cfp-tl-off'}`} key={i}>
           <span className={`cfp-tl-dot ${s.done ? 'done' : i === current ? 'now' : ''}`}>{s.done ? <CheckCircle2 size={14} /> : i + 1}</span>
           <div className="grow"><div className="small strong">{s.t}</div><div className="tiny muted">{s.who}</div></div>
           {i === current && <span className="chip" style={{ background: '#dbeafe', color: '#1d4ed8' }}>Ahora</span>}
         </div>
       ))}
+      {/* Says plainly that the last steps are arranged off-platform, so a list
+          that stops moving reads as expected rather than as something broken. */}
+      <div className="tiny muted cfp-tl-note">
+        El seguro, la firma y la entrega se coordinan directamente con tu banco y el dealer.
+      </div>
     </div>
   )
 }
@@ -631,6 +652,10 @@ function PortalStyles() {
       .cfp-calc-fit { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; }
       .cfp-calc-fit.ok { background: #dcfce7; color: #166534; }
       .cfp-calc-fit.bad { background: #fef3c7; color: #b45309; }
+      /* Steps AutoRD cannot observe: dimmed so they do not read as a live
+         checklist that has stalled. */
+      .cfp-tl-off { opacity: .55; }
+      .cfp-tl-note { margin-top: 10px; padding-top: 9px; border-top: 1px solid #e6edf6; }
       .cfp-activity { display: flex; flex-direction: column; }
       .cfp-act-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; }
       .cfp-act-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: none; background: #cbd5e1; }
