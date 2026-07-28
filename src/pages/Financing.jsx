@@ -63,7 +63,7 @@ export default function Financing() {
   const [editAll, setEditAll] = useState(false)
 
   useEffect(() => {
-    if (institutionUser) nav('/?calculadora=1', { replace: true })
+    if (institutionUser) nav('/?calculadora=1#calculadora-cuotas', { replace: true })
   }, [institutionUser, nav])
 
   // Reuse whatever the customer entered on the homepage calculator (URL params

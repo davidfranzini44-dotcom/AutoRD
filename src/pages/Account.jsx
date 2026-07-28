@@ -197,7 +197,7 @@ export default function Account() {
                 <div className="tiny muted">{institutionUser ? 'Calcula cuotas estimadas para orientar clientes sin iniciar KYC ni solicitud.' : 'Obtén una pre-aprobación con bancos antes de elegir tu carro.'}</div>
               </div>
             </div>
-            <Link to={institutionUser ? '/?calculadora=1' : '/financiamiento'} className="btn btn-primary">
+            <Link to={institutionUser ? '/?calculadora=1#calculadora-cuotas' : '/financiamiento'} className="btn btn-primary">
               {institutionUser ? 'Abrir calculadora' : 'Solicitar pre-aprobación'}
             </Link>
           </div>

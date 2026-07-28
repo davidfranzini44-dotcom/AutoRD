@@ -83,7 +83,7 @@ export default function Layout() {
     { to: '/dealers', label: 'Dealers' },
     { to: '/ingresar', label: 'Vender' },
     institutionUser
-      ? { to: '/?calculadora=1', label: 'Calculadora' }
+      ? { to: '/?calculadora=1#calculadora-cuotas', label: 'Calculadora' }
       : { to: '/financiamiento', label: 'Financiamiento' },
     { to: '/como-funciona', label: 'Cómo funciona' },
   ]
@@ -162,7 +162,7 @@ export default function Layout() {
         <NavLink to="/buscar"><Search size={20} /> Buscar</NavLink>
         <NavLink to="/comparar"><Scale size={20} /> Comparar</NavLink>
         {institutionUser
-          ? <NavLink to="/?calculadora=1"><Calculator size={20} /> Calculadora</NavLink>
+          ? <NavLink to="/?calculadora=1#calculadora-cuotas"><Calculator size={20} /> Calculadora</NavLink>
           : <NavLink to="/financiamiento"><Landmark size={20} /> Financiamiento</NavLink>}
         <NavLink to={user ? '/mi-cuenta' : '/ingresar'}><User size={20} /> Perfil</NavLink>
       </nav>
@@ -188,7 +188,7 @@ function Footer({ institutionUser = false }) {
           <div className="row gap-24 wrap" style={{ fontSize: 13.5 }}>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Producto</strong>
-              <Link to="/">Comprar</Link><Link to={institutionUser ? '/?calculadora=1' : '/financiamiento'}>{institutionUser ? 'Calculadora' : 'Financiamiento'}</Link><Link to="/como-funciona">Cómo funciona</Link>
+              <Link to="/">Comprar</Link><Link to={institutionUser ? '/?calculadora=1#calculadora-cuotas' : '/financiamiento'}>{institutionUser ? 'Calculadora' : 'Financiamiento'}</Link><Link to="/como-funciona">Cómo funciona</Link>
             </div>
             <div className="col gap-8">
               <strong style={{ color: '#fff' }}>Aliados</strong>

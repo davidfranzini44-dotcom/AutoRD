@@ -82,6 +82,9 @@ const BODY_TYPE_PRICES = {
   Convertible: 'Desde RD$ 1.2M',
   Wagon: 'Desde RD$ 520K',
 }
+
+const CALCULATOR_TARGET = 'calculadora-cuotas'
+
 export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -233,15 +236,27 @@ export default function Home() {
     } catch { /* ignore storage errors */ }
   }, [incomeNum, preapprovalAmount, calcYears])
 
+  const scrollToCalculator = (block = 'start') => {
+    let tries = 0
+    const go = () => {
+      const el = document.getElementById(CALCULATOR_TARGET)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block })
+        return
+      }
+      tries += 1
+      if (tries < 8) window.setTimeout(go, 50)
+    }
+    window.requestAnimationFrame(go)
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    if (params.get('calculadora') === '1') {
+    if (params.get('calculadora') === '1' || location.hash === `#${CALCULATOR_TARGET}`) {
       setShowCalculator(true)
-      window.setTimeout(() => {
-        document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 80)
+      scrollToCalculator('start')
     }
-  }, [location.search])
+  }, [location.search, location.hash])
 
   const resetFilters = () => {
     setSegment('todos'); setTipo('todos'); setMarca(''); setModelo('')
@@ -266,13 +281,13 @@ export default function Home() {
   const toggleCalculator = () => {
     setShowCalculator((open) => !open)
     if (!showCalculator) window.setTimeout(() => {
-      document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      scrollToCalculator('nearest')
     }, 40)
   }
   const openCalculator = () => {
     setShowCalculator(true)
     window.setTimeout(() => {
-      document.getElementById('calculadora-cuotas')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      scrollToCalculator('nearest')
     }, 40)
   }
 
@@ -431,7 +446,7 @@ export default function Home() {
                 className={`btn btn-outline calc-toggle ${showCalculator ? 'active' : ''}`}
                 onClick={toggleCalculator}
                 aria-expanded={showCalculator}
-                aria-controls="calculadora-cuotas"
+                aria-controls={CALCULATOR_TARGET}
               >
                 <Calculator size={16} /> {showCalculator ? 'Ocultar' : 'Calculadora'}
               </button>
@@ -440,7 +455,7 @@ export default function Home() {
         </section>
 
         {showCalculator && (
-          <section className="inline-finance-calculator" id="calculadora-cuotas" aria-label="Calculadora de cuotas">
+          <section className="inline-finance-calculator" id={CALCULATOR_TARGET} aria-label="Calculadora de cuotas">
             <div className="inline-calc-head">
               <div>
                 <span className="section-kicker"><Calculator size={14} /> Calculadora</span>
