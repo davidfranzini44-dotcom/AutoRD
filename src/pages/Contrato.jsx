@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import autordLogo from '../assets/autord-logo-reference.png'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { getPublicContract, getContractIdentity, acceptContractTerms } from '../data/api'
@@ -114,7 +115,7 @@ export default function Contrato() {
           <header className="fc-hero" style={bank ? { background: `linear-gradient(135deg, ${bank.color}, #0c2033)` } : undefined}>
             <div className="fc-status"><span>CONTRATO DE CONSENTIMIENTO</span><span>{c.code}</span></div>
             <div className="fc-brand">
-              <div className="fc-logo"><span className="a1">Auto</span><span className="a2">RD</span></div>
+              <div className="fc-logo"><img src={autordLogo} alt="AutoRD" /></div>
               <div className="fc-org">
                 <h1>AutoRD{bank ? ` · ${bank.name}` : ''}</h1>
                 <p>{bank
@@ -300,8 +301,8 @@ const CSS = `
 .fc-status { display: flex; justify-content: space-between; gap: 10px; font-size: 10px; font-weight: 900; letter-spacing: .11em; }
 .fc-status span { display: inline-flex; border: 1px solid #ffffff42; border-radius: 999px; padding: 5px 9px; }
 .fc-brand { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; margin-top: 18px; }
-.fc-logo { display: grid; place-items: center; height: 44px; min-width: 76px; padding: 0 12px; border-radius: 12px; background: #fff; font-size: 20px; font-weight: 900; letter-spacing: -.02em; }
-.fc-logo .a1 { color: #0c2033; } .fc-logo .a2 { color: #0f766e; }
+.fc-logo { display: grid; place-items: center; height: 44px; min-width: 76px; padding: 0 12px; border-radius: 12px; background: #fff; }
+.fc-logo img { height: 26px; width: auto; max-width: 120px; display: block; object-fit: contain; }
 .fc-org h1 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
 .fc-org p { margin: 3px 0 0; color: #cfe9e4; font-size: 11px; }
 .fc-badge { text-align: right; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #cfe9e4; }
