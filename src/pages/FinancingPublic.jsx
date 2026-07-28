@@ -520,8 +520,11 @@ const DOC_STATUS = {
   solicitado: { label: 'Falta subir', cls: 'warn', canUpload: true },
   rechazado: { label: 'Reenviar', cls: 'warn', canUpload: true },
   subido: { label: 'Documento recibido', cls: 'ok', canUpload: false },
+  recibido: { label: 'Documento recibido', cls: 'ok', canUpload: false },
   en_revision: { label: 'Banco revisando', cls: 'info', canUpload: false },
+  revision: { label: 'Banco revisando', cls: 'info', canUpload: false },
   aprobado: { label: 'Aprobado', cls: 'ok', canUpload: false },
+  aceptado: { label: 'Aprobado', cls: 'ok', canUpload: false },
 }
 
 // Smart document checklist — upload the exact docs the bank asked for. Needs an
