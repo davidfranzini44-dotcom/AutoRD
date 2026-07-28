@@ -10,9 +10,58 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const FIRECRAWL_URL = 'https://api.firecrawl.dev/v2/scrape'
 const SOURCE = 'supercarros'
-const DEFAULT_DETAIL_LIMIT = 12
+const DEFAULT_DETAIL_LIMIT = 22
 const MAX_PREVIEW_PAGES = 8
 const MAX_IMPORT = 80
+// Detail pages carry the photos, so coverage here decides how many cars arrive
+// with images. Firecrawl allows ~17 requests/minute, and a 78-car dealer needs
+// ~82 requests -- about 5 minutes against a ~150s function budget. Bursting at
+// concurrency 6 produced a 429 storm that read as "this dealer has no data".
+const DETAIL_CONCURRENCY = 3
+// ~15 req/min. The pacer is global, so concurrency only overlaps slow
+// responses; it never raises the request rate.
+const MIN_REQUEST_GAP_MS = 3800
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+let lastRequestAt = 0
+let gate: Promise<unknown> = Promise.resolve()
+function paced<T>(fn: () => Promise<T>): Promise<T> {
+  const slot = gate.then(async () => {
+    const wait = MIN_REQUEST_GAP_MS - (Date.now() - lastRequestAt)
+    if (wait > 0) await sleep(wait)
+    lastRequestAt = Date.now()
+  })
+  gate = slot.catch(() => {})
+  return slot.then(fn)
+}
+
+async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) {
+  const queue = [...items]
+  const out: R[] = []
+  const worker = async () => {
+    for (;;) {
+      const item = queue.shift()
+      if (item === undefined) return
+      out.push(await fn(item))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker))
+  return out
+}
+
+// A detail parse that misses a field must not erase what the listing line
+// already told us. Empty values never overwrite a populated base.
+function mergeVehicle(base: any, extra: any) {
+  const out = { ...(base || {}) }
+  for (const [k, val] of Object.entries(extra || {})) {
+    const empty = val == null || val === ''
+      || (Array.isArray(val) && val.length === 0)
+      || (typeof val === 'number' && !Number.isFinite(val))
+    if (!empty) out[k] = val
+  }
+  return out
+}
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -57,8 +106,13 @@ function slugify(s: string) {
     .slice(0, 90)
 }
 
+// Returns null when the source stated no number at all. "Uso: N/D Mi" strips to
+// an empty string, and Number('') is 0 -- which is finite, so every unknown
+// mileage used to be published as a confident "0 km", including on a 2003 car.
 function parseMoney(raw: string) {
-  const n = Number(text(raw).replace(/[^\d.]/g, '').replace(/\.(?=.*\.)/g, ''))
+  const cleaned = text(raw).replace(/[^\d.]/g, '').replace(/\.(?=.*\.)/g, '')
+  if (!/\d/.test(cleaned)) return null
+  const n = Number(cleaned)
   return Number.isFinite(n) ? n : null
 }
 
@@ -157,7 +211,78 @@ function splitTitle(title: string) {
 function field(markdown: string, label: string) {
   const esc = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const re = new RegExp(`${esc}:\\s*([^\\n]+?)(?=\\s+[A-ZÁÉÍÓÚÑ][\\wÁÉÍÓÚÑ/ ]{1,24}:|\\n|$)`, 'i')
-  return text(markdown.match(re)?.[1] || '')
+  // Firecrawl renders the spec block as a markdown table, so a raw capture keeps
+  // the cell pipes: "| Jeepeta |". Those leaked straight into the database and
+  // broke every marketplace filter, including values that were otherwise right.
+  return text(markdown.match(re)?.[1] || '').replace(/^\|+|\|+$/g, '').trim()
+}
+
+// SuperCarros' vocabulary is not AutoRD's. Map onto the values the marketplace
+// filters and the per-fuel bank rates already use; leave anything genuinely
+// unknown (GLP, say) untouched rather than inventing a match.
+const strip = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+function normFuel(raw: string) {
+  const s = strip(raw)
+  if (!s) return null
+  if (s === 'gasoil' || s === 'diesel') return 'Diésel'
+  if (s === 'gasolina') return 'Gasolina'
+  if (s === 'hibrido' || s === 'hybrid') return 'Híbrido'
+  if (s === 'electrico' || s === 'electric') return 'Eléctrico'
+  return raw
+}
+
+function normTransmission(raw: string) {
+  const s = strip(raw)
+  if (!s) return null
+  if (s.startsWith('autom')) return 'Automática'
+  if (s === 'manual' || s === 'sincronica') return 'Manual'
+  return raw
+}
+
+function normBodyType(raw: string) {
+  const s = strip(raw)
+  if (!s) return null
+  if (s === 'jeepeta') return 'SUV'
+  if (s === 'camioneta') return 'Pickup'
+  if (s === 'sedan') return 'Sedán'
+  return raw
+}
+
+// SuperCarros serves one photo at several sizes and ends every detail page with
+// an "Anuncios Similares" strip of OTHER dealers' cars:
+//   .../AdsPhotos/266x600/0/14079019.jpg   gallery, large
+//   .../AdsPhotos/188x125/5/14079019.jpg   same photo, thumbnail
+//   .../AdsPhotos/117x78/5/14470725.jpg    a different vehicle entirely
+// Deduping on the full URL kept both sizes of the same photo and imported the
+// similar-ads strip onto the car. Key on the photo id, keep the widest variant,
+// and drop the 117x78 strip.
+function collectImages(markdown: string) {
+  const best = new Map<string, { url: string; width: number }>()
+  const re = /https?:\/\/img\.supercarros\.com\/AdsPhotos\/(\d+)x(\d+)\/\d+\/(\d+)\.(?:jpg|jpeg|png|webp)/gi
+  for (const m of markdown.matchAll(re)) {
+    const width = Number(m[1])
+    if (!Number.isFinite(width) || width < 150) continue
+    const photoId = m[3]
+    const prev = best.get(photoId)
+    if (!prev || width > prev.width) best.set(photoId, { url: m[0], width })
+  }
+  return [...best.values()].map((v) => v.url).slice(0, 20)
+}
+
+// The dealer's own blurb, and nothing else. No SuperCarros links (the page ends
+// with "Ver más vehículos como este" pointing back at a competitor listing), no
+// bare URLs, no leftover markdown escapes. An empty result is null, never
+// filler text standing in for a description we do not have.
+function cleanDescription(raw: string) {
+  const out = text(raw)
+    .replace(/\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/Ver m[aá]s veh[ií]culos como este/gi, ' ')
+    .replace(/\\([-*_#[\]()])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+  return out || null
 }
 
 function parseDetail(markdown: string, sourceUrl: string, dealerName: string) {
@@ -174,12 +299,10 @@ function parseDetail(markdown: string, sourceUrl: string, dealerName: string) {
   const observation = text(markdown.match(/### Observaciones\s+([\s\S]+?)(?:\n#+\s|$)/i)?.[1] || '')
     .replace(/\s+/g, ' ')
     .slice(0, 1200)
-  const images = [...markdown.matchAll(/https?:\/\/[^\s)"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s)"']*)?/gi)]
-    .map((m) => m[0])
-    .filter((u, i, arr) => arr.indexOf(u) === i)
-    .slice(0, 20)
+  const images = collectImages(markdown)
   const conditionText = field(markdown, 'Condición')
-  const condition = /nuevo/i.test(conditionText) ? 'nuevo' : 'usado'
+  const condition = conditionText ? (/nuevo/i.test(conditionText) ? 'nuevo' : 'usado') : null
+  const mileage = parseMoney(field(markdown, 'Uso'))
   return {
     source: SOURCE,
     sourceId: anuncio,
@@ -192,19 +315,19 @@ function parseDetail(markdown: string, sourceUrl: string, dealerName: string) {
     trim: titleParts.trim,
     price,
     currency,
-    mileage: parseMoney(field(markdown, 'Uso')) || 0,
-    transmission: field(markdown, 'Transmisión') || field(markdown, 'Transmision'),
-    fuel: field(markdown, 'Combustible'),
+    mileage: mileage ?? null,
+    transmission: normTransmission(field(markdown, 'Transmisión') || field(markdown, 'Transmision')),
+    fuel: normFuel(field(markdown, 'Combustible')),
     engine: field(markdown, 'Motor'),
     color: field(markdown, 'Exterior') || field(markdown, 'Color'),
     interior: field(markdown, 'Interior'),
-    bodyType: field(markdown, 'Tipo'),
+    bodyType: normBodyType(field(markdown, 'Tipo')),
     drivetrain: field(markdown, 'Tracción') || field(markdown, 'Traccion'),
     doors: parseMoney(field(markdown, 'Puertas')),
     passengers: parseMoney(field(markdown, 'Pasajeros')),
     condition,
     location: field(markdown, 'Ciudad') || 'RD',
-    description: observation,
+    description: cleanDescription(observation),
     features,
     images,
   }
@@ -213,7 +336,7 @@ function parseDetail(markdown: string, sourceUrl: string, dealerName: string) {
 async function firecrawlScrape(url: string) {
   const key = Deno.env.get('FIRECRAWL_API_KEY')
   if (!key) throw new Error('Falta FIRECRAWL_API_KEY en Supabase Secrets.')
-  const res = await fetch(FIRECRAWL_URL, {
+  const res = await paced(() => fetch(FIRECRAWL_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -226,15 +349,18 @@ async function firecrawlScrape(url: string) {
       timeout: 60000,
       maxAge: 3600000,
     }),
-  })
+  }))
   const body = await res.json().catch(() => ({}))
   if (!res.ok || body?.success === false) {
+    // Deliberately NOT retrying 429: the quota is per minute, so a retry spends
+    // another request from the same bucket and the window does not reset for
+    // ~52s. That is what turned a partial read into a total failure.
     throw new Error(body?.error || `Firecrawl respondió ${res.status}`)
   }
   return body
 }
 
-async function buildPreview(urlRaw: string, detailLimitRaw = DEFAULT_DETAIL_LIMIT) {
+async function buildPreview(urlRaw: string, detailLimitRaw = DEFAULT_DETAIL_LIMIT, alreadyImported: Set<string> = new Set()) {
   const base = normUrl(urlRaw)
   const first = await firecrawlScrape(base.toString())
   const firstMd = first?.data?.markdown || ''
@@ -248,10 +374,10 @@ async function buildPreview(urlRaw: string, detailLimitRaw = DEFAULT_DETAIL_LIMI
     pageUrls.push(u.toString())
   }
 
-  const pageScrapes = [first]
-  for (const u of pageUrls.slice(1)) {
-    try { pageScrapes.push(await firecrawlScrape(u)) } catch { /* keep partial preview */ }
-  }
+  const rest = await pool(pageUrls.slice(1), DETAIL_CONCURRENCY, async (u) => {
+    try { return await firecrawlScrape(u) } catch { return null /* keep partial preview */ }
+  })
+  const pageScrapes = [first, ...rest.filter(Boolean)]
 
   const summaries = new Map<string, any>()
   const urls = new Set<string>()
@@ -261,20 +387,44 @@ async function buildPreview(urlRaw: string, detailLimitRaw = DEFAULT_DETAIL_LIMI
     for (const u of extractVehicleUrls(scrape, md)) urls.add(u)
   }
 
-  const detailLimit = Math.min(Math.max(Number(detailLimitRaw) || DEFAULT_DETAIL_LIMIT, 0), 30)
-  const selectedUrls = [...urls].slice(0, detailLimit)
-  const details: any[] = []
-  for (const u of selectedUrls) {
+  const detailLimit = Math.min(Math.max(Number(detailLimitRaw) || DEFAULT_DETAIL_LIMIT, 0), MAX_IMPORT)
+  // Spend the run's rate-limit budget only on cars this dealer does not have.
+  // Without this every run re-scrapes the same inventory and never converges.
+  const pending = [...urls].filter((u) => !alreadyImported.has(u))
+  const selectedUrls = pending.slice(0, detailLimit)
+  const baseOf = (u: string) => ({
+    ...(summaries.get(u) || {}),
+    dealerName,
+    source: SOURCE,
+    sourceUrl: u,
+    sourceId: sourceIdFromUrl(u),
+  })
+  const details = await pool(selectedUrls, DETAIL_CONCURRENCY, async (u) => {
     try {
       const detail = await firecrawlScrape(u)
-      details.push(parseDetail(detail?.data?.markdown || '', u, dealerName))
+      return mergeVehicle(baseOf(u), parseDetail(detail?.data?.markdown || '', u, dealerName))
     } catch {
-      details.push({ ...summaries.get(u), dealerName, needsDetailRetry: true })
+      return { ...baseOf(u), needsDetailRetry: true }
     }
-  }
+  })
   const byUrl = new Map(details.map((v) => [v.sourceUrl, v]))
-  const vehicles = [...urls].map((u) => byUrl.get(u) || { ...summaries.get(u), dealerName, source: SOURCE, sourceUrl: u, sourceId: sourceIdFromUrl(u) })
-  return { dealerName, source: SOURCE, url: base.toString(), totalPublished: total, pagesScanned: pageScrapes.length, vehicles }
+  // Only rows we actually read this run are offered. Listing the rest as blank
+  // placeholders is what made the preview table look broken.
+  const vehicles = selectedUrls.map((u) => byUrl.get(u) || baseOf(u))
+  const withDetail = details.filter((v) => !v.needsDetailRetry).length
+  return {
+    dealerName,
+    source: SOURCE,
+    url: base.toString(),
+    totalPublished: total,
+    totalFound: urls.size,
+    alreadyImported: urls.size - pending.length,
+    pagesScanned: pageScrapes.length,
+    detailAttempted: selectedUrls.length,
+    detailFetched: withDetail,
+    remainingAfterRun: Math.max(0, pending.length - selectedUrls.length),
+    vehicles,
+  }
 }
 
 async function withDuplicates(admin: any, dealerId: string, vehicles: any[]) {
@@ -297,7 +447,40 @@ async function withDuplicates(admin: any, dealerId: string, vehicles: any[]) {
   })
 }
 
-function vehiclePatch(v: any, dealerId: string) {
+async function saveMarketSnapshots(admin: any, vehicles: any[], dealerName: string) {
+  const today = new Date().toISOString().slice(0, 10)
+  const rows = vehicles
+    .filter((v) => v?.sourceUrl && v?.make && v?.model && Number(v?.price) > 0)
+    .map((v) => ({
+      source: SOURCE,
+      source_id: text(v.sourceId) || sourceIdFromUrl(v.sourceUrl),
+      source_url: text(v.sourceUrl),
+      snapshot_date: today,
+      dealer_name: dealerName || text(v.dealerName) || null,
+      make: text(v.make),
+      model: text(v.model),
+      year: Number(v.year) || null,
+      trim: text(v.trim) || null,
+      mileage: Number(v.mileage) || null,
+      price: Number(v.price),
+      currency: v.currency === 'USD' ? 'USD' : 'DOP',
+      condition: text(v.condition) || null,
+      transmission: text(v.transmission) || null,
+      fuel: text(v.fuel) || null,
+      body_type: text(v.bodyType) || null,
+      color: text(v.color) || null,
+      location: text(v.location) || null,
+      raw: v,
+    }))
+  if (!rows.length) return { saved: 0 }
+  const { error } = await admin
+    .from('vehicle_market_snapshots')
+    .upsert(rows, { onConflict: 'source,source_url,snapshot_date' })
+  if (error) return { saved: 0, error: error.message }
+  return { saved: rows.length }
+}
+
+function vehiclePatch(v: any, dealerId: string, dealerCity: string | null) {
   const make = text(v.make)
   const model = text(v.model)
   const year = Number(v.year)
@@ -310,19 +493,26 @@ function vehiclePatch(v: any, dealerId: string) {
     model,
     year,
     trim: text(v.trim) || null,
-    transmission: text(v.transmission) || null,
-    fuel: text(v.fuel) || null,
+    // Normalised here too, not just in parseDetail: values coming from the
+    // listing-line fallback never pass through the detail parser.
+    transmission: normTransmission(text(v.transmission)),
+    fuel: normFuel(text(v.fuel)),
     engine: text(v.engine) || null,
-    mileage: Number(v.mileage) || 0,
+    // null means the source did not state it. Never 0, which reads as a genuine
+    // zero-kilometre car.
+    mileage: v.mileage == null || v.mileage === '' ? null : Number(v.mileage) || null,
     color: text(v.color) || null,
-    body_type: text(v.bodyType) || null,
+    body_type: normBodyType(text(v.bodyType)),
     price,
     currency: v.currency === 'USD' ? 'USD' : 'DOP',
     condition: v.condition === 'nuevo' ? 'nuevo' : 'usado',
+    condition_confirmed: v.condition === 'nuevo' || v.condition === 'usado',
     certified: false,
-    location: text(v.location) || null,
+    // The car sits at the AutoRD dealer's lot, not at whatever city SuperCarros
+    // printed in the seller block. Their value is only a fallback.
+    location: dealerCity || text(v.location) || null,
     financing: true,
-    description: text(v.description) || `Importado desde SuperCarros: ${v.sourceUrl}`,
+    description: cleanDescription(v.description),
     features: Array.isArray(v.features) ? v.features : [],
     monthly: Math.round((price * 0.8 * 0.013) || 0),
     apr: 9.75,
@@ -338,13 +528,21 @@ function vehiclePatch(v: any, dealerId: string) {
 }
 
 async function importVehicles(admin: any, dealerId: string, vehicles: any[], mode = 'new') {
-  const chosen = vehicles.slice(0, MAX_IMPORT).filter((v) => v?.sourceUrl && v?.make && v?.model && v?.year && v?.price)
+  const candidates = vehicles.slice(0, MAX_IMPORT)
+  const chosen = candidates.filter((v) => v?.sourceUrl && v?.make && v?.model && v?.year && v?.price)
+  // Rows we could not complete used to vanish with no trace, which is why an
+  // 80-car dealer looked like a 6-car dealer. Count them and say so.
+  const incomplete = candidates
+    .filter((v) => !chosen.includes(v))
+    .map((v) => ({ sourceUrl: v?.sourceUrl || null, missing: ['make', 'model', 'year', 'price'].filter((k) => !v?.[k]) }))
   const checked = await withDuplicates(admin, dealerId, chosen)
-  const result = { imported: 0, updated: 0, skipped: 0, errors: [] as any[] }
+  const { data: dealerRow } = await admin.from('dealers').select('city').eq('id', dealerId).maybeSingle()
+  const dealerCity = text(dealerRow?.city) || null
+  const result = { imported: 0, updated: 0, skipped: 0, incomplete, errors: [] as any[] }
   for (const v of checked) {
     try {
       if (v.duplicate && mode !== 'update') { result.skipped += 1; continue }
-      const patch = vehiclePatch(v, dealerId)
+      const patch = vehiclePatch(v, dealerId, dealerCity)
       let vehicleId = v.existingVehicleId
       if (vehicleId && mode === 'update') {
         const { error } = await admin.from('vehicles').update({ ...patch, slug: undefined, source_imported_at: undefined }).eq('id', vehicleId)
@@ -363,7 +561,17 @@ async function importVehicles(admin: any, dealerId: string, vehicles: any[], mod
           position,
           is_cover: position === 0,
         }))
-        await admin.from('vehicle_photos').insert(rows).catch(() => {})
+        // NOT .catch(): a PostgrestBuilder is a bare thenable with no catch
+        // method, so the previous `.insert(rows).catch(() => {})` threw
+        // TypeError before the insert ever ran. Every photo was lost while
+        // photos_count still advertised 20 of them.
+        await admin.from('vehicle_photos').delete().eq('vehicle_id', vehicleId)
+        const { error: photoErr } = await admin.from('vehicle_photos').insert(rows)
+        if (photoErr) {
+          // Never leave the card claiming photos that do not exist.
+          await admin.from('vehicles').update({ photos_count: 0 }).eq('id', vehicleId)
+          result.errors.push({ sourceUrl: v.sourceUrl, error: `fotos: ${photoErr.message}` })
+        }
       }
     } catch (e) {
       result.errors.push({ sourceUrl: v.sourceUrl, error: String((e as Error)?.message || e) })
@@ -392,8 +600,15 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'preview'
     if (action === 'preview') {
-      const preview = await buildPreview(text(body.url), body.detailLimit)
+      // Known before any scraping, so the rate-limit budget is spent only on
+      // vehicles that are actually new to this dealer.
+      const { data: owned } = await admin.from('vehicles')
+        .select('source_url').eq('dealer_id', dealerId).eq('source', SOURCE)
+      const alreadyImported = new Set<string>((owned || []).map((r: any) => r.source_url).filter(Boolean))
+      const preview = await buildPreview(text(body.url), body.detailLimit, alreadyImported)
       preview.vehicles = await withDuplicates(admin, dealerId, preview.vehicles)
+      preview.marketSnapshots = await saveMarketSnapshots(admin, preview.vehicles, preview.dealerName)
+        .catch((e) => ({ saved: 0, error: String((e as Error)?.message || e) }))
       return json(preview)
     }
     if (action === 'import') {

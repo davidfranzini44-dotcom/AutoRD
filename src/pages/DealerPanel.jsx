@@ -10,11 +10,12 @@ import { fmtRD, fmtMoney } from '../data/demo'
 import {
   getDealerData, getDealerLeadCounts, setVehicleStatus, updateVehicleFields, deleteVehicle,
   getVehiclePhotos, addVehiclePhotos, deleteVehiclePhoto, setVehicleCover, reorderVehiclePhotos,
-  previewSuperCarrosDealerImport, importSuperCarrosVehicles,
+  previewSuperCarrosDealerImport, importSuperCarrosVehicles, getDealerVehicleMarketAnalytics,
 } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
 import CarImage from '../components/CarImage'
+import PriceSignal from '../components/PriceSignal'
 import { BODY_TYPES } from '../data/bodyTypes'
 import { BRANDS, YEARS, TRANSMISSIONS, FUELS, COLORS, CONDITIONS, ACCESSORIES } from '../data/vehicleOptions'
 import { listingScore } from '../data/dealerDemo'
@@ -280,7 +281,10 @@ function SuperCarrosImportModal({ onClose, onImported }) {
     setErr('')
     setPreview(null)
     try {
-      const data = await previewSuperCarrosDealerImport(url, { detailLimit: 12 })
+      // Firecrawl allows ~17 req/min, so one run cannot cover a large dealer.
+      // 22 paced requests fit the function's wall clock; the function skips
+      // vehicles already imported, so repeated runs work through the backlog.
+      const data = await previewSuperCarrosDealerImport(url, { detailLimit: 22 })
       setPreview(data)
       const next = {}
       ;(data.vehicles || []).forEach((v, i) => { next[v.sourceUrl || i] = !v.duplicate })
@@ -342,13 +346,19 @@ function SuperCarrosImportModal({ onClose, onImported }) {
 
           {err && <div className="notice" style={{ borderColor: '#fecaca', background: '#fff1f2', color: '#991b1b' }}><ShieldCheck size={16} /> {err}</div>}
 
+          {preview?.detailError && (
+            <div className="notice" style={{ borderColor: '#fed7aa', background: '#fff7ed', color: '#9a3412' }}>
+              <ShieldCheck size={16} /> {preview.detailFailed} de {preview.detailAttempted} no se pudieron leer: {preview.detailError}
+            </div>
+          )}
+
           {preview && (
             <>
               <div className="grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
                 <div className="metric-card"><div className="mc-v">{preview.dealerName || 'Dealer'}</div><div className="mc-l">Dealer detectado</div></div>
-                <div className="metric-card"><div className="mc-v">{vehicles.length}</div><div className="mc-l">Vehículos encontrados</div></div>
-                <div className="metric-card"><div className="mc-v">{vehicles.filter((v) => v.duplicate).length}</div><div className="mc-l">Duplicados</div></div>
-                <div className="metric-card"><div className="mc-v">{preview.pagesScanned || 1}</div><div className="mc-l">Páginas leídas</div></div>
+                <div className="metric-card"><div className="mc-v">{preview.totalFound ?? vehicles.length}</div><div className="mc-l">Publicados por el dealer</div></div>
+                <div className="metric-card"><div className="mc-v">{preview.alreadyImported ?? 0}</div><div className="mc-l">Ya en tu inventario</div></div>
+                <div className="metric-card"><div className="mc-v">{preview.detailFetched ?? 0}</div><div className="mc-l">Leídos en esta corrida</div></div>
               </div>
 
               <div className="row between center wrap gap-8">
@@ -359,7 +369,10 @@ function SuperCarrosImportModal({ onClose, onImported }) {
                     <option value="update">Actualizar duplicados</option>
                   </select>
                 </div>
-                <span className="tiny muted">{selectedVehicles.length} seleccionados</span>
+                <span className="tiny muted">
+                  {selectedVehicles.length} seleccionados
+                  {preview.remainingAfterRun > 0 && ` · quedan ${preview.remainingAfterRun} para la próxima corrida`}
+                </span>
               </div>
 
               <div className="table-wrap" style={{ maxHeight: 380, overflow: 'auto', border: '1px solid var(--line-2, #e2e8f0)', borderRadius: 14 }}>
@@ -420,6 +433,7 @@ export default function DealerPanel({ view = 'resumen' }) {
   const [inventory, setInventory] = useState([])
   const [leads, setLeads] = useState([])
   const [engagement, setEngagement] = useState({})
+  const [marketByVehicle, setMarketByVehicle] = useState({})
   const [reload, setReload] = useState(0)
   const [editing, setEditing] = useState(null)
   const [importOpen, setImportOpen] = useState(false)
@@ -438,6 +452,10 @@ export default function DealerPanel({ view = 'resumen' }) {
       setLeads(d.leads || [])
     })
     getDealerLeadCounts().then((c) => { if (alive) setEngagement(c || {}) })
+    getDealerVehicleMarketAnalytics().then((rows) => {
+      if (!alive) return
+      setMarketByVehicle(Object.fromEntries((rows || []).map((r) => [r.vehicle_id, r.insight]).filter(([, insight]) => insight)))
+    }).catch(() => { if (alive) setMarketByVehicle({}) })
     return () => { alive = false }
   }, [profile?.dealer_id, reload])
 
@@ -631,6 +649,7 @@ export default function DealerPanel({ view = 'resumen' }) {
                   const name = r.vehicle || `${r.make} ${r.model} ${r.year}`
                   const isSold = r.status === 'vendido'
                   const busy = busyId === r.dbId
+                  const priceInsight = marketByVehicle[r.dbId] || r.priceInsight
                   return (
                     <tr key={r.id}>
                       <td>
@@ -641,7 +660,12 @@ export default function DealerPanel({ view = 'resumen' }) {
                           <div className="tiny muted">{r.trim ? `${r.trim} · ` : ''}{r.photos || 0} foto{Number(r.photos || 0) === 1 ? '' : 's'}</div>
                         </button>
                       </td>
-                      <td className="num">{fmtMoney(r.price, r.currency)}</td>
+                      <td className="num">
+                        <div className="col gap-4" style={{ alignItems: 'flex-end' }}>
+                          <span>{fmtMoney(r.price, r.currency)}</span>
+                          <PriceSignal insight={priceInsight} compact />
+                        </div>
+                      </td>
                       <td>{estadoChip(r.status)}</td>
                       <td>{scoreChip(r)}</td>
                       <td className="num"><span className="row center gap-4" style={{ justifyContent: 'flex-end' }}><Eye size={13} className="muted" /> {(r.views || 0).toLocaleString('es-DO')}</span></td>
@@ -681,6 +705,7 @@ export default function DealerPanel({ view = 'resumen' }) {
               const isSold = r.status === 'vendido'
               const busy = busyId === r.dbId
               const quality = listingScore(r)
+              const priceInsight = marketByVehicle[r.dbId] || r.priceInsight
               return (
                 <article className="dealer-inventory-card" key={r.id}>
                   <button type="button" className="dealer-inventory-card-head" onClick={() => { setMenuFor(null); setEditing(r) }}>
@@ -692,6 +717,7 @@ export default function DealerPanel({ view = 'resumen' }) {
                       <strong>{name}</strong>
                       <small>{r.trim ? `${r.trim} · ` : ''}{r.photos || 0} foto{Number(r.photos || 0) === 1 ? '' : 's'}</small>
                       <b>{fmtMoney(r.price, r.currency)}</b>
+                      <PriceSignal insight={priceInsight} compact />
                     </span>
                     <ChevronRight size={17} className="muted" />
                   </button>

@@ -2253,6 +2253,11 @@ textarea.input { height: auto; padding: 10px 12px; resize: vertical; line-height
   border-color: #fed7aa;
   color: #9a3412;
 }
+.price-signal.unknown {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
 .price-signal.compact {
   margin-top: 2px;
   min-height: 21px;

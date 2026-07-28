@@ -15,6 +15,7 @@ import {
   getBankOfficers, setUnderwriting, unassignOfficer, addInternalNote, getInternalNotes,
   generateApprovalPackage, getPackageState,
   requestClientInfo, getOpenInfoRequests, getContractIdentity,
+  getBankApplicationVehicleMarketAnalytics,
   UNDERWRITING_STAGES,
 } from '../data/api'
 import { PROVINCIAS, formatAddress } from '../data/provincias'
@@ -583,6 +584,65 @@ function ClientLinkButton({ applicationId }) {
   )
 }
 
+function fmtMarketMoney(value, currency = 'DOP') {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return '-'
+  return new Intl.NumberFormat('es-DO', {
+    style: 'currency',
+    currency: currency === 'USD' ? 'USD' : 'DOP',
+    maximumFractionDigits: 0,
+  }).format(n)
+}
+
+function BankVehicleMarketAnalyticsCard({ applicationId }) {
+  const [market, setMarket] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    if (!applicationId) {
+      setMarket(null)
+      return () => { alive = false }
+    }
+    getBankApplicationVehicleMarketAnalytics(applicationId)
+      .then((r) => { if (alive) setMarket(r) })
+      .catch(() => { if (alive) setMarket(null) })
+    return () => { alive = false }
+  }, [applicationId])
+
+  const insight = market?.insight
+  const comps = Number(insight?.comparableCount || market?.comparable_count || 0)
+  const risk = market?.collateral_risk || 'Sin referencia'
+  const currency = market?.currency || 'DOP'
+  const tone = /normal/i.test(risk)
+    ? { bg: '#f0fdf4', fg: '#166534', bd: '#bbf7d0' }
+    : /alto/i.test(risk)
+      ? { bg: '#fff1f2', fg: '#b91c1c', bd: '#fecdd3' }
+      : { bg: '#fff7ed', fg: '#b45309', bd: '#fed7aa' }
+
+  return (
+    <div style={{ marginTop: 12, border: `1px solid ${tone.bd}`, borderRadius: 14, padding: 12, background: tone.bg }}>
+      <div className="row between center gap-8">
+        <div style={{ minWidth: 0 }}>
+          <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.04em', color: tone.fg }}>Analitica de garantia</div>
+          <div className="small strong">{insight?.label || 'Esperando comparables reales'}</div>
+        </div>
+        <span className="pill" style={{ background: '#fff', color: tone.fg, border: `1px solid ${tone.bd}` }}>{risk}</span>
+      </div>
+      {insight?.marketMedian ? (
+        <div style={{ marginTop: 8 }}>
+          <div className="bankx-infoline"><span>Mediana mercado</span><b>{fmtMarketMoney(insight.marketMedian, currency)}</b></div>
+          <div className="bankx-infoline"><span>Rango sugerido</span><b>{fmtMarketMoney(insight.recommendedLow, currency)} - {fmtMarketMoney(insight.recommendedHigh, currency)}</b></div>
+          <div className="bankx-infoline"><span>Diferencia precio</span><b>{insight.deltaPct == null ? '-' : `${insight.deltaPct > 0 ? '+' : ''}${insight.deltaPct}%`}</b></div>
+          <div className="bankx-infoline"><span>LTV sobre mercado</span><b>{market?.ltv_pct == null ? '-' : `${market.ltv_pct}%`}</b></div>
+          <div className="tiny muted" style={{ marginTop: 6 }}>{insight.basis || `${comps} comparables reales`}</div>
+        </div>
+      ) : (
+        <div className="tiny muted" style={{ marginTop: 8 }}>Aparece cuando AutoRD tiene al menos 5 comparables reales del mismo modelo/anio. No bloquea la decision; solo evita aprobar a ciegas.</div>
+      )}
+    </div>
+  )
+}
+
 function PaymentCapacityTool({ app }) {
   const [amount, setAmount] = useState(app.amount ? String(app.amount) : '')
   const [income, setIncome] = useState(app.income ? String(app.income) : '')
@@ -902,6 +962,7 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
             <div className="bankx-infoline"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
             <div className="bankx-infoline"><span>Monto a financiar</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
             <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}</b></div>
+            <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
           </>)}
         </section>
         <PaymentCapacityTool app={a} />
@@ -1096,6 +1157,7 @@ function ApplicationDetail({ a, onBack, onAssign, onStage, onAddNote, officers, 
                 <KV k="Inicial" v={`${fmtRD(a.down)}${a.amount ? ` (${Math.round(a.down / a.amount * 100)}%)` : ''}`} />
                 <KV k="Plazo solicitado" v={`${a.term} años`} />
                 <KV k="Dealer" v={a.dealer} />
+                <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
               </>
             )}
           </Block>

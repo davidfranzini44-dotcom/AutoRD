@@ -4,6 +4,7 @@ const ICONS = {
   good: TrendingDown,
   fair: BadgeDollarSign,
   review: Search,
+  unknown: Search,
 }
 
 export default function PriceSignal({ insight, compact = false }) {

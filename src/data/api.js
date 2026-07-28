@@ -1266,7 +1266,30 @@ export async function createVehicle(v) {
   return data
 }
 
-export async function previewSuperCarrosDealerImport(url, { detailLimit = 12 } = {}) {
+// supabase-js collapses every non-2xx into "Edge Function returned a non-2xx
+// status code" and leaves the response body unread on error.context. That makes
+// a missing secret, an invalid Firecrawl key and a rejected URL look identical
+// to the dealer. Read the body so the real reason reaches the screen.
+async function functionError(error) {
+  const res = error?.context
+  if (!res || typeof res.text !== 'function') return error?.message || 'Error desconocido'
+  try {
+    const raw = (await res.text()).trim()
+    if (!raw) return error.message
+    try { return JSON.parse(raw)?.error || raw } catch { return raw }
+  } catch {
+    return error?.message || 'Error desconocido'
+  }
+}
+
+async function invokeImporter(body) {
+  const { data, error } = await supabase.functions.invoke('supercarros-import', { body })
+  if (error) throw new Error(await functionError(error))
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function previewSuperCarrosDealerImport(url, { detailLimit = 80 } = {}) {
   if (!LIVE) return {
     dealerName: 'Joselito Auto Import',
     source: 'supercarros',
@@ -1279,22 +1302,75 @@ export async function previewSuperCarrosDealerImport(url, { detailLimit = 12 } =
       { source: 'supercarros', sourceUrl: 'https://www.supercarros.com/toyota-grand-highlander/preview/', title: 'Toyota Grand Highlander 2024', year: 2024, make: 'Toyota', model: 'Grand Highlander', price: 85500, currency: 'USD', duplicate: true },
     ],
   }
-  const { data, error } = await supabase.functions.invoke('supercarros-import', {
-    body: { action: 'preview', url, detailLimit },
-  })
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
-  return data
+  return invokeImporter({ action: 'preview', url, detailLimit })
 }
 
 export async function importSuperCarrosVehicles(vehicles, { mode = 'new' } = {}) {
   if (!LIVE) return { ok: true, demo: true, imported: vehicles.length, updated: 0, skipped: 0, errors: [] }
-  const { data, error } = await supabase.functions.invoke('supercarros-import', {
-    body: { action: 'import', vehicles, mode },
-  })
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
-  return data
+  return invokeImporter({ action: 'import', vehicles, mode })
+}
+
+export function marketAnalyticsToInsight(a) {
+  if (!a) return null
+  const comparableCount = Number(a.comparable_count ?? a.comparableCount ?? 0)
+  const sourceCount = Number(a.source_count ?? a.sourceCount ?? 0)
+  const marketMedian = a.market_median ?? a.marketMedian ?? null
+  const recommendedLow = a.recommended_low ?? a.recommendedLow ?? null
+  const recommendedHigh = a.recommended_high ?? a.recommendedHigh ?? null
+  const rawDelta = a.delta_pct ?? a.deltaPct
+  const deltaPct = rawDelta == null || rawDelta === '' ? null : Number(rawDelta)
+  const label = a.label || (comparableCount < 5 ? 'Sin suficientes comparables' : 'Precio justo')
+  const tone = /excelente|buen/i.test(label)
+    ? 'good'
+    : /alto/i.test(label)
+      ? 'review'
+      : comparableCount < 5
+        ? 'unknown'
+        : 'fair'
+
+  return {
+    ...a,
+    comparableCount,
+    sourceCount,
+    autordCount: Number(a.autord_count ?? a.autordCount ?? 0),
+    externalCount: Number(a.external_count ?? a.externalCount ?? 0),
+    marketMin: a.market_min ?? a.marketMin ?? null,
+    marketMedian,
+    marketMax: a.market_max ?? a.marketMax ?? null,
+    recommendedLow,
+    recommendedHigh,
+    deltaPct: Number.isFinite(deltaPct) ? deltaPct : null,
+    label,
+    tone,
+    confidence: a.confidence || 'insuficiente',
+    basis: a.basis || '',
+    summary: comparableCount < 5
+      ? 'Se necesitan más comparables reales'
+      : `${comparableCount} comparables reales · confianza ${a.confidence || 'baja'}`,
+  }
+}
+
+export async function getVehicleMarketAnalytics(vehicleDbId) {
+  if (!LIVE || !vehicleDbId) return null
+  const { data, error } = await supabase.rpc('vehicle_market_price_analytics', { p_vehicle_id: vehicleDbId })
+  if (error) return null
+  const row = Array.isArray(data) ? data[0] : data
+  return marketAnalyticsToInsight(row)
+}
+
+export async function getDealerVehicleMarketAnalytics() {
+  if (!LIVE) return []
+  const { data, error } = await supabase.rpc('my_dealer_vehicle_market_analytics')
+  if (error) return []
+  return (data || []).map((r) => ({ ...r, insight: marketAnalyticsToInsight(r) }))
+}
+
+export async function getBankApplicationVehicleMarketAnalytics(applicationId) {
+  if (!LIVE || !applicationId) return null
+  const { data, error } = await supabase.rpc('bank_application_vehicle_market_analytics', { p_application_id: applicationId })
+  if (error) return null
+  const row = Array.isArray(data) ? data[0] : data
+  return row ? { ...row, insight: marketAnalyticsToInsight(row) } : null
 }
 
 // Change a vehicle's status (publicado | reservado | vendido | borrador). Dealer-owned only (RLS).

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   MessageCircle, FileText, Landmark, X, AlertTriangle, Send, Eye, CheckCircle2, Wallet, ShieldCheck, BadgeCheck,
 } from 'lucide-react'
-import { getDealerData, getClientHistoryForDealer, getDealerPreapprovalInterests, getDealerApplications, LIVE } from '../data/api'
+import { getDealerData, getClientHistoryForDealer, getDealerPreapprovalInterests, getDealerApplications, getVehicleMarketAnalytics, LIVE } from '../data/api'
 import { useAuth } from '../context/AuthContext'
 import { fmtMoney } from '../data/demo'
 import CarImage from '../components/CarImage'
@@ -298,6 +298,20 @@ function ClientHistoryDealer({ buyerId }) {
 function AppDrawer({ app, onClose }) {
   const banks = Array.isArray(app.banks) ? app.banks : []
   const missing = Array.isArray(app.missing) ? app.missing : []
+  const [market, setMarket] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    if (!app.vehicle?.dbId) {
+      setMarket(null)
+      return () => { alive = false }
+    }
+    getVehicleMarketAnalytics(app.vehicle.dbId)
+      .then((r) => { if (alive) setMarket(r) })
+      .catch(() => { if (alive) setMarket(null) })
+    return () => { alive = false }
+  }, [app.vehicle?.dbId])
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', zIndex: 70, display: 'flex', justifyContent: 'flex-end' }} onClick={onClose}>
       <aside style={{ width: 'min(460px, 100%)', height: '100%', background: 'var(--surface, #fff)', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
@@ -331,6 +345,7 @@ function AppDrawer({ app, onClose }) {
             <Row k="Plazo" v={app.term ? `${app.term} años` : '—'} />
             {app.clientAccepted && <Row k="Aceptada por el cliente" v={app.acceptedBank || 'Sí'} />}
           </div>
+          {app.vehicle && <DealerMarketCard market={market} vehicle={app.vehicle} />}
           {/* Income and the buyer's documents are deliberately absent: RLS keeps
               them between the client and the bank. */}
 
@@ -379,6 +394,43 @@ function AppDrawer({ app, onClose }) {
     </div>
   )
 }
+
+function DealerMarketCard({ market, vehicle }) {
+  const comps = Number(market?.comparableCount || 0)
+  const range = market?.recommendedLow && market?.recommendedHigh
+    ? `${fmtMoney(market.recommendedLow, vehicle.currency)} - ${fmtMoney(market.recommendedHigh, vehicle.currency)}`
+    : '-'
+  const tone = market?.tone === 'good'
+    ? { bg: '#dcfce7', fg: '#166534', bd: '#bbf7d0' }
+    : market?.tone === 'review'
+      ? { bg: '#fff7ed', fg: '#c2410c', bd: '#fed7aa' }
+      : comps >= 5
+        ? { bg: '#eff6ff', fg: '#1d4ed8', bd: '#bfdbfe' }
+        : { bg: '#f8fafc', fg: '#64748b', bd: '#e2e8f0' }
+
+  return (
+    <div className="card" style={{ padding: 12, borderColor: tone.bd, background: `linear-gradient(180deg, ${tone.bg}, var(--surface, #fff))` }}>
+      <div className="row between center gap-8">
+        <div style={{ minWidth: 0 }}>
+          <div className="tiny strong" style={{ textTransform: 'uppercase', letterSpacing: '.04em', color: tone.fg }}>Analitica de precio real</div>
+          <div className="strong small">{market?.label || 'Esperando comparables'}</div>
+        </div>
+        <span className="chip" style={{ background: '#fff', color: tone.fg, border: `1px solid ${tone.bd}` }}>{comps} comps</span>
+      </div>
+      {market?.marketMedian ? (
+        <div style={{ marginTop: 8 }}>
+          <Row k="Mediana mercado" v={fmtMoney(market.marketMedian, vehicle.currency)} />
+          <Row k="Rango sugerido" v={range} />
+          <Row k="Diferencia" v={market.deltaPct == null ? '-' : `${market.deltaPct > 0 ? '+' : ''}${market.deltaPct}%`} />
+          <div className="tiny muted" style={{ marginTop: 6 }}>{market.basis || market.summary}</div>
+        </div>
+      ) : (
+        <div className="tiny muted" style={{ marginTop: 8 }}>AutoRD mostrara una opinion cuando haya al menos 5 comparables reales del mismo modelo/anio.</div>
+      )}
+    </div>
+  )
+}
+
 function Row({ k, v }) {
   return <div className="row between center" style={{ fontSize: 13, padding: '3px 0' }}><span className="muted">{k}</span><span className="strong">{v}</span></div>
 }
