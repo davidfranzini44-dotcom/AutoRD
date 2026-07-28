@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isPlaceholderEmail } from '../data/contact'
 import autordLogo from '../assets/autord-logo-reference.png'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
@@ -12,6 +13,19 @@ const BANK_STATUS_LABEL = {
   preaprobada: 'Pre-aprobada', oferta: 'Aprobada', condicional: 'Aprobada con condiciones',
   pendiente_docs: 'Documentos solicitados', en_evaluacion: 'En evaluación',
   rechazada: 'No aprobada', pendiente: 'En revisión',
+}
+
+// What to print under "Correo". Most AutoRD customers sign up over WhatsApp and
+// never have an inbox — their account IS the phone number, and the synthetic
+// wa<digits>@autord.local address is not a real one. Printing "No registrado" on
+// a signed contract for someone we can reach every day is wrong, so fall back to
+// the number and label it as the account.
+function contactoCuenta(c) {
+  const email = c?.email
+  if (email && !isPlaceholderEmail(email)) return email
+  const phone = c?.phone
+  if (phone) return `${String(phone).startsWith('+') ? '' : '+'}${phone} (cuenta de WhatsApp)`
+  return 'No registrado'
 }
 
 export default function Contrato() {
@@ -158,7 +172,7 @@ export default function Contrato() {
               <div className="fc-detail"><span>Nombre completo</span><b>{c.customer || '—'}</b></div>
               <div className="fc-detail"><span>Cédula</span><b>{c.cedula_masked || 'Validada por DIDIT'}</b></div>
               <div className="fc-detail"><span>Teléfono</span><b>{c.phone || 'No registrado'}</b></div>
-              <div className="fc-detail"><span>Correo</span><b>{c.email || 'No registrado'}</b></div>
+              <div className="fc-detail"><span>Correo</span><b>{contactoCuenta(c)}</b></div>
               <div className="fc-detail"><span>Verificación de identidad</span><b>DIDIT · cédula + prueba de vida</b></div>
             </div>
           </section>
@@ -324,8 +338,11 @@ const CSS = `
 .fc-id-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 11px; border-bottom: 1px solid #e7edf5; }
 .fc-id-cap b { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: #475569; }
 .fc-id-ok { display: inline-flex; align-items: center; gap: 4px; color: #0f766e; font-size: 10px; font-weight: 800; white-space: nowrap; }
-.fc-id-frame { position: relative; background: #eef2f7; min-height: 150px; display: grid; place-items: center; }
-.fc-id-frame img { width: 100%; height: 200px; object-fit: cover; display: block; }
+.fc-id-frame { position: relative; background: #0c2033; min-height: 150px; display: grid; place-items: center; padding: 8px; }
+/* object-fit:cover cropped the edges off the cédula. On a consent contract the
+   document has to be legible in full, so the whole scan is contained and
+   the frame letterboxes around whatever aspect ratio DIDIT returns. */
+.fc-id-frame img { width: 100%; height: auto; max-height: 340px; object-fit: contain; display: block; }
 .fc-id-empty { color: #94a3b8; font-size: 11px; padding: 28px 10px; text-align: center; }
 .fc-id-foot { padding: 8px 11px; font-size: 10px; color: #64748b; border-top: 1px solid #e7edf5; }
 .fc-idnote { border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; color: #64748b; padding: 14px; font-size: 12px; }
