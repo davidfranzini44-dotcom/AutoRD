@@ -25,7 +25,11 @@ export default function Login() {
   // Phone + WhatsApp code. Kept as its own little state machine rather than
   // another `mode`, because it is two steps (send, then verify) and the email
   // form's fields do not apply to it.
-  const [phoneMode, setPhoneMode] = useState(false)
+  // ?login=whatsapp means we already know this customer has no password and no
+  // real inbox. Offering them an email form is a dead end, so open straight on
+  // the phone flow and do not show the email escape hatch.
+  const waOnly = sp.get('login') === 'whatsapp'
+  const [phoneMode, setPhoneMode] = useState(waOnly)
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [sent, setSent] = useState(false)
@@ -135,10 +139,12 @@ export default function Login() {
                     </button>
                   </>
                 )}
-                <button type="button" className="btn btn-ghost btn-sm btn-block"
-                  onClick={() => { setPhoneMode(false); setErr(''); setNote(''); setSent(false); setCode('') }}>
-                  Entrar con correo y contraseña
-                </button>
+                {!waOnly && (
+                  <button type="button" className="btn btn-ghost btn-sm btn-block"
+                    onClick={() => { setPhoneMode(false); setErr(''); setNote(''); setSent(false); setCode('') }}>
+                    Entrar con correo y contraseña
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -434,7 +434,12 @@ function RequestInfoButton({ app, field, faltaKey }) {
   // Deep-link straight to the item in the client's "Qué falta" list. Asking for
   // a field and then making them hunt for where to enter it is how these
   // requests go unanswered.
-  const link = faltaKey ? ` ${window.location.origin}/mi-financiamiento?falta=${faltaKey}` : ''
+  // Tell the login screen which method this customer actually has, so a
+  // WhatsApp-only client is never asked for an email they do not own.
+  const waOnly = !app?.email && !!app?.phone
+  const link = faltaKey
+    ? ` ${window.location.origin}/mi-financiamiento?falta=${faltaKey}${waOnly ? '&login=whatsapp' : ''}`
+    : ''
   const text = `Hola ${app.customer}, para completar tu solicitud ${app.id}, por favor confírmame tu ${field}.${link}`
   return (
     <a className="btn btn-outline btn-sm bankx-info-btn" href={`https://wa.me/${digits(app.phone)}?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
