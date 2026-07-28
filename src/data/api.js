@@ -1519,7 +1519,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, officer:profiles(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
+    .select('*, officer:profiles!application_banks_assigned_officer_id_fkey(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
