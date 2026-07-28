@@ -576,19 +576,23 @@ export async function getMyFinancing() {
   if (!uid) return null
   const { data: app } = await supabase
     .from('financing_applications')
-    .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(*, bank:banks(name, slug, color, initials))')
+    .select('*, vehicle:vehicles(' + VEHICLE_SELECT + '), responses:application_banks(*, bank:banks(id, name, slug, color, initials)), documents(id, requested_by_bank, status), info_requests:financing_info_requests(id, bank_id, requested_fields, status)')
     .eq('buyer_id', uid).order('created_at', { ascending: false }).limit(1).single()
   if (!app) return null
   const isPre = !app.vehicle_id
-  const responses = (app.responses || []).map((r) => ({
-    bankId: r.bank?.slug, bankName: r.bank?.name, status: mapBankStatus(r.status), label: bankStatusLabel(r.status),
-    apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
-    approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
-    validUntil: r.valid_until || null,
-    expired: isValidityExpired(r.valid_until),
-    selected: !!r.selected,
-    rawStatus: r.status,
-  }))
+  const responses = (app.responses || []).map((r) => {
+    const uiStatus = responseStatusForUi(r.status, app, r.bank?.id)
+    return {
+      bankId: r.bank?.slug, bankName: r.bank?.name, status: mapBankStatus(uiStatus), label: bankStatusLabel(uiStatus),
+      apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
+      approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
+      validUntil: r.valid_until || null,
+      expired: isValidityExpired(r.valid_until),
+      selected: !!r.selected,
+      rawStatus: r.status,
+      uiStatus,
+    }
+  })
   const hasOffer = responses.some((r) => r.status === 'offer')
   const evaluating = responses.some((r) => r.status === 'evaluating' || r.status === 'docs')
   // Best (highest) pre-approved ceiling across banks — powers "shop within budget".
@@ -1669,18 +1673,42 @@ export const UNDERWRITING_STAGES = [
   { id: 'comite', label: 'En comité' },
 ]
 
+const DOCUMENT_REQUEST_FIELDS = ['comprobante_ingresos', 'referencias', 'info_laboral', 'inicial_disponible', 'otro']
+const OPEN_DOCUMENT_STATUSES = ['solicitado']
+
+function bankHasOpenDocumentRequest(app, bankId) {
+  const docs = Array.isArray(app?.documents) ? app.documents : []
+  const infoRequests = Array.isArray(app?.info_requests) ? app.info_requests : []
+  const ownsBank = (rowBank) => !bankId || !rowBank || rowBank === bankId
+  const openDoc = docs.some((d) => ownsBank(d.requested_by_bank) && OPEN_DOCUMENT_STATUSES.includes(d.status))
+  const openInfoDoc = infoRequests.some((r) => (
+    ownsBank(r.bank_id)
+    && r.status === 'abierta'
+    && (r.requested_fields || []).some((f) => DOCUMENT_REQUEST_FIELDS.includes(f))
+  ))
+  return openDoc || openInfoDoc
+}
+
+function responseStatusForUi(rawStatus, app, bankId) {
+  if (rawStatus === 'pendiente_docs' && !bankHasOpenDocumentRequest(app, bankId)) {
+    return 'en_evaluacion'
+  }
+  return rawStatus
+}
+
 export async function getBankApplications(bankDbId, filter = 'todas') {
   if (!LIVE) {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, officer:profiles!application_banks_assigned_officer_id_fkey(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)))')
+    .select('*, officer:profiles!application_banks_assigned_officer_id_fkey(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)), documents(id, requested_by_bank, status), info_requests:financing_info_requests(id, bank_id, requested_fields, status))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
   return (data || []).map((r) => {
     const fin = Array.isArray(r.app?.financials) ? r.app.financials[0] : r.app?.financials
     const isPre = !r.app?.vehicle_id
+    const uiStatus = responseStatusForUi(r.status, r.app, bankDbId)
     return {
       // Real contact + identity. Anything we don't hold stays null so the UI can
       // say "no registrado" instead of the panel inventing it (it used to
@@ -1715,7 +1743,8 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       consentVersion: (r.app?.consents || []).find((c) => c.bank_id === bankDbId)?.consent_version || null,
       banksAuthorized: [...new Set((r.app?.routed || []).map((x) => x.bank?.name).filter(Boolean))].join(', ') || null,
       contractToken: r.app?.contract_token || null,
-      status: filterFromResponse(r.status), responseId: r.id, applicationId: r.application_id || r.app?.id,
+      status: filterFromResponse(uiStatus), rawStatus: r.status, uiStatus,
+      responseId: r.id, applicationId: r.application_id || r.app?.id,
       createdAt: r.created_at || r.app?.created_at || null,
       // Needed by the risk flags: financing more than the car is worth can only
       // be detected when the price is actually present.
