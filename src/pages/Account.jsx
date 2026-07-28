@@ -67,8 +67,9 @@ export default function Account() {
     return () => { alive = false; window.removeEventListener('autord-notifs', sync) }
   }, [user])
 
-  const name = profile?.full_name || (user?.email && user.email.split('@')[0]) || 'Comprador'
-  const email = profile?.email || user?.email || ''
+  const rawEmail = profile?.email || user?.email || ''
+  const email = isPlaceholderEmail(rawEmail) ? '' : rawEmail
+  const name = profile?.full_name || fin?.buyerName || (email && email.split('@')[0]) || 'Comprador'
   const phone = profile?.phone || ''
   const anon = !!user?.is_anonymous
   const kyc = kycValidity(profile)
@@ -113,7 +114,7 @@ export default function Account() {
             these fields that every authorised bank sees. A bank can also record
             its own copy while working a case, but that stays private to it, so
             filling this in is what saves the client repeating themselves. */}
-        {!institutionUser && <ProfileCard profile={profile} onSaved={refreshProfile} />}
+        {!institutionUser && <ProfileCard profile={profile} fallbackFullName={fin?.buyerName} onSaved={refreshProfile} />}
 
         <div className="col gap-12">
           {/* Notifications (bank responses etc.) */}
@@ -321,7 +322,7 @@ function HubRow({ to, icon, tone = 'teal', title, sub, badge }) {
 // Phone is deliberately not editable here: it is the WhatsApp identity the OTP
 // and the passwordless account are keyed on, so changing it needs re-verification
 // rather than a text box.
-function ProfileCard({ profile, onSaved }) {
+function ProfileCard({ profile, fallbackFullName = '', onSaved }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ fullName: '', email: '', occupation: '', provincia: '', addressLine: '' })
   const [busy, setBusy] = useState(false)
@@ -329,7 +330,7 @@ function ProfileCard({ profile, onSaved }) {
   const [ok, setOk] = useState(false)
 
   const current = {
-    fullName: profile?.full_name || '',
+    fullName: profile?.full_name || fallbackFullName || '',
     email: isPlaceholderEmail(profile?.email) ? '' : (profile?.email || ''),
     occupation: profile?.occupation || '',
     provincia: profile?.provincia || '',

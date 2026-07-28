@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   expiredCedulaOnly, collectWarnings, checkPassed, documentExpired,
-  extractCedulaLast4, cedulaGraceActive, CEDULA_GRACE_UNTIL_MS,
+  extractCedulaLast4, extractKycFullName, cedulaGraceActive, CEDULA_GRACE_UNTIL_MS,
 } from '../supabase/functions/didit-webhook/kyc-grace.ts'
 
 // ---------------------------------------------------------------------------
@@ -195,5 +195,23 @@ describe('extractCedulaLast4 — feeds the client-portal identity gate', () => {
   it('returns null when there is no usable number', () => {
     expect(extractCedulaLast4({})).toBe(null)
     expect(extractCedulaLast4({ id_verification: { document_number: '12' } })).toBe(null)
+  })
+})
+
+describe('extractKycFullName - feeds Mis Datos and the account greeting', () => {
+  it('reads the cedula name from singular Didit decisions', () => {
+    expect(extractKycFullName({ id_verification: { full_name: 'Nashla  Martinez' } })).toBe('Nashla Martinez')
+  })
+
+  it('reads the cedula name from plural Didit decisions', () => {
+    expect(extractKycFullName({ id_verifications: [{ fullName: 'Wendy Fernandez' }] })).toBe('Wendy Fernandez')
+  })
+
+  it('reads the persisted webhook shape where the decision is nested', () => {
+    expect(extractKycFullName({ decision: { id_verification: { name: 'Jose Almonte' } } })).toBe('Jose Almonte')
+  })
+
+  it('returns null when there is no usable name', () => {
+    expect(extractKycFullName({ id_verification: {} })).toBe(null)
   })
 })

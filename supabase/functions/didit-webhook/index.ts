@@ -11,7 +11,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 // The expired-cédula decision lives in its own module so it can be unit-tested
 // (tests/kyc-grace.test.js replays the real payloads from the two incidents it
 // caused). Do not inline this logic back here.
-import { cedulaGraceActive, expiredCedulaOnly, extractCedulaLast4 } from './kyc-grace.ts'
+import { cedulaGraceActive, expiredCedulaOnly, extractCedulaLast4, extractKycFullName } from './kyc-grace.ts'
 
 const enc = new TextEncoder()
 const DIDIT_BASE = Deno.env.get('DIDIT_BASE_URL') ?? 'https://verification.didit.me/v2'
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
 
   // On approval (including graced), best-effort capture the cédula + liveness
   // images. Wrapped so a Didit hiccup never turns a success into a failed webhook.
-  if (approved && sessionId && apiKey) {
+  if (approved && sessionId) {
     // Resolve the owning profile id (vendor_data carries the user id at session creation).
     let profileId = vendorData
     if (!profileId) {
@@ -174,7 +174,18 @@ Deno.serve(async (req) => {
       profileId = data?.profile_id
     }
     if (profileId) {
-      try { await captureIdentityImages(admin, apiKey, sessionId, profileId, decision) } catch (_) { /* non-fatal */ }
+      const verifiedName = extractKycFullName(decision)
+      if (verifiedName) {
+        await admin.from('profiles')
+          .update({ full_name: verifiedName })
+          .eq('id', profileId)
+        await admin.from('financing_applications')
+          .update({ buyer_name: verifiedName })
+          .eq('buyer_id', profileId)
+      }
+      if (apiKey) {
+        try { await captureIdentityImages(admin, apiKey, sessionId, profileId, decision) } catch (_) { /* non-fatal */ }
+      }
       // Store the cédula's last-4 (hashed server-side) for the client-portal gate.
       try {
         const last4 = extractCedulaLast4(decision)

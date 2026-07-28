@@ -91,3 +91,18 @@ export function extractCedulaLast4(decision: any): string | null {
   const digits = String(raw).replace(/[^0-9]/g, '')
   return digits.length >= 4 ? digits.slice(-4) : null
 }
+
+// Name as read by Didit from the verified cédula. Didit has shipped both
+// singular and plural ID-verification payloads, and some webhooks persist the
+// actual decision one level down under `decision`, so keep this as permissive as
+// the cédula extractor.
+export function extractKycFullName(decision: any): string | null {
+  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
+  const root = decision?.decision && typeof decision.decision === 'object' ? decision.decision : decision
+  const idv = first(root?.id_verifications) ?? root?.id_verification ?? root?.document ?? {}
+  const raw = idv?.full_name ?? idv?.fullName ?? idv?.name
+    ?? idv?.full_name_latin ?? idv?.latin_name
+    ?? root?.full_name ?? root?.fullName ?? root?.name
+  const name = String(raw || '').replace(/\s+/g, ' ').trim()
+  return name || null
+}

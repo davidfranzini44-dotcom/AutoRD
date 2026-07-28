@@ -16,6 +16,17 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } })
 
+function extractKycFullName(decision: any): string | null {
+  const first = (v: any) => (Array.isArray(v) ? v[0] : v)
+  const root = decision?.decision && typeof decision.decision === 'object' ? decision.decision : decision
+  const idv = first(root?.id_verifications) ?? root?.id_verification ?? root?.document ?? {}
+  const raw = idv?.full_name ?? idv?.fullName ?? idv?.name
+    ?? idv?.full_name_latin ?? idv?.latin_name
+    ?? root?.full_name ?? root?.fullName ?? root?.name
+  const name = String(raw || '').replace(/\s+/g, ' ').trim()
+  return name || null
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
@@ -69,7 +80,12 @@ Deno.serve(async (req) => {
         }
       }
 
-      return json({ status, approved, declined, graced })
+      const fullName = approved ? extractKycFullName(d) : null
+      if (fullName) {
+        await supa.from('profiles').update({ full_name: fullName }).eq('id', user.id)
+      }
+
+      return json({ status, approved, declined, graced, fullName })
     }
 
     // action === 'create'

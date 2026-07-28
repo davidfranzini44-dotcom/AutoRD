@@ -33,15 +33,15 @@ export default function Verificar() {
     if (onFile.valid) setState((s) => (s === 'idle' ? 'onfile' : s))
   }, [onFile.valid]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const finish = () => {
+  const finish = (fullName = null) => {
     clearInterval(pollRef.current)
     setState('ok')
-    markKycVerified().then(() => refreshProfile?.()).catch(() => {})
+    markKycVerified(fullName).then(() => refreshProfile?.()).catch(() => {})
   }
   const checkStatus = async (sid) => {
     if (!sid) return
     const st = await getKycStatus(sid)
-    if (st.approved) finish()
+    if (st.approved) finish(st.fullName)
     else if (st.declined) { clearInterval(pollRef.current); setError('La verificación fue rechazada o quedó incompleta.'); setState('error') }
   }
 

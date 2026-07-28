@@ -221,9 +221,9 @@ export default function Financing() {
 
   // A fresh KYC just passed: mark it 'ok', record the verified-on date so it can
   // be reused for 12 months, and refresh the profile so the account hub updates.
-  const onKycVerified = () => {
+  const onKycVerified = (fullName = null) => {
     setKyc('ok'); setKycFromProfile(false)
-    markKycVerified().then(() => refreshProfile?.()).catch(() => {})
+    markKycVerified(fullName).then(() => refreshProfile?.()).catch(() => {})
   }
 
   // Single source of truth for reading the Didit decision — used by the poll,
@@ -232,7 +232,7 @@ export default function Financing() {
     const id = sid || session?.session_id
     if (!id) return
     const st = await getKycStatus(id)
-    if (st.approved) { clearInterval(pollRef.current); onKycVerified() }
+    if (st.approved) { clearInterval(pollRef.current); onKycVerified(st.fullName) }
     else if (st.declined) { clearInterval(pollRef.current); setKycError('La verificación fue rechazada o quedó incompleta.'); setKyc('error') }
   }
   const startPoll = (sid) => {
