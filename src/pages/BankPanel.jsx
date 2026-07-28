@@ -750,7 +750,9 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
     let alive = true
     if (!a.contractToken) { setIdFace(null); return undefined }
     getContractIdentity(a.contractToken)
-      .then((r) => { if (alive) setIdFace(r?.authorized ? r.idUrl : null) })
+      // Only the portrait — the face cropped from the cédula. Never the whole
+      // document and never the selfie.
+      .then((r) => { if (alive) setIdFace(r?.authorized ? r.portraitUrl : null) })
       .catch(() => { if (alive) setIdFace(null) })
     return () => { alive = false }
   }, [a.contractToken])

@@ -542,20 +542,26 @@ export async function getPublicContract(token) {
 // Returns { authorized, idUrl, livenessUrl, capturedAt } — idUrl/livenessUrl
 // are null when authorized but no images were captured (e.g. legacy/seed apps).
 export async function getContractIdentity(token) {
-  if (!LIVE || !token) return { authorized: false, idUrl: null, livenessUrl: null }
+  if (!LIVE || !token) return { authorized: false, idUrl: null, livenessUrl: null, portraitUrl: null }
   const { data: userRes } = await supabase.auth.getUser()
-  if (!userRes?.user) return { authorized: false, idUrl: null, livenessUrl: null }
+  if (!userRes?.user) return { authorized: false, idUrl: null, livenessUrl: null, portraitUrl: null }
 
   const { data, error } = await supabase.rpc('get_contract_identity', { p_token: token })
-  if (error || !data || !data.authorized) return { authorized: false, idUrl: null, livenessUrl: null }
+  if (error || !data || !data.authorized) return { authorized: false, idUrl: null, livenessUrl: null, portraitUrl: null }
 
   const sign = async (path) => {
     if (!path) return null
     const { data: s } = await supabase.storage.from('kyc-images').createSignedUrl(path, 300)
     return s?.signedUrl || null
   }
-  const [idUrl, livenessUrl] = await Promise.all([sign(data.id_image_path), sign(data.liveness_image_path)])
-  return { authorized: true, idUrl, livenessUrl, capturedAt: data.captured_at || null }
+  const [idUrl, livenessUrl, portraitSigned] = await Promise.all([
+    sign(data.id_image_path), sign(data.liveness_image_path), sign(data.portrait_image_path),
+  ])
+  // The face cropped from the ID document. Prefer our own stored copy; fall back
+  // to DIDIT's presigned link for verifications captured before we stored it.
+  // That link expires, so it is a bridge, not a source.
+  const portraitUrl = portraitSigned || data.portrait_fallback_url || null
+  return { authorized: true, idUrl, livenessUrl, portraitUrl, capturedAt: data.captured_at || null }
 }
 
 // Customer financing status (latest application for the logged-in buyer)
