@@ -959,11 +959,6 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
           </div>
         </section>
 
-        {/* Paired with Cliente because both are tall; a short card here is what
-            left the column ragged. */}
-        <section className="card pad">
-          <CapacityTool a={a} />
-        </section>
 
         {/* Full width: a flag list reads fine wide, and at one line it would
             otherwise strand an entire half-row. */}
@@ -1037,15 +1032,15 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
             <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
           </>)}
         </section>
-        {/* Both calculators render, by design. They answer different questions:
-            CapacityTool (above) works from precio/inicial/deudas via
-            assessCapacity, while this one works from the financed amount and
-            adds seguro plus a longer-term comparison.
+        {/* The expediente's only capacity calculator. CapacityTool (built on
+            assessCapacity) used to render above as well; two tools with
+            different assumptions — a hardcoded 9.25% and a 35% cuota/ingreso
+            ceiling here, against the application's own APR and 40% there —
+            could reach opposite verdicts on the same file.
 
-            They do NOT share assumptions — this one hardcodes 9.25% and a 35%
-            cuota/ingreso ceiling, where CapacityTool uses the application's own
-            APR and 40%. On the same file they can therefore disagree, so treat
-            them as two readings rather than one verdict. */}
+            Note this one takes the financed amount directly: it has no
+            precio/inicial inputs, so nothing derives "monto a financiar", and
+            it ignores existing monthly debts. It does account for seguro. */}
         <PaymentCapacityTool app={a} />
       </div>
 
