@@ -1763,7 +1763,7 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
     return bankApplications.filter((a) => filter === 'todas' || a.status === filter)
   }
   let q = supabase.from('application_banks')
-    .select('*, officer:profiles!application_banks_assigned_officer_id_fkey(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price), dealer:dealers(name), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)), documents(id, requested_by_bank, status), info_requests:financing_info_requests(id, bank_id, requested_fields, status))')
+    .select('*, officer:profiles!application_banks_assigned_officer_id_fkey(id, full_name), app:financing_applications(*, vehicle:vehicles(make, model, year, price, currency, slug, trim, mileage, condition, transmission, fuel, engine, color, body_type, location, photo_rows:vehicle_photos(url, is_cover, position)), dealer:dealers(name, phone, whatsapp, slug, city), financials:application_financials(income, employment_type, cedula_masked, cedula_last4), consents:financing_bank_consents(bank_id, signed_at, consent_version), routed:application_banks(bank:banks(name)), documents(id, requested_by_bank, status), info_requests:financing_info_requests(id, bank_id, requested_fields, status))')
     .eq('bank_id', bankDbId)
   const { data, error } = await q.order('created_at', { ascending: false })
   if (error) throw error
@@ -1787,7 +1787,39 @@ export async function getBankApplications(bankDbId, filter = 'todas') {
       email: realEmail(r.app?.buyer_email),
       isPreapproval: isPre,
       vehicle: r.app?.vehicle ? `${r.app.vehicle.make} ${r.app.vehicle.model} ${r.app.vehicle.year}` : '',
-      dealer: r.app?.dealer?.name, amount: r.app?.requested_amount != null ? Number(r.app.requested_amount) : null,
+      // The listed price and ITS currency. Sending the number alone let a bank
+      // read US$85,500 as RD$85,500 — the same confusion that made the buyer
+      // flow request 60x too little.
+      vehiclePriceCurrency: r.app?.vehicle?.currency === 'USD' ? 'USD' : 'DOP',
+      // Enough of the collateral to judge it without leaving the panel. mileage
+      // is NULL when the source never stated it (most SuperCarros imports) — the
+      // UI must say "no indicado" rather than print 0 km.
+      vehicleSpecs: r.app?.vehicle ? {
+        slug: r.app.vehicle.slug || null,
+        trim: r.app.vehicle.trim || null,
+        mileage: r.app.vehicle.mileage != null ? Number(r.app.vehicle.mileage) : null,
+        condition: r.app.vehicle.condition || null,
+        transmission: r.app.vehicle.transmission || null,
+        fuel: r.app.vehicle.fuel || null,
+        engine: r.app.vehicle.engine || null,
+        color: r.app.vehicle.color || null,
+        bodyType: r.app.vehicle.body_type || null,
+        location: r.app.vehicle.location || null,
+        photo: (() => {
+          const rows = Array.isArray(r.app.vehicle.photo_rows) ? r.app.vehicle.photo_rows : []
+          const cover = rows.find((p) => p.is_cover) || [...rows].sort((x, y) => (x.position ?? 0) - (y.position ?? 0))[0]
+          return cover?.url || null
+        })(),
+      } : null,
+      dealer: r.app?.dealer?.name,
+      // Contact for the dealer holding the collateral. The bank had only a name,
+      // so confirming the vehicle or arranging disbursement meant leaving AutoRD
+      // and finding them by hand.
+      dealerPhone: r.app?.dealer?.phone || null,
+      dealerWhatsapp: r.app?.dealer?.whatsapp || null,
+      dealerSlug: r.app?.dealer?.slug || null,
+      dealerCity: r.app?.dealer?.city || null,
+      amount: r.app?.requested_amount != null ? Number(r.app.requested_amount) : null,
       down: r.app?.down_payment != null ? Number(r.app.down_payment) : null, term: r.app?.term_years,
       income: fin?.income, employment: fin?.employment_type,
       approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,

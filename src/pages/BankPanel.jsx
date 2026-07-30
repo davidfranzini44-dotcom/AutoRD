@@ -871,31 +871,44 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
               <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
               </div></div>
               {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval) || a.clientAccepted) && (
-                <div className="bankx-hero-flags">
+                <div className="bankx-hero-events">
                   {a.validUntil && (
-                    <span className={`pill bankx-hero-flag ${a.expired ? 'danger' : 'success'}`}>
-                      {a.expired ? 'Vigencia vencida' : 'Vigencia'} · hasta {fmtDay(a.validUntil)}
-                    </span>
+                    <div className={`bankx-hero-event ${a.expired ? 'danger' : 'success'}`}>
+                      <span className="bankx-hero-dot" />
+                      <div><b>{a.expired ? 'Vigencia vencida' : 'Vigencia activa'}</b><small>Hasta {fmtDay(a.validUntil)}</small></div>
+                    </div>
                   )}
                   {a.vehicleLinkedAt && !a.isPreapproval && (
-                    <span className="pill bankx-hero-flag info">Cliente eligió vehículo · {fmtDay(a.vehicleLinkedAt)}</span>
+                    <div className="bankx-hero-event info">
+                      <span className="bankx-hero-dot" />
+                      <div><b>Cliente eligió vehículo</b><small>{fmtDay(a.vehicleLinkedAt)}</small></div>
+                    </div>
                   )}
                   {a.selectedByClient && (
-                    <span className="pill bankx-hero-flag success"><CheckCircle2 size={12} /> El cliente aceptó tu oferta</span>
+                    <div className="bankx-hero-event success">
+                      <span className="bankx-hero-dot" />
+                      <div><b>Oferta aceptada</b><small>El cliente aceptó tu oferta</small></div>
+                    </div>
                   )}
                   {a.clientAccepted && !a.selectedByClient && (
-                    <span className="pill bankx-hero-flag neutral">Cliente aceptó otra oferta</span>
+                    <div className="bankx-hero-event neutral">
+                      <span className="bankx-hero-dot" />
+                      <div><b>Otra oferta aceptada</b><small>El cliente eligió otro banco</small></div>
+                    </div>
                   )}
                 </div>
               )}
             </div>
-            <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
+            <div className="bankx-hero-side">
+              <span className={statusPill(a.status)}>{bankStatusMeta[a.status].label}</span>
+              <div className="bankx-hero-score"><span>Score interno</span><b>{sc}/100</b></div>
+            </div>
           </div>
           <div className="bankx-expmini-grid">
-            <div className="bankx-expmini"><span>Monto</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
-            <div className="bankx-expmini"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
+            <div className="bankx-expmini accent"><span>Monto</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
+            <div className="bankx-expmini warn"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
             <div className="bankx-expmini"><span>Ingreso</span><b>{a.income ? fmtRD(a.income) : '—'}</b></div>
-            <div className="bankx-expmini"><span>Score interno</span><b>{sc}/100</b></div>
+            <div className="bankx-expmini"><span>Cuota estimada</span><b>{cuota ? fmtRD(cuota) : '—'}</b></div>
           </div>
         </div>
 
@@ -966,15 +979,70 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
           {a.isPreapproval ? (
             <div className="tiny muted">Pre-aprobación sin vehículo — el cliente elige el carro después.</div>
           ) : (<>
-            <div className="bankx-infoline"><span>Modelo</span><b>{dash(a.vehicle)}</b></div>
-            <div className="bankx-infoline"><span>Precio venta</span><b>{precioVenta ? fmtRD(precioVenta) : '—'}</b></div>
+            {a.vehicleSpecs?.photo && (
+              <img src={a.vehicleSpecs.photo} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
+                style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} />
+            )}
+            <div className="bankx-infoline"><span>Modelo</span><b>{dash(a.vehicle)}{a.vehicleSpecs?.trim ? ` ${a.vehicleSpecs.trim}` : ''}</b></div>
+            {/* Collateral basics. Kilometraje is null when the source never
+                stated it — say so instead of printing a confident 0 km. */}
+            <div className="bankx-infoline"><span>Kilometraje</span><b>{a.vehicleSpecs?.mileage != null
+              ? `${a.vehicleSpecs.mileage.toLocaleString('en-US')} km`
+              : 'No indicado'}</b></div>
+            {a.vehicleSpecs?.condition && (
+              <div className="bankx-infoline"><span>Condición</span><b style={{ textTransform: 'capitalize' }}>{a.vehicleSpecs.condition}</b></div>
+            )}
+            {[['Transmisión', a.vehicleSpecs?.transmission], ['Combustible', a.vehicleSpecs?.fuel],
+              ['Motor', a.vehicleSpecs?.engine], ['Color', a.vehicleSpecs?.color],
+              ['Tipo', a.vehicleSpecs?.bodyType], ['Ubicación', a.vehicleSpecs?.location]]
+              .filter(([, v]) => v)
+              .map(([label, v]) => (
+                <div key={label} className="bankx-infoline"><span>{label}</span><b>{v}</b></div>
+              ))}
+            {/* The unit matters as much as the number: this marketplace lists
+                most cars in US$, and a bare "85,500" reads as pesos. */}
+            <div className="bankx-infoline"><span>Precio venta</span><b>{precioVenta
+              ? (a.vehiclePriceCurrency === 'USD'
+                ? `US$ ${Number(precioVenta).toLocaleString('en-US')}`
+                : fmtRD(precioVenta))
+              : '—'}</b></div>
             <div className="bankx-infoline"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
             <div className="bankx-infoline"><span>Monto a financiar</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
-            <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}</b></div>
+            {a.vehicleSpecs?.slug && (
+              <div className="bankx-infoline bankx-infoline-action"><span>Publicación</span><b>
+                <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/vehiculo/${a.vehicleSpecs.slug}`}>
+                  <ExternalLink size={12} /> Ver el anuncio
+                </a>
+              </b></div>
+            )}
+            <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}{a.dealerCity ? ` · ${a.dealerCity}` : ''}</b></div>
+            {/* The dealer holds the collateral. Without a number the analyst had
+                to leave AutoRD to confirm the car or arrange disbursement. */}
+            {(a.dealerPhone || a.dealerWhatsapp || a.dealerSlug) && (
+              <div className="bankx-infoline bankx-infoline-action"><span>Contacto</span><b>
+                {a.dealerPhone && <a className="link-teal" href={`tel:${a.dealerPhone}`}>{a.dealerPhone}</a>}
+                {a.dealerWhatsapp && (
+                  <a className="link-teal row center gap-4" target="_blank" rel="noreferrer"
+                    href={`https://wa.me/${String(a.dealerWhatsapp).replace(/[^0-9]/g, '')}`}>
+                    <MessageSquare size={12} /> WhatsApp
+                  </a>
+                )}
+                {a.dealerSlug && (
+                  <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/dealers/${a.dealerSlug}`}>
+                    <ExternalLink size={12} /> Perfil
+                  </a>
+                )}
+              </b></div>
+            )}
             <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
           </>)}
         </section>
-        <PaymentCapacityTool app={a} />
+        {/* PaymentCapacityTool also rendered here, so the expediente showed two
+            capacity calculators with different assumptions — a hardcoded 9.25%
+            and a 35% ceiling against the application's own APR and 40% — which
+            could reach opposite verdicts on the same file. CapacityTool is the
+            one kept: it runs on assessCapacity, which is advisory by
+            construction and accounts for existing debts and the inicial. */}
       </div>
 
       {/* Documentos + Actividad */}

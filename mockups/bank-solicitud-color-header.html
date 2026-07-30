@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD - Solicitud banco header color mockup</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #dbe4ee;
+      --soft: #f6f9fc;
+      --bank: #0f766e;
+      --bank-dark: #0b4f4a;
+      --blue: #2563eb;
+      --green: #047857;
+      --red: #be123c;
+      --amber: #b45309;
+      --shadow: 0 22px 70px rgba(15, 23, 42, .10);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 5%, rgba(15, 118, 110, .10), transparent 26%),
+        linear-gradient(180deg, #eef5f8 0%, #f8fafc 38%, #ffffff 100%);
+      color: var(--ink);
+      padding: 32px;
+    }
+
+    .page { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+    .caption { display: flex; justify-content: space-between; align-items: end; gap: 16px; }
+    .caption h1 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
+    .caption p { margin: 6px 0 0; color: var(--muted); max-width: 720px; line-height: 1.5; }
+    .caption .tag { border: 1px solid #b7ebe4; background: #effaf8; color: var(--bank-dark); border-radius: 999px; padding: 8px 12px; font-weight: 850; font-size: 12px; white-space: nowrap; }
+
+    .mock-section { display: grid; gap: 10px; }
+    .label { font-size: 12px; font-weight: 900; letter-spacing: .10em; text-transform: uppercase; color: #73859d; }
+
+    .shell {
+      border: 1px solid #d8e3ec;
+      background: rgba(255,255,255,.72);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background:
+        linear-gradient(90deg, rgba(15, 118, 110, .12), transparent 44%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 7px;
+      background: linear-gradient(180deg, var(--bank), #1d4ed8);
+    }
+
+    .hero-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      padding: 22px 22px 18px 28px;
+    }
+    .person { display: flex; gap: 14px; min-width: 0; }
+    .avatar {
+      width: 62px;
+      height: 62px;
+      border-radius: 17px;
+      background:
+        linear-gradient(135deg, rgba(15,118,110,.18), rgba(37,99,235,.14)),
+        #fff;
+      border: 1px solid #cbd5e1;
+      display: grid;
+      place-items: center;
+      color: var(--bank-dark);
+      font-weight: 950;
+      flex: none;
+      box-shadow: 0 8px 22px rgba(15,23,42,.08);
+    }
+    .id-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .pill {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 850;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .pill.id { background: #eef7f6; color: var(--bank-dark); border-color: #c8ebe7; }
+    .pill.status { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .pill.danger { background: #fff1f2; color: var(--red); border-color: #fecdd3; }
+    .pill.info { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .pill.ok { background: #ecfdf5; color: var(--green); border-color: #a7f3d0; }
+    .pill.neutral { background: #f8fafc; color: #475569; border-color: #dbe4ee; }
+
+    h2 { margin: 9px 0 5px; font-size: 30px; line-height: 1.02; letter-spacing: -.045em; }
+    .vehicle { margin: 0; color: #475569; line-height: 1.45; font-size: 15px; font-weight: 650; }
+    .vehicle b { color: var(--ink); }
+
+    .hero-side { display: grid; justify-items: end; align-content: start; gap: 10px; }
+    .quick-score {
+      min-width: 162px;
+      border: 1px solid #b7ebe4;
+      background: linear-gradient(135deg, #ecfdf5, #effaf8);
+      color: var(--bank-dark);
+      border-radius: 18px;
+      padding: 13px;
+    }
+    .quick-score span { display: block; color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    .quick-score b { display: block; margin-top: 4px; font-size: 25px; letter-spacing: -.04em; }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0 22px 18px 28px;
+    }
+    .event {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 10px 1fr;
+      gap: 10px;
+      align-items: start;
+      min-width: 0;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: #94a3b8; }
+    .dot.red { background: var(--red); box-shadow: 0 0 0 4px #ffe4e6; }
+    .dot.blue { background: var(--blue); box-shadow: 0 0 0 4px #dbeafe; }
+    .dot.green { background: var(--green); box-shadow: 0 0 0 4px #d1fae5; }
+    .event b { display: block; font-size: 13px; letter-spacing: -.01em; }
+    .event span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0 22px 22px 28px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 17px;
+      padding: 14px;
+      min-height: 82px;
+    }
+    .metric.accent { border-color: #b7ebe4; background: linear-gradient(180deg, #ffffff, #effaf8); }
+    .metric.warn { border-color: #fde68a; background: linear-gradient(180deg, #ffffff, #fffbeb); }
+    .metric span { display: block; color: #64748b; font-size: 10.5px; font-weight: 950; letter-spacing: .09em; text-transform: uppercase; }
+    .metric b { display: block; margin-top: 8px; font-size: 20px; letter-spacing: -.035em; }
+    .metric small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+    .phone-wrap { display: flex; justify-content: center; }
+    .phone {
+      width: 390px;
+      border: 10px solid #111827;
+      border-radius: 34px;
+      background: #f6f9fc;
+      padding: 12px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+    }
+    .phone .hero { border-radius: 22px; }
+    .phone .hero-top { grid-template-columns: 1fr; padding: 18px 16px 14px 22px; gap: 12px; }
+    .phone .hero-side { justify-items: start; grid-template-columns: auto 1fr; align-items: center; }
+    .phone h2 { font-size: 25px; }
+    .phone .avatar { width: 54px; height: 54px; border-radius: 15px; }
+    .phone .timeline { grid-template-columns: 1fr; padding: 0 16px 14px 22px; }
+    .phone .metrics { grid-template-columns: 1fr 1fr; padding: 0 16px 16px 22px; }
+    .phone .quick-score { min-width: 0; width: 100%; padding: 11px 12px; }
+    .phone .quick-score b { font-size: 20px; }
+    .phone .pill { white-space: normal; line-height: 1.2; }
+
+    .note {
+      border: 1px dashed #cbd5e1;
+      background: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      color: #475569;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+    .note b { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="caption">
+      <div>
+        <h1>Solicitud banco - header con color controlado</h1>
+        <p>La idea: no volver al bloque oscuro. Usar una tarjeta clara con una barra de acento, estados con puntos de color, y metricas limpias. Color existe, pero guia la lectura.</p>
+      </div>
+      <span class="tag">Propuesta para AutoRD</span>
+    </header>
+
+    <section class="mock-section">
+      <div class="label">Desktop</div>
+      <div class="shell">
+        <article class="hero">
+          <div class="hero-top">
+            <div class="person">
+              <div class="avatar">DF</div>
+              <div>
+                <div class="id-row">
+                  <span class="pill id">Solicitud AP-2047</span>
+                  <span class="pill neutral">En revision</span>
+                </div>
+                <h2>David Enrique Franzini Javier</h2>
+                <p class="vehicle"><b>Toyota Grand Highlander 2024</b> · Joselito Auto Import · Expediente revisado por Banco BHD</p>
+              </div>
+            </div>
+            <div class="hero-side">
+              <span class="pill status">Pre-aprobada</span>
+              <div class="quick-score">
+                <span>Score interno</span>
+                <b>90/100</b>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline">
+            <div class="event"><i class="dot red"></i><div><b>Vigencia vencida</b><span>Hasta 29 jul de 2026. Requiere nueva confirmacion del banco.</span></div></div>
+            <div class="event"><i class="dot blue"></i><div><b>Cliente eligio vehiculo</b><span>29 jul de 2026. Puede continuar con cierre si el banco confirma.</span></div></div>
+            <div class="event"><i class="dot green"></i><div><b>Oferta aceptada</b><span>El cliente acepto esta oferta. Dealer pendiente de coordinacion.</span></div></div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric accent"><span>Monto a financiar</span><b>RD$ 4,104,000</b><small>Maximo aprobado</small></div>
+            <div class="metric warn"><span>Inicial requerido</span><b>RD$ 250,000</b><small>o 20% del vehiculo</small></div>
+            <div class="metric"><span>Ingreso declarado</span><b>RD$ 250,000</b><small>Validado por documentos</small></div>
+            <div class="metric"><span>Cuota estimada</span><b>RD$ 66,920</b><small>9.25% · 7 anos</small></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="mock-section">
+      <div class="label">Mobile</div>
+      <div class="phone-wrap">
+        <div class="phone">
+          <article class="hero">
+            <div class="hero-top">
+              <div class="person">
+                <div class="avatar">DF</div>
+                <div>
+                  <div class="id-row">
+                    <span class="pill id">Solicitud AP-2047</span>
+                    <span class="pill status">Pre-aprobada</span>
+                  </div>
+                  <h2>David Enrique Franzini Javier</h2>
+                  <p class="vehicle"><b>Toyota Grand Highlander 2024</b> · Joselito Auto Import</p>
+                </div>
+              </div>
+              <div class="hero-side">
+                <div class="quick-score">
+                  <span>Score interno</span>
+                  <b>90/100</b>
+                </div>
+              </div>
+            </div>
+            <div class="timeline">
+              <div class="event"><i class="dot red"></i><div><b>Vigencia vencida</b><span>Hasta 29 jul de 2026.</span></div></div>
+              <div class="event"><i class="dot blue"></i><div><b>Cliente eligio vehiculo</b><span>Listo para confirmar condiciones.</span></div></div>
+              <div class="event"><i class="dot green"></i><div><b>Oferta aceptada</b><span>Cliente ya acepto esta oferta.</span></div></div>
+            </div>
+            <div class="metrics">
+              <div class="metric accent"><span>Monto</span><b>RD$ 4.1M</b><small>Financiar</small></div>
+              <div class="metric warn"><span>Inicial</span><b>RD$ 250K</b><small>o 20%</small></div>
+              <div class="metric"><span>Ingreso</span><b>RD$ 250K</b><small>mensual</small></div>
+              <div class="metric"><span>Cuota</span><b>RD$ 66.9K</b><small>estimada</small></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="note">
+      <b>Decision de diseno:</b> el color ahora cumple una funcion. Verde = decision positiva, azul = accion/evento del cliente, rojo = vencimiento, amber = condicion financiera que requiere atencion. El fondo sigue claro para que nombre, vehiculo y numeros sean lo primero que el banco lee.
+    </div>
+  </main>
+</body>
+</html>
