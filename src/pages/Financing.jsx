@@ -7,7 +7,7 @@ import {
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
 import { createApplication, createKycSession, getKycStatus, markKycVerified, getFinancingBankOptions, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin, getUsdDopRate } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
-import { financedAmountDop, isValidRate } from '../data/fx'
+import { financedAmountDop, toDop, isValidRate } from '../data/fx'
 import { kycValidity, fmtKycDate } from '../data/kyc'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -104,6 +104,7 @@ export default function Financing() {
     getUsdDopRate().then((r) => { if (alive) setFxRate(r) }).catch(() => { if (alive) setFxRate(null) })
     return () => { alive = false }
   }, [])
+
   const [form, setForm] = useState(() => ({
     nombre: '', cedula: '', telefono: '', email: '',
     ingreso: seed.ingreso ? fmtMoneyInput(seed.ingreso) : '',
@@ -120,6 +121,24 @@ export default function Financing() {
   const [selBanks, setSelBanks] = useState(demoBanks.map((b) => b.id))
   const [notify, setNotify] = useState('ambos')
   const [vehicle, setVehicle] = useState(null)
+
+  // Every figure on this page is DOP, because that is what the banks lend. The
+  // listing price may be USD, so convert once here rather than fmtRD-ing the raw
+  // number at each site — that printed US$69,000 as RD$69,000.
+  const priceDop = vehicle ? toDop(vehicle.price, vehicle.currency, fxRate) : null
+  const priceUsd = vehicle?.currency === 'USD'
+    ? `US$ ${Number(vehicle.price).toLocaleString('en-US')}`
+    : null
+  // With no usable rate, show the dollar figure as dollars rather than a peso
+  // number we cannot stand behind.
+  const priceLabel = !vehicle ? '—' : (priceDop != null ? fmtRD(priceDop) : (priceUsd || '—'))
+  // PreapDatos, StepEnviar and InicialSlider all take `vehicle` as a prop and
+  // format .price with fmtRD. Handing them a peso-denominated copy fixes every
+  // one of those at once, instead of threading the rate through and converting
+  // in each — which is how the raw USD number slipped past in the first place.
+  const vehicleDop = vehicle && priceDop != null && priceDop !== vehicle.price
+    ? { ...vehicle, price: priceDop, priceOriginal: vehicle.price, priceCurrency: vehicle.currency }
+    : vehicle
   const [preApp, setPreApp] = useState(null) // existing open pre-approval to reuse
   const pollRef = useRef(null)
 
@@ -308,7 +327,9 @@ export default function Financing() {
     // form); only the car's price may need converting.
     const requestedAmount = vehicle
       ? financedAmountDop({
-        price: vehicle.price,
+        // DOP, matching requestedAmount. Sending the USD figure here would put
+        // two different currencies in the same application row.
+        price: priceDop ?? vehicle.price,
         currency: vehicle.currency,
         downDop: parseMoney(form.inicial) || 0,
         rate: fxRate,
@@ -408,7 +429,8 @@ export default function Financing() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div className="tiny muted">{vehicle.dealer}</div>
-              <div className="strong">{fmtRD(vehicle.price)}</div>
+              <div className="strong">{priceLabel}</div>
+              {priceUsd && priceDop != null && <div className="tiny muted">{priceUsd} · tasa {fxRate}</div>}
             </div>
           </div>
         )}
@@ -437,10 +459,10 @@ export default function Financing() {
         <div className="card card-pad">
           {/* Key by step so each step slides in smoothly, consistent with the pre-approval questions. */}
           <div className="preap-slide" key={step}>
-            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} vehicle={vehicle} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} plazoOptions={plazoOptions} plazoNote={plazoNote} />}
+            {step === 0 && <PreapDatos form={form} set={set} setMoney={setMoney} questions={questions} vehicle={vehicleDop} onComplete={next} reused={!!preApp} recap={recap} onEdit={() => setEditAll(true)} plazoOptions={plazoOptions} plazoNote={plazoNote} />}
             {step === 1 && <StepIdentidad state={kyc} run={runKyc} onFrameLoad={onFrameLoad} session={session} reused={!!preApp} error={kycError} authed={authed} loginHref={loginHref} fromProfile={kycFromProfile} onReverify={reverify} onFile={kycOnFile} />}
             {step === 2 && <StepConsent consent={consent} setConsent={setConsent} reused={!!preApp} />}
-            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicle} isPreapproval={isPreapproval} reused={!!preApp} eligibility={eligibility} />}
+            {step === 3 && <StepEnviar banks={bankList} sel={selBanks} toggle={toggleBank} notify={notify} setNotify={setNotify} form={form} vehicle={vehicleDop} isPreapproval={isPreapproval} reused={!!preApp} eligibility={eligibility} />}
             {step === 4 && <StepRespuestas banks={bankList.filter((b) => selBanks.includes(b.id) && eligibility[b.id]?.ok)} phone={form.telefono} showClaim={!authed} />}
           </div>
 
