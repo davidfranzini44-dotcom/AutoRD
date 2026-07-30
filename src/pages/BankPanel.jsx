@@ -912,187 +912,164 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
           </div>
         </div>
 
-        <aside className="card pad">
-          <div className="row between center">
-            <div><div className="strong">Resumen para decidir</div><div className="tiny muted">Todo lo crítico antes de aprobar</div></div>
-            <span className={`pill ${okCount === 3 ? 'green' : 'amber'}`}>{okCount}/3 ok</span>
-          </div>
-          <div className="bankx-readiness" style={{ marginTop: 12 }}>
-            {readiness.map((r) => (
-              <div className="bankx-readiness-row" key={r.key}>
-                <span className={`bankx-check-ic ${r.ok ? 'ok' : r.warn ? 'warn' : 'bad'}`}>{r.ok ? <CheckCircle2 size={16} /> : r.warn ? <AlertTriangle size={16} /> : <XCircle size={16} />}</span>
-                <div className="grow" style={{ minWidth: 0 }}><b className="small">{r.title}</b><div className="tiny muted">{r.sub}</div></div>
-                {r.href && <a className="btn btn-outline btn-sm" href={r.href} target="_blank" rel="noreferrer">{r.cta}</a>}
-              </div>
-            ))}
-          </div>
-          <div className="row wrap center gap-8" style={{ marginTop: 10 }}>
-            <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
-              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
-                value={a.reviewer?.id || ''} onChange={(e) => onAssign(a.responseId, e.target.value || null)}>
-                <option value="">Sin analista asignado</option>
-                {(officers || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </label>
-            <label className="row center gap-6 tiny"><ClipboardList size={14} className="muted" />
-              <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
-                value={a.underwritingStage || 'nuevo'} onChange={(e) => onStage(a.responseId, e.target.value)}>
-                {UNDERWRITING_STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
-              </select>
-            </label>
-          </div>
-        </aside>
       </div>
 
-      {/* Cliente / Vehículo / Capacidad */}
-      <div className="bankx-expgrid">
-        <section className="card pad">
-          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
-          {/* Ocupación and Dirección are never inferred. They show what the client
-              declared, or what this bank recorded itself — they used to be filled
-              from a hash, and a bank must not see details AutoRD invented. */}
-          <ClientInfoPanel app={a} />
-          {/* Requesting data IS a client action, and as its own card it was a
-              lone button beside a tall panel — half a row of dead space. */}
-          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line-2, #e2e8f0)' }}>
-            <RequestInfoPanel a={a} bank={bank} />
-          </div>
-        </section>
-
-
-        {/* Full width: a flag list reads fine wide, and at one line it would
-            otherwise strand an entire half-row. */}
-        {/* Short panel: paired with Paquete rather than spanning its own row. */}
-        <section className="card pad" style={{ order: 4 }}>
-          <RiskPanel a={a} documents={effectiveDocs} />
-        </section>
-
-        <section className="card pad" style={{ order: 3 }}>
-          <PackagePanel a={a} />
-        </section>
-        {/* Tall panel (photo + specs): paired with Cliente, the other tall one. */}
-        <section className="card pad" style={{ order: 2 }}>
-          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
-          {a.isPreapproval ? (
-            <div className="tiny muted">Pre-aprobación sin vehículo — el cliente elige el carro después.</div>
-          ) : (<>
-            {a.vehicleSpecs?.photo && (
-              <img src={a.vehicleSpecs.photo} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }}
-                style={{ width: '100%', height: 150, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} />
-            )}
-            <div className="bankx-infoline"><span>Modelo</span><b>{dash(a.vehicle)}{a.vehicleSpecs?.trim ? ` ${a.vehicleSpecs.trim}` : ''}</b></div>
-            {/* Collateral basics. Kilometraje is null when the source never
-                stated it — say so instead of printing a confident 0 km. */}
-            <div className="bankx-infoline"><span>Kilometraje</span><b>{a.vehicleSpecs?.mileage != null
-              ? `${a.vehicleSpecs.mileage.toLocaleString('en-US')} km`
-              : 'No indicado'}</b></div>
-            {a.vehicleSpecs?.condition && (
-              <div className="bankx-infoline"><span>Condición</span><b style={{ textTransform: 'capitalize' }}>{a.vehicleSpecs.condition}</b></div>
-            )}
-            {[['Transmisión', a.vehicleSpecs?.transmission], ['Combustible', a.vehicleSpecs?.fuel],
-              ['Motor', a.vehicleSpecs?.engine], ['Color', a.vehicleSpecs?.color],
-              ['Tipo', a.vehicleSpecs?.bodyType], ['Ubicación', a.vehicleSpecs?.location]]
-              .filter(([, v]) => v)
-              .map(([label, v]) => (
-                <div key={label} className="bankx-infoline"><span>{label}</span><b>{v}</b></div>
-              ))}
-            {/* The unit matters as much as the number: this marketplace lists
-                most cars in US$, and a bare "85,500" reads as pesos. */}
-            <div className="bankx-infoline"><span>Precio venta</span><b>{precioVenta
-              ? (a.vehiclePriceCurrency === 'USD'
-                ? `US$ ${Number(precioVenta).toLocaleString('en-US')}`
-                : fmtRD(precioVenta))
-              : '—'}</b></div>
-            <div className="bankx-infoline"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
-            <div className="bankx-infoline"><span>Monto a financiar</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
-            {a.vehicleSpecs?.slug && (
-              <div className="bankx-infoline bankx-infoline-action"><span>Publicación</span><b>
-                <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/vehiculo/${a.vehicleSpecs.slug}`}>
-                  <ExternalLink size={12} /> Ver el anuncio
-                </a>
-              </b></div>
-            )}
-            <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}{a.dealerCity ? ` · ${a.dealerCity}` : ''}</b></div>
-            {/* The dealer holds the collateral. Without a number the analyst had
-                to leave AutoRD to confirm the car or arrange disbursement. */}
-            {(a.dealerPhone || a.dealerWhatsapp || a.dealerSlug) && (
-              <div className="bankx-infoline bankx-infoline-action"><span>Contacto</span><b>
-                {a.dealerPhone && <a className="link-teal" href={`tel:${a.dealerPhone}`}>{a.dealerPhone}</a>}
-                {a.dealerWhatsapp && (
-                  <a className="link-teal row center gap-4" target="_blank" rel="noreferrer"
-                    href={`https://wa.me/${String(a.dealerWhatsapp).replace(/[^0-9]/g, '')}`}>
-                    <MessageSquare size={12} /> WhatsApp
-                  </a>
-                )}
-                {a.dealerSlug && (
-                  <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/dealers/${a.dealerSlug}`}>
-                    <ExternalLink size={12} /> Perfil
-                  </a>
-                )}
-              </b></div>
-            )}
-            <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
-          </>)}
-        </section>
-        {/* The expediente's only capacity calculator. CapacityTool (built on
-            assessCapacity) used to render above as well; two tools with
-            different assumptions — a hardcoded 9.25% and a 35% cuota/ingreso
-            ceiling here, against the application's own APR and 40% there —
-            could reach opposite verdicts on the same file.
-
-            Note this one takes the financed amount directly: it has no
-            precio/inicial inputs, so nothing derives "monto a financiar", and
-            it ignores existing monthly debts. It does account for seguro. */}
-        <PaymentCapacityTool app={a} />
-      </div>
-
-      {/* Documentos + Actividad */}
-      <div className="bankx-docgrid">
-        <DocWorkflow app={a} docs={docs} setDocs={setDocs} docStatus={docStatus} setDocStatus={setDocStatus} />
-        <section className="card pad">
-          <div className="row between center" style={{ marginBottom: 4 }}>
-            <div><h3 style={{ fontSize: 15, margin: 0 }}>Actividad y comunicación</h3><div className="tiny muted">Historial de banco, dealer y cliente</div></div>
-            <div className="row center gap-6">
-              <ClientLinkButton applicationId={a.applicationId} />
-              {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={15} /> WhatsApp</a>}
+      <div className="bankx-exp-workspace">
+        <main className="bankx-exp-main">
+          <section className="card pad bankx-review-card">
+            <div className="row between center">
+              <div><div className="strong">Revisión rápida</div><div className="tiny muted">Lo crítico queda arriba antes de aprobar o pedir documentos.</div></div>
+              <span className={`pill ${okCount === 3 ? 'green' : 'amber'}`}>{okCount}/3 ok</span>
             </div>
-          </div>
-          <div className="bankx-timeline" style={{ marginTop: 12 }}>
-            {events.map((e, i) => (
-              <div className="bankx-tlitem" key={`ev-${i}`}>
-                <span className="bankx-tldot" style={{ background: e.kind === 'accepted' ? '#16a34a' : e.kind === 'verified' ? '#0f766e' : '#2563eb' }} />
-                <div><b className="small">{bankEventLabel(e)}</b><div className="tiny muted">{fmtEventWhen(e.at)} · {e.actor}</div></div>
-              </div>
-            ))}
-            {[...a.timeline].reverse().map((e, i) => (
-              <div className="bankx-tlitem" key={i}>
-                <span className={`bankx-tldot ${/pendiente|solicit/i.test(e.name) ? 'amber' : ''}`} />
-                <div><b className="small">{e.name}</b><div className="tiny muted">{e.when} · {e.actor}{e.note ? ` · ${e.note}` : ''}</div></div>
-              </div>
-            ))}
-            {events.length === 0 && a.timeline.length === 0 && <div className="tiny muted">Sin actividad todavía.</div>}
-          </div>
-        </section>
-      </div>
+            <div className="bankx-readiness bankx-readiness-compact">
+              {readiness.map((r) => (
+                <div className="bankx-readiness-row" key={r.key}>
+                  <span className={`bankx-check-ic ${r.ok ? 'ok' : r.warn ? 'warn' : 'bad'}`}>{r.ok ? <CheckCircle2 size={16} /> : r.warn ? <AlertTriangle size={16} /> : <XCircle size={16} />}</span>
+                  <div className="grow" style={{ minWidth: 0 }}><b className="small">{r.title}</b><div className="tiny muted">{r.sub}</div></div>
+                  {r.href && <a className="btn btn-outline btn-sm" href={r.href} target="_blank" rel="noreferrer">{r.cta}</a>}
+                </div>
+              ))}
+            </div>
+            <div className="bankx-review-actions">
+              <label className="row center gap-6 tiny"><UserCheck size={14} className="muted" />
+                <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                  value={a.reviewer?.id || ''} onChange={(e) => onAssign(a.responseId, e.target.value || null)}>
+                  <option value="">Sin analista asignado</option>
+                  {(officers || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </label>
+              <label className="row center gap-6 tiny"><ClipboardList size={14} className="muted" />
+                <select className="input bankx-minisel" style={{ height: 34, padding: '2px 8px' }}
+                  value={a.underwritingStage || 'nuevo'} onChange={(e) => onStage(a.responseId, e.target.value)}>
+                  {UNDERWRITING_STAGES.map((st) => <option key={st.id} value={st.id}>{st.label}</option>)}
+                </select>
+              </label>
+            </div>
+          </section>
 
-      {/* Client history (this bank's own past decisions for the client) */}
-      <ClientHistoryBank buyerId={a.buyerId} currentAppId={a.applicationId} />
+          <div className="bankx-compact-grid">
+            <section className="card pad">
+              <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Cliente</h3><span className={`pill ${a.kyc === 'aprobado' ? 'green' : 'amber'}`}>{a.kyc === 'aprobado' ? 'Verificado' : 'Pendiente'}</span></div>
+              <ClientInfoPanel app={a} />
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line-2, #e2e8f0)' }}>
+                <RequestInfoPanel a={a} bank={bank} />
+              </div>
+            </section>
+            <section className="card pad">
+              <RiskPanel a={a} documents={effectiveDocs} />
+            </section>
+          </div>
 
-      {/* Decision panel */}
-      <div className="bankx-decpanel">
-        <div className="bankx-dec-wide"><DecisionForm a={a} bank={bank} /></div>
-        <section className="card pad">
-          <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Notas internas</h3><span className="pill">Banco</span></div>
-          <div className="tiny muted" style={{ marginBottom: 8 }}>Solo visibles para el banco. No se comparten con el cliente ni el dealer.</div>
-          <div className="row gap-6">
-            <input className="input" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Nueva nota…" style={{ height: 36 }} />
-            <button className="btn btn-outline btn-sm" disabled={!noteInput.trim()} onClick={() => { onAddNote({ text: noteInput.trim(), by: a.reviewer?.name || 'Analista', when: 'Ahora' }); setNoteInput('') }}><Plus size={14} /></button>
+          <PaymentCapacityTool app={a} />
+
+          <div className="bankx-docgrid bankx-docgrid-compact">
+            <DocWorkflow app={a} docs={docs} setDocs={setDocs} docStatus={docStatus} setDocStatus={setDocStatus} />
+            <section className="card pad">
+              <div className="row between center" style={{ marginBottom: 4 }}>
+                <div><h3 style={{ fontSize: 15, margin: 0 }}>Actividad y comunicación</h3><div className="tiny muted">Historial de banco, dealer y cliente</div></div>
+                <div className="row center gap-6">
+                  <ClientLinkButton applicationId={a.applicationId} />
+                  {a.phone && <a className="btn btn-primary btn-sm" href={`https://wa.me/${digits(a.phone)}?text=${encodeURIComponent(waMsg(a))}`} target="_blank" rel="noreferrer"><WhatsAppIcon size={15} /> WhatsApp</a>}
+                </div>
+              </div>
+              <div className="bankx-timeline" style={{ marginTop: 12 }}>
+                {events.map((e, i) => (
+                  <div className="bankx-tlitem" key={`ev-${i}`}>
+                    <span className="bankx-tldot" style={{ background: e.kind === 'accepted' ? '#16a34a' : e.kind === 'verified' ? '#0f766e' : '#2563eb' }} />
+                    <div><b className="small">{bankEventLabel(e)}</b><div className="tiny muted">{fmtEventWhen(e.at)} · {e.actor}</div></div>
+                  </div>
+                ))}
+                {[...a.timeline].reverse().map((e, i) => (
+                  <div className="bankx-tlitem" key={i}>
+                    <span className={`bankx-tldot ${/pendiente|solicit/i.test(e.name) ? 'amber' : ''}`} />
+                    <div><b className="small">{e.name}</b><div className="tiny muted">{e.when} · {e.actor}{e.note ? ` · ${e.note}` : ''}</div></div>
+                  </div>
+                ))}
+                {events.length === 0 && a.timeline.length === 0 && <div className="tiny muted">Sin actividad todavía.</div>}
+              </div>
+            </section>
           </div>
-          <div className="col gap-6" style={{ marginTop: 10 }}>
-            {(a.notes || []).length === 0 && <div className="bankx-notebox tiny muted">Sin notas todavía.</div>}
-            {(a.notes || []).map((n, i) => (<div className="bankx-notebox" key={i}><b className="small">{n.by}</b><div className="small muted">{n.text}</div><div className="tiny muted">{n.when}</div></div>))}
-          </div>
-        </section>
+
+          <ClientHistoryBank buyerId={a.buyerId} currentAppId={a.applicationId} />
+        </main>
+
+        <aside className="bankx-side-rail">
+          <section className="card pad">
+            <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
+            {a.isPreapproval ? (
+              <div className="tiny muted">Pre-aprobación sin vehículo — el cliente elige el carro después.</div>
+            ) : (<>
+              {a.vehicleSpecs?.photo && (
+                <img className="bankx-vehicle-photo" src={a.vehicleSpecs.photo} alt="" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+              )}
+              <div className="bankx-infoline"><span>Modelo</span><b>{dash(a.vehicle)}{a.vehicleSpecs?.trim ? ` ${a.vehicleSpecs.trim}` : ''}</b></div>
+              <div className="bankx-infoline"><span>Kilometraje</span><b>{a.vehicleSpecs?.mileage != null
+                ? `${a.vehicleSpecs.mileage.toLocaleString('en-US')} km`
+                : 'No indicado'}</b></div>
+              {a.vehicleSpecs?.condition && (
+                <div className="bankx-infoline"><span>Condición</span><b style={{ textTransform: 'capitalize' }}>{a.vehicleSpecs.condition}</b></div>
+              )}
+              {[['Transmisión', a.vehicleSpecs?.transmission], ['Combustible', a.vehicleSpecs?.fuel],
+                ['Motor', a.vehicleSpecs?.engine], ['Color', a.vehicleSpecs?.color],
+                ['Tipo', a.vehicleSpecs?.bodyType], ['Ubicación', a.vehicleSpecs?.location]]
+                .filter(([, v]) => v)
+                .map(([label, v]) => (
+                  <div key={label} className="bankx-infoline"><span>{label}</span><b>{v}</b></div>
+                ))}
+              <div className="bankx-infoline"><span>Precio venta</span><b>{precioVenta
+                ? (a.vehiclePriceCurrency === 'USD'
+                  ? `US$ ${Number(precioVenta).toLocaleString('en-US')}`
+                  : fmtRD(precioVenta))
+                : '—'}</b></div>
+              <div className="bankx-infoline"><span>Inicial</span><b>{a.down ? fmtRD(a.down) : '—'}</b></div>
+              <div className="bankx-infoline"><span>Monto a financiar</span><b>{a.amount ? fmtRD(a.amount) : '—'}</b></div>
+              {a.vehicleSpecs?.slug && (
+                <div className="bankx-infoline bankx-infoline-action"><span>Publicación</span><b>
+                  <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/vehiculo/${a.vehicleSpecs.slug}`}>
+                    <ExternalLink size={12} /> Ver el anuncio
+                  </a>
+                </b></div>
+              )}
+              <div className="bankx-infoline"><span>Dealer</span><b>{dash(a.dealer)}{a.dealerCity ? ` · ${a.dealerCity}` : ''}</b></div>
+              {(a.dealerPhone || a.dealerWhatsapp || a.dealerSlug) && (
+                <div className="bankx-infoline bankx-infoline-action"><span>Contacto</span><b>
+                  {a.dealerPhone && <a className="link-teal" href={`tel:${a.dealerPhone}`}>{a.dealerPhone}</a>}
+                  {a.dealerWhatsapp && (
+                    <a className="link-teal row center gap-4" target="_blank" rel="noreferrer"
+                      href={`https://wa.me/${String(a.dealerWhatsapp).replace(/[^0-9]/g, '')}`}>
+                      <MessageSquare size={12} /> WhatsApp
+                    </a>
+                  )}
+                  {a.dealerSlug && (
+                    <a className="link-teal row center gap-4" target="_blank" rel="noreferrer" href={`/dealers/${a.dealerSlug}`}>
+                      <ExternalLink size={12} /> Perfil
+                    </a>
+                  )}
+                </b></div>
+              )}
+              <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
+            </>)}
+          </section>
+
+          <section className="card pad">
+            <PackagePanel a={a} />
+          </section>
+
+          <DecisionForm a={a} bank={bank} />
+
+          <section className="card pad">
+            <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Notas internas</h3><span className="pill">Banco</span></div>
+            <div className="tiny muted" style={{ marginBottom: 8 }}>Solo visibles para el banco. No se comparten con el cliente ni el dealer.</div>
+            <div className="row gap-6">
+              <input className="input" value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Nueva nota…" style={{ height: 36 }} />
+              <button className="btn btn-outline btn-sm" disabled={!noteInput.trim()} onClick={() => { onAddNote({ text: noteInput.trim(), by: a.reviewer?.name || 'Analista', when: 'Ahora' }); setNoteInput('') }}><Plus size={14} /></button>
+            </div>
+            <div className="col gap-6" style={{ marginTop: 10 }}>
+              {(a.notes || []).length === 0 && <div className="bankx-notebox tiny muted">Sin notas todavía.</div>}
+              {(a.notes || []).map((n, i) => (<div className="bankx-notebox" key={i}><b className="small">{n.by}</b><div className="small muted">{n.text}</div><div className="tiny muted">{n.when}</div></div>))}
+            </div>
+          </section>
+        </aside>
       </div>
     </section>
   )
