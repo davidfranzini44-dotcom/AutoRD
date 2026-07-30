@@ -5,8 +5,9 @@ import {
   ChevronRight, ChevronLeft, Info, Building2, User, Users, Landmark, ExternalLink, X, Car, MessageCircle,
 } from 'lucide-react'
 import { banks as demoBanks, financingCase, fmtRD } from '../data/demo'
-import { createApplication, createKycSession, getKycStatus, markKycVerified, getFinancingBankOptions, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin } from '../data/api'
+import { createApplication, createKycSession, getKycStatus, markKycVerified, getFinancingBankOptions, getVehicleBySlug, parseMoney, getMyFinancing, attachVehicleToApplication, sendPhoneOtp, verifyPhoneOtp, startPhoneLogin, verifyPhoneLogin, getUsdDopRate } from '../data/api'
 import { fmtMoneyInput } from '../data/finance'
+import { financedAmountDop, isValidRate } from '../data/fx'
 import { kycValidity, fmtKycDate } from '../data/kyc'
 import { useAuth } from '../context/AuthContext'
 import StatusChip from '../components/StatusChip'
@@ -95,6 +96,14 @@ export default function Financing() {
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  // Most inventory is priced in USD but every bank lends in DOP. undefined =
+  // still loading, null = no rate configured (we must not convert).
+  const [fxRate, setFxRate] = useState(undefined)
+  useEffect(() => {
+    let alive = true
+    getUsdDopRate().then((r) => { if (alive) setFxRate(r) }).catch(() => { if (alive) setFxRate(null) })
+    return () => { alive = false }
+  }, [])
   const [form, setForm] = useState(() => ({
     nombre: '', cedula: '', telefono: '', email: '',
     ingreso: seed.ingreso ? fmtMoneyInput(seed.ingreso) : '',
@@ -280,14 +289,30 @@ export default function Financing() {
     // Re-entry guard: without it a double-tap sends TWO applications to every
     // bank (seen live — two files 1.2s apart from the same person).
     if (submitting) return
+    // Banks lend in DOP, so a USD-priced car has to be converted before the
+    // amount leaves this page. Refuse rather than send an unconverted figure:
+    // US$96,000 read as RD$96,000 is wrong by ~60x.
+    if (vehicle?.currency === 'USD' && !isValidRate(fxRate)) {
+      setSubmitError(fxRate === undefined
+        ? 'Cargando la tasa de cambio, intenta de nuevo en un momento.'
+        : 'No hay una tasa USD configurada, así que no podemos calcular el monto en DOP. Contacta al dealer o inténtalo más tarde.')
+      return
+    }
     setSubmitting(true)
     setSubmitError('')
     // Route only to banks that are BOTH selected and eligible for this car
     // (term within their max for the car's condition, and they finance its fuel).
     const bankDbIds = eligibleSel.map((id) => bankList.find((b) => b.id === id)?.dbId).filter(Boolean)
     // Car flow: amount = price − inicial. Pre-approval: the (optional) desired budget.
+    // Always DOP. The inicial is already in pesos (it is typed into a peso
+    // form); only the car's price may need converting.
     const requestedAmount = vehicle
-      ? vehicle.price - (parseMoney(form.inicial) || 0)
+      ? financedAmountDop({
+        price: vehicle.price,
+        currency: vehicle.currency,
+        downDop: parseMoney(form.inicial) || 0,
+        rate: fxRate,
+      })
       : parseMoney(form.presupuesto)
     try {
       if (preApp && vehicle) {

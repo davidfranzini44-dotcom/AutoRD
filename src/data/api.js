@@ -585,6 +585,9 @@ export async function getMyFinancing() {
     return {
       bankId: r.bank?.slug, bankName: r.bank?.name, status: mapBankStatus(uiStatus), label: bankStatusLabel(uiStatus),
       apr: r.apr, term: r.term_years, down: r.down_required, monthly: r.monthly, note: r.notes,
+      downPct: r.down_required_pct != null ? Number(r.down_required_pct) : null,
+      downRule: r.down_rule || null,
+      monthlyManual: !!r.monthly_manual,
       approvedAmount: r.approved_amount != null ? Number(r.approved_amount) : null,
       validUntil: r.valid_until || null,
       expired: isValidityExpired(r.valid_until),
@@ -1293,6 +1296,65 @@ async function invokeImporter(body) {
   return data
 }
 
+// Platform reference rate for USD -> DOP. Returns null when unset, and callers
+// must treat null as "cannot convert" rather than falling back to a guess.
+export async function getUsdDopRate() {
+  if (!LIVE) return 61
+  const { data, error } = await supabase
+    .from('platform_settings')
+    .select('value')
+    .eq('key', 'usd_dop_rate')
+    .maybeSingle()
+  if (error) return null
+  const n = Number(data?.value)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+// Admin-only. RLS on platform_settings enforces this; the check here is just to
+// fail with a readable message instead of a policy violation.
+export async function setUsdDopRate(rate) {
+  const n = Number(rate)
+  if (!Number.isFinite(n) || n < 20 || n > 200) {
+    throw new Error('La tasa debe estar entre 20 y 200 DOP por USD.')
+  }
+  if (!LIVE) return n
+  const { data: { user } } = await supabase.auth.getUser()
+  const { error } = await supabase
+    .from('platform_settings')
+    .update({ value: n, updated_at: new Date().toISOString(), updated_by: user?.id || null })
+    .eq('key', 'usd_dop_rate')
+  if (error) throw error
+  return n
+}
+
+// Re-fetches each Didit decision (their API mints fresh image URLs on every
+// call) and copies the cédula portrait into our own bucket, where it stops
+// expiring. Admin-only; enforced inside the function.
+export async function backfillKycPortraits({ limit = 25, dryRun = false } = {}) {
+  if (!LIVE) return { ok: true, scanned: 0, captured: 0, noPortrait: 0, dryRun }
+  const { data, error } = await supabase.functions.invoke('kyc-backfill-portraits', {
+    body: { limit, dryRun },
+  })
+  if (error) {
+    let detail = ''
+    try { detail = (JSON.parse(await error.context.text()))?.error || '' } catch { /* not json */ }
+    throw new Error(detail || error.message)
+  }
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+export async function getUsdDopRateMeta() {
+  if (!LIVE) return { rate: 61, updatedAt: null }
+  const { data } = await supabase
+    .from('platform_settings')
+    .select('value, updated_at')
+    .eq('key', 'usd_dop_rate')
+    .maybeSingle()
+  const n = Number(data?.value)
+  return { rate: Number.isFinite(n) && n > 0 ? n : null, updatedAt: data?.updated_at || null }
+}
+
 export async function previewSuperCarrosDealerImport(url, { detailLimit = 80 } = {}) {
   if (!LIVE) return {
     dealerName: 'Joselito Auto Import',
@@ -1817,6 +1879,9 @@ export async function submitBankResponse(responseId, body) {
   const { error } = await supabase.from('application_banks').update({
     status: body.status, apr: body.apr, term_years: body.term,
     monthly: body.monthly, down_required: body.down, notes: body.notes,
+    down_required_pct: body.downPct ?? null,
+    down_rule: body.downRule || null,
+    monthly_manual: !!body.monthlyManual,
     approved_amount: body.approvedAmount != null ? Number(body.approvedAmount) : null,
     valid_until: body.validUntil || null,
     responded_at: new Date().toISOString(),

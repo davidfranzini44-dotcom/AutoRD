@@ -5,6 +5,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { getPublicContract, getContractIdentity } from '../data/api'
 import { fmtRD } from '../data/demo'
+import { downRequirementLabel } from '../data/finance'
 import BankLogo from '../components/BankLogo'
 
 const fmtDate = (d) => (d ? new Date(d).toLocaleString('es-DO', { dateStyle: 'long', timeStyle: 'short' }) : '—')
@@ -74,6 +75,7 @@ export default function Contrato() {
   // terms, and consent language naming only that bank.
   const requested = scoped ? details[0]?.slug : bankSlug
   const bank = requested ? details.find((b) => b.slug === requested) : null
+  const bankDownText = bank ? downRequirementLabel({ down: bank.down, downPct: bank.downPct, downRule: bank.downRule, money: fmtRD }) : ''
   const banksText = bank ? bank.name : (banks.length ? banks.join(', ') : 'los bancos seleccionados')
   const acceptedAt = c.accepted_at || bank?.acceptedAt || bank?.signedAt || c.consent_at || null
 
@@ -130,8 +132,8 @@ export default function Contrato() {
                 {bank.approvedAmount ? <div className="fc-detail"><span>Monto aprobado</span><b>{fmtRD(bank.approvedAmount)}</b></div> : null}
                 <div className="fc-detail"><span>Tasa anual</span><b>{bank.apr ? `${bank.apr}%` : '—'}</b></div>
                 <div className="fc-detail"><span>Plazo</span><b>{bank.term ? `${bank.term} años` : '—'}</b></div>
-                <div className="fc-detail"><span>Cuota estimada</span><b>{bank.monthly ? `${fmtRD(bank.monthly)}/mes` : '—'}</b></div>
-                <div className="fc-detail"><span>Inicial requerido</span><b>{bank.down ? fmtRD(bank.down) : '—'}</b></div>
+                <div className="fc-detail"><span>{bank.monthlyManual ? 'Cuota del banco' : 'Cuota estimada'}</span><b>{bank.monthly ? `${fmtRD(bank.monthly)}/mes` : '—'}</b></div>
+                <div className="fc-detail"><span>Inicial requerido</span><b>{bankDownText || '—'}</b></div>
                 <div className="fc-detail"><span>Vigencia</span><b>{bank.validUntil ? `Hasta ${new Date(`${bank.validUntil}T12:00:00`).toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}` : 'Sin vencimiento'}</b></div>
                 <div className="fc-detail"><span>Respondido</span><b>{bank.respondedAt ? fmtDate(bank.respondedAt) : 'Pendiente'}</b></div>
               </div>

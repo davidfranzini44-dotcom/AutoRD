@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { estimateMonthly, maxPrincipal, affordablePrice, fmtMoneyInput } from '../src/data/finance.js'
+import { estimateMonthly, maxPrincipal, affordablePrice, fmtMoneyInput, downRequirementLabel } from '../src/data/finance.js'
 
 // These numbers are quoted to customers on the homepage calculator, the vehicle
 // ficha and the client portal, so they need to be right and to agree with each
@@ -86,5 +86,23 @@ describe('fmtMoneyInput — live comma formatting while typing', () => {
     expect(fmtMoneyInput('abc')).toBe('')
     expect(fmtMoneyInput(null)).toBe('')
     expect(fmtMoneyInput(undefined)).toBe('')
+  })
+})
+
+describe('downRequirementLabel', () => {
+  it('explains fixed plus percentage down payment rules', () => {
+    expect(downRequirementLabel({
+      down: 250_000,
+      downPct: 20,
+      money: (n) => `RD$ ${n.toLocaleString('en-US')}`,
+    })).toBe('El mayor entre RD$ 250,000 y 20% del vehiculo')
+  })
+
+  it('keeps a stored bank rule as the source of truth', () => {
+    expect(downRequirementLabel({
+      down: 250_000,
+      downPct: 20,
+      downRule: 'Usar el mayor entre RD$ 250,000 y 20% del vehiculo',
+    })).toBe('Usar el mayor entre RD$ 250,000 y 20% del vehiculo')
   })
 })

@@ -8,7 +8,7 @@ import BankLogo from '../components/BankLogo'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import { useAuth } from '../context/AuthContext'
 import { fmtRD } from '../data/demo'
-import { estimateMonthly } from '../data/finance'
+import { downRequirementLabel, estimateMonthly } from '../data/finance'
 import {
   getFinancingPreview, verifyFinancingCedula, startFinancingOtp, verifyFinancingOtp, getFinancingByToken,
   acceptFinancingOffer, activateFinancingAccount, getApplicationDocuments, uploadApplicationDocument,
@@ -248,6 +248,7 @@ function Portal({ full, token, onReload }) {
   const ceiling = Math.max(0, ...(full.responses || []).map((r) => Number(r.approvedAmount) || 0))
   const kind = best ? (STATUS[best.status]?.kind || 'evaluating') : 'evaluating'
   const monthly = best?.monthly || (ceiling ? estimateMonthly(ceiling, best?.apr || 12, (best?.term || full.term || 7) * 12) : null)
+  const downText = downRequirementLabel({ down: best?.down, downPct: best?.downPct, downRule: best?.downRule, money: fmtRD })
   const waText = encodeURIComponent(`Hola, soy ${full.customerName || 'un cliente'} (solicitud ${full.code}). Tengo una consulta sobre mi financiamiento${best ? ` con ${best.bankName}` : ''}${full.vehicle ? ` del ${full.vehicle.make} ${full.vehicle.model}` : ''}.`)
   const waNumber = String(full.dealerWhatsapp || '').replace(/[^0-9]/g, '')
   const waHref = waNumber ? `https://wa.me/${waNumber}?text=${waText}` : `https://wa.me/?text=${waText}`
@@ -268,7 +269,7 @@ function Portal({ full, token, onReload }) {
               {monthly ? <Fact k="Cuota estimada" v={`${fmtRD(Math.round(monthly))}/mes`} /> : null}
               {best?.apr ? <Fact k="Tasa" v={`${best.apr}%`} /> : null}
               {best?.term ? <Fact k="Plazo" v={`${best.term} años`} /> : null}
-              {best?.down ? <Fact k="Inicial" v={fmtRD(best.down)} /> : null}
+              {downText ? <Fact k="Inicial" v={downText} /> : null}
               {best?.validUntil ? <Fact k="Vigencia" v={`Hasta ${fmtDay(best.validUntil)}`} /> : null}
               <Fact k="Banco" v={best?.bankName || '—'} />
             </div>

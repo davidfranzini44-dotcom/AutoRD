@@ -30,6 +30,15 @@ const daysSince = (iso) => {
   if (!Number.isFinite(t)) return null
   return Math.floor((Date.now() - t) / DAY)
 }
+const daysUntilDate = (iso) => {
+  if (!iso) return null
+  const match = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+  const target = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((target.getTime() - today.getTime()) / DAY)
+}
 
 /**
  * @param {object} lead  a merged lead from mergeLeadSources()
@@ -67,7 +76,7 @@ export function leadReadiness(lead = {}) {
     reasons.push(`Hace ${stale} día${stale === 1 ? '' : 's'} sin seguimiento`)
   }
   if (lead.approvalValidUntil) {
-    const left = Math.ceil((new Date(`${lead.approvalValidUntil}T12:00:00`).getTime() - Date.now()) / DAY)
+    const left = daysUntilDate(lead.approvalValidUntil)
     if (Number.isFinite(left)) {
       if (left < 0) reasons.push('Su aprobación venció')
       else if (left <= 7) reasons.push(`Su aprobación vence en ${left} día${left === 1 ? '' : 's'}`)

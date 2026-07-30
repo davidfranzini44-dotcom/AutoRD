@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode, Smartphone, ShieldCheck, Loader2, Power, Send, Info, ArrowLeft, History, KeyRound, Bell, Landmark, UserPlus, Copy, Check } from 'lucide-react'
-import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank, getVerifiedWithoutApplication, getWaHealth, requeueStuckWaMessages } from '../data/api'
+import { getWaStatus, waLinkQr, waStartPairing, waDisconnect, sendPhoneOtp, checkWaGateway, getNotifications, enrollBank, getVerifiedWithoutApplication, getWaHealth, requeueStuckWaMessages, getUsdDopRateMeta, setUsdDopRate, backfillKycPortraits } from '../data/api'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 
 const TYPE_META = {
@@ -209,6 +209,13 @@ export default function AdminPanel() {
         {/* Enroll a partner bank + its first owner account */}
         <EnrollBankCard />
 
+        {/* USD -> DOP reference rate: most inventory is priced in dollars, every
+            bank lends in pesos, and without this no USD car can be financed. */}
+        <UsdRateCard />
+
+        {/* Recover cédula portraits Didit still holds but we never stored */}
+        <KycPortraitBackfillCard />
+
         {/* Verified identities that never became an application */}
         <VerifiedWithoutApplicationCard />
 
@@ -266,6 +273,141 @@ export default function AdminPanel() {
 // + rules) and its first OWNER account, which can then self-manage its analysts.
 function EnrollBankCard() {
   return <EnrollBankCardInner />
+}
+
+// The platform reference rate. It drives estimates shown before a bank is
+// chosen; the binding figure is whatever the lending bank quotes. Left unset,
+// no USD car can be financed at all — so this card says so plainly rather than
+// looking like an optional setting.
+function UsdRateCard() {
+  const [meta, setMeta] = useState(undefined)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const [ok, setOk] = useState(false)
+
+  const load = () => getUsdDopRateMeta().then((m) => {
+    setMeta(m)
+    setDraft(m.rate != null ? String(m.rate) : '')
+  }).catch(() => setMeta({ rate: null, updatedAt: null }))
+  useEffect(() => { load() }, [])
+
+  async function save() {
+    setSaving(true); setErr(''); setOk(false)
+    try {
+      await setUsdDopRate(draft)
+      await load()
+      setOk(true)
+    } catch (e) {
+      setErr(e?.message || 'No se pudo guardar la tasa.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const rate = meta?.rate ?? null
+  const preview = Number(draft) > 0 ? Math.round(96000 * Number(draft)) : null
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 14 }}>
+      <div className="row between center" style={{ marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+        <h3 className="row center gap-8" style={{ fontSize: 15, margin: 0 }}>
+          <Landmark size={16} color="var(--teal-700)" /> Tasa de referencia USD → DOP
+        </h3>
+        {meta !== undefined && (
+          <span className={`chip ${rate != null ? 'chip-green' : 'chip-amber'}`}>
+            {rate != null ? `RD$ ${rate} por US$1` : 'Sin configurar'}
+          </span>
+        )}
+      </div>
+
+      {rate == null && meta !== undefined && (
+        <div className="notice" style={{ borderColor: '#fed7aa', background: '#fff7ed', color: '#9a3412', marginBottom: 12 }}>
+          <Info size={16} />
+          <span>Sin tasa, los vehículos cotizados en US$ no se pueden financiar: la solicitud se detiene antes de enviarse al banco.</span>
+        </div>
+      )}
+
+      <div className="row gap-8 wrap" style={{ alignItems: 'flex-end' }}>
+        <label className="col gap-4" style={{ minWidth: 160 }}>
+          <span className="tiny strong">DOP por 1 USD</span>
+          <input className="input" inputMode="decimal" value={draft} placeholder="61"
+            onChange={(e) => { setDraft(e.target.value.replace(/[^0-9.]/g, '')); setOk(false) }} />
+        </label>
+        <button className="btn btn-primary" onClick={save} disabled={saving || draft === ''}>
+          {saving ? <Loader2 size={16} className="spin" /> : <Check size={16} />} Guardar tasa
+        </button>
+      </div>
+
+      {preview != null && (
+        <div className="tiny muted" style={{ marginTop: 8 }}>
+          Un vehículo de US$96,000 se mostraría como RD$ {preview.toLocaleString('en-US')}.
+        </div>
+      )}
+      {meta?.updatedAt && (
+        <div className="tiny muted" style={{ marginTop: 4 }}>
+          Actualizada el {new Date(meta.updatedAt).toLocaleString('es-DO')}.
+        </div>
+      )}
+      {err && <div className="notice" style={{ marginTop: 10, borderColor: '#fecaca', background: '#fff1f2', color: '#991b1b' }}><Info size={16} /><span>{err}</span></div>}
+      {ok && <div className="notice" style={{ marginTop: 10 }}><Check size={16} /><span>Tasa guardada. Los estimados nuevos ya la usan; las solicitudes ya enviadas conservan la tasa con la que se crearon.</span></div>}
+    </div>
+  )
+}
+
+// The webhook only began storing the cédula portrait at v14, so every earlier
+// verification shows no face in the bank expediente. KYC stays valid ~1 year and
+// buyers open new solicitudes against the same old verification, so waiting for
+// re-verification would leave a year of files faceless. Didit still has the
+// images and re-issues URLs on request — this pulls them into our bucket once,
+// after which they never expire again.
+function KycPortraitBackfillCard() {
+  const [busy, setBusy] = useState(false)
+  const [res, setRes] = useState(null)
+  const [err, setErr] = useState('')
+
+  async function run(dryRun) {
+    setBusy(true); setErr(''); setRes(null)
+    try {
+      setRes(await backfillKycPortraits({ limit: 100, dryRun }))
+    } catch (e) {
+      setErr(e?.message || 'No se pudo ejecutar el respaldo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="card card-pad" style={{ marginTop: 14 }}>
+      <h3 className="row center gap-8" style={{ fontSize: 15, margin: '0 0 6px' }}>
+        <ShieldCheck size={16} color="var(--teal-700)" /> Fotos de cédula (expediente)
+      </h3>
+      <p className="tiny muted" style={{ marginBottom: 12 }}>
+        Recupera desde Didit la foto del titular impresa en la cédula y la guarda en AutoRD.
+        Las verificaciones anteriores no la tienen, y por eso el expediente del banco aparece sin rostro.
+      </p>
+      <div className="row gap-8 wrap">
+        <button className="btn btn-outline" onClick={() => run(true)} disabled={busy}>
+          {busy ? <Loader2 size={16} className="spin" /> : <Info size={16} />} Probar sin guardar
+        </button>
+        <button className="btn btn-primary" onClick={() => run(false)} disabled={busy}>
+          {busy ? <Loader2 size={16} className="spin" /> : <Check size={16} />} Recuperar fotos
+        </button>
+      </div>
+      {res && (
+        <div className="notice" style={{ marginTop: 12 }}>
+          <Info size={16} />
+          <span>
+            {res.dryRun ? 'Prueba: ' : ''}{res.captured} de {res.scanned} recuperadas
+            {res.noPortrait ? ` · ${res.noPortrait} sin foto en Didit` : ''}
+            {res.failures?.length ? ` · ${res.failures.length} con error` : ''}.
+            {res.noPortrait === res.scanned && res.scanned > 0 && ' Didit no devolvió ninguna foto: revisa el workflow.'}
+          </span>
+        </div>
+      )}
+      {err && <div className="notice" style={{ marginTop: 12, borderColor: '#fecaca', background: '#fff1f2', color: '#991b1b' }}><Info size={16} /><span>{err}</span></div>}
+    </div>
+  )
 }
 
 function HealthStat({ label, value, bad }) {

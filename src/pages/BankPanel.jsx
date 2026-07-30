@@ -28,7 +28,7 @@ import BankLogo from '../components/BankLogo'
 import CarImage from '../components/CarImage'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import useBankIdentity from '../hooks/useBankIdentity'
-import { estimateMonthly } from '../data/finance'
+import { estimateMonthly, fmtMoneyInput } from '../data/finance'
 import {
   DOC_TYPES, DOC_STATUS, TONE, enrichApp, bankStats,
 } from '../data/bankDemo'
@@ -857,30 +857,34 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
       <div className="bankx-exphero">
         <div className="bankx-exphero-main">
           <div className="bankx-exptitle">
-            <div className="bankx-heroname">
+            <div className="bankx-hero-left"><div className="bankx-heroname">
               {idFace
-                ? <img className="bankx-face" src={idFace} alt="" />
+                // A dead URL (Didit's presigned links expire) rendered the
+                // browser's broken-image glyph, which reads as "this file is
+                // corrupt" rather than "no photo on record". Fall back to the
+                // placeholder that already exists for the null case.
+                ? <img className="bankx-face" src={idFace} alt="" onError={() => setIdFace(null)} />
                 : <span className="bankx-face bankx-face-empty" title={a.kyc === 'aprobado' ? 'Verificado · foto no disponible' : 'Identidad sin verificar'}><User size={20} /></span>}
               <div style={{ minWidth: 0 }}>
-              <span className="pill">Solicitud {a.id}</span>
+              <span className="pill bankx-hero-id">Solicitud {a.id}</span>
               <h2>{a.customer}</h2>
               <p>{a.vehicle || 'Pre-aprobación sin vehículo'} · {a.dealer || 'Directo AutoRD'} · {a.reviewerState}</p>
-              </div>
+              </div></div>
               {(a.validUntil || (a.vehicleLinkedAt && !a.isPreapproval) || a.clientAccepted) && (
-                <div className="row wrap gap-6" style={{ marginTop: 8 }}>
+                <div className="bankx-hero-flags">
                   {a.validUntil && (
-                    <span className="pill" style={{ background: a.expired ? 'rgba(220,38,38,.14)' : 'rgba(22,128,92,.14)', color: a.expired ? '#dc2626' : '#12805c' }}>
+                    <span className={`pill bankx-hero-flag ${a.expired ? 'danger' : 'success'}`}>
                       {a.expired ? 'Vigencia vencida' : 'Vigencia'} · hasta {fmtDay(a.validUntil)}
                     </span>
                   )}
                   {a.vehicleLinkedAt && !a.isPreapproval && (
-                    <span className="pill" style={{ background: 'rgba(37,99,235,.14)', color: '#2563eb' }}>Cliente eligió vehículo · {fmtDay(a.vehicleLinkedAt)}</span>
+                    <span className="pill bankx-hero-flag info">Cliente eligió vehículo · {fmtDay(a.vehicleLinkedAt)}</span>
                   )}
                   {a.selectedByClient && (
-                    <span className="pill" style={{ background: 'rgba(22,163,74,.16)', color: '#166534', fontWeight: 700 }}><CheckCircle2 size={12} /> El cliente aceptó tu oferta</span>
+                    <span className="pill bankx-hero-flag success"><CheckCircle2 size={12} /> El cliente aceptó tu oferta</span>
                   )}
                   {a.clientAccepted && !a.selectedByClient && (
-                    <span className="pill" style={{ background: 'rgba(100,116,139,.14)', color: '#475569' }}>Cliente aceptó otra oferta</span>
+                    <span className="pill bankx-hero-flag neutral">Cliente aceptó otra oferta</span>
                   )}
                 </div>
               )}
@@ -935,18 +939,23 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
               declared, or what this bank recorded itself — they used to be filled
               from a hash, and a bank must not see details AutoRD invented. */}
           <ClientInfoPanel app={a} />
+          {/* Requesting data IS a client action, and as its own card it was a
+              lone button beside a tall panel — half a row of dead space. */}
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line-2, #e2e8f0)' }}>
+            <RequestInfoPanel a={a} bank={bank} />
+          </div>
         </section>
 
-        <section className="card pad">
-          <RequestInfoPanel a={a} bank={bank} />
-        </section>
-
-        <section className="card pad">
-          <RiskPanel a={a} documents={effectiveDocs} />
-        </section>
-
+        {/* Paired with Cliente because both are tall; a short card here is what
+            left the column ragged. */}
         <section className="card pad">
           <CapacityTool a={a} />
+        </section>
+
+        {/* Full width: a flag list reads fine wide, and at one line it would
+            otherwise strand an entire half-row. */}
+        <section className="card pad bankx-full">
+          <RiskPanel a={a} documents={effectiveDocs} />
         </section>
 
         <section className="card pad">
@@ -1306,8 +1315,10 @@ const num = (s) => { const n = Number(String(s).replace(/[^\d.]/g, '')); return 
 function DecisionForm({ a, bank }) {
   const [decision, setDecision] = useState('')
   const [rate, setRate] = useState(''); const [term, setTerm] = useState('7')
-  const [monthly, setMonthly] = useState(''); const [down, setDown] = useState('')
-  const [amount, setAmount] = useState(a.approvedAmount ? String(a.approvedAmount) : '')
+  const [monthly, setMonthly] = useState(''); const [monthlyManual, setMonthlyManual] = useState(false)
+  const [down, setDown] = useState('')
+  const [downPct, setDownPct] = useState(a.isPreapproval ? '20' : '')
+  const [amount, setAmount] = useState(a.approvedAmount ? fmtMoneyInput(a.approvedAmount) : '')
   const [expires, setExpires] = useState(''); const [conditions, setConditions] = useState('')
   const [custMsg, setCustMsg] = useState(''); const [internal, setInternal] = useState('')
   const [reason, setReason] = useState('')
@@ -1325,6 +1336,16 @@ function DecisionForm({ a, bank }) {
   ]
   const isApprove = decision === 'approved'
   const canSubmit = decision && (!isApprove || (amount && rate)) && (decision !== 'rejected' || (reason && internal))
+  const amountN = num(amount)
+  const rateN = Number(String(rate).replace(',', '.')) || 0
+  const termN = Number(term) || 7
+  const autoMonthly = amountN && rateN && termN ? estimateMonthly(amountN, rateN, termN * 12) : null
+  const monthlyValue = monthlyManual ? monthly : (autoMonthly ? fmtMoneyInput(autoMonthly) : '')
+  const fixedDown = num(down)
+  const pctDown = Number(String(downPct).replace(',', '.')) || null
+  const downRule = a.isPreapproval && (fixedDown || pctDown)
+    ? `Usar el mayor entre ${fixedDown ? fmtRD(fixedDown) : 'RD$ 0'} y ${pctDown ? `${pctDown}% del vehiculo` : '0% del vehiculo'}`
+    : ''
 
   async function submit() {
     const statusMap = { approved: 'preaprobada', evaluando: 'en_evaluacion', docs: 'pendiente_docs', rejected: 'rechazada' }
@@ -1332,7 +1353,8 @@ function DecisionForm({ a, bank }) {
     try {
       await submitBankResponse(a.responseId, {
         status: statusMap[decision], apr: num(rate), term: Number(term) || null,
-        monthly: num(monthly), down: num(down), approvedAmount: num(amount), notes,
+        monthly: num(monthlyValue), monthlyManual, down: fixedDown, downPct: pctDown,
+        downRule: downRule || null, approvedAmount: amountN, notes,
         validUntil: expires || null,
       })
     } catch (_) { /* demo/offline: still confirm */ }
@@ -1354,12 +1376,26 @@ function DecisionForm({ a, bank }) {
 
       {isApprove && (
         <div style={{ marginTop: 12 }}>
-          <F label={a.isPreapproval ? 'Monto pre-aprobado (RD$) — máximo a financiar' : 'Monto aprobado (RD$)'}><input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1,800,000" /></F>
+          <F label={a.isPreapproval ? 'Monto pre-aprobado (RD$) - maximo a financiar' : 'Monto aprobado (RD$)'}><input className="input" value={amount} onChange={(e) => setAmount(fmtMoneyInput(e.target.value))} placeholder="RD$ 1,800,000" /></F>
           <div className="bankx-kv-grid" style={{ marginTop: 10 }}>
             <F label="Tasa (%)"><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="9.25" /></F>
             <F label="Plazo (años)"><select className="select" value={term} onChange={(e) => setTerm(e.target.value)}><option>4</option><option>5</option><option>6</option><option>7</option></select></F>
-            <F label="Cuota mensual"><input className="input" value={monthly} onChange={(e) => setMonthly(e.target.value)} placeholder="27,950" /></F>
-            <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(e.target.value)} placeholder="250,000" /></F>
+            <F label={monthlyManual ? 'Cuota mensual manual' : 'Cuota mensual estimada'}>
+              <input className="input" value={monthlyValue} onChange={(e) => setMonthly(fmtMoneyInput(e.target.value))} placeholder="RD$ 27,950" readOnly={!monthlyManual} />
+              <label className="row center gap-6 tiny" style={{ marginTop: 6 }}>
+                <input type="checkbox" checked={monthlyManual} onChange={(e) => { setMonthlyManual(e.target.checked); if (!e.target.checked) setMonthly('') }} />
+                Escribir cuota manualmente
+              </label>
+            </F>
+            {a.isPreapproval ? (
+              <>
+                <F label="Inicial minimo RD$"><input className="input" value={down} onChange={(e) => setDown(fmtMoneyInput(e.target.value))} placeholder="RD$ 250,000" /></F>
+                <F label="Inicial minimo %"><input className="input" value={downPct} onChange={(e) => setDownPct(e.target.value.replace(/[^\d.]/g, ''))} placeholder="20" /></F>
+                <F label="Regla de inicial"><input className="input" value={downRule || 'Se calcula cuando el cliente elija un vehiculo'} readOnly /></F>
+              </>
+            ) : (
+              <F label="Inicial requerido"><input className="input" value={down} onChange={(e) => setDown(fmtMoneyInput(e.target.value))} placeholder="RD$ 250,000" /></F>
+            )}
             <F label="Vence"><input className="input" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></F>
           </div>
           <F label="Condiciones"><textarea className="input" rows={2} value={conditions} onChange={(e) => setConditions(e.target.value)} placeholder="Ej: sujeto a seguro de vida, comprobación de ingresos…" /></F>
@@ -1411,8 +1447,10 @@ function DecisionForm({ a, bank }) {
               <KV k="Monto" v={num(amount) ? fmtRD(num(amount)) : '—'} />
               <KV k="Tasa" v={rate ? `${rate}%` : '—'} />
               <KV k="Plazo" v={`${term} años`} />
-              <KV k="Cuota" v={num(monthly) ? `${fmtRD(num(monthly))}/mes` : '—'} />
-              <KV k="Inicial requerido" v={num(down) ? fmtRD(num(down)) : '—'} />
+              <KV k="Cuota" v={num(monthlyValue) ? `${fmtRD(num(monthlyValue))}/mes${monthlyManual ? ' (manual)' : ' (estimada)'}` : '—'} />
+              {a.isPreapproval && pctDown ? <KV k="Inicial minimo %" v={`${pctDown}%`} /> : null}
+              <KV k={a.isPreapproval ? 'Inicial minimo RD$' : 'Inicial requerido'} v={fixedDown ? fmtRD(fixedDown) : '—'} />
+              {downRule ? <KV k="Regla de inicial" v={downRule} /> : null}
               {expires && <KV k="Vence" v={expires} />}
               {conditions && <KV k="Condiciones" v={conditions} />}
             </>}
@@ -1482,19 +1520,40 @@ function RiskPanel({ a, documents }) {
 // Decision SUPPORT. It never approves or rejects, and says so on screen — an
 // analyst reading a green pill under time pressure should not mistake it for a
 // credit decision the bank did not make.
+// Money fields carry thousands separators while you type — a bank analyst reads
+// "2,750,000" at a glance and miscounts "2750000".
+const money = (v) => (v === '' || v == null ? '' : fmtMoneyInput(String(v)))
+
 function CapacityTool({ a }) {
-  const [income, setIncome] = useState(a.income ?? '')
+  const [income, setIncome] = useState(money(a.income))
   const [debts, setDebts] = useState('')
-  const [down, setDown] = useState(a.down ?? '')
-  const [price, setPrice] = useState(a.vehiclePrice ?? '')
-  const [amount, setAmount] = useState(a.amount ?? '')
+  const [down, setDown] = useState(money(a.down))
+  const [price, setPrice] = useState(money(a.vehiclePrice))
+  const [amount, setAmount] = useState(money(a.amount))
+  // Only true once the analyst types their own figure. Clearing the field hands
+  // it back to the automatic calculation.
+  const [amountTouched, setAmountTouched] = useState(!!a.amount)
   const [apr, setApr] = useState(a.apr ?? 12)
   const [term, setTerm] = useState(a.term ?? 5)
   const [maxDti, setMaxDti] = useState(40)
 
+  // What is actually financed is price minus what the client puts down. Leaving
+  // it blank made the analyst do that subtraction by hand on every file.
+  const nPrice = Number(digits(price) || 0)
+  const nDown = Number(digits(down) || 0)
+  const derivedAmount = nPrice > 0 ? Math.max(0, nPrice - nDown) : null
+  const amountValue = amountTouched ? amount : (derivedAmount != null ? money(derivedAmount) : '')
+
+  const onAmount = (e) => {
+    const v = fmtMoneyInput(e.target.value)
+    setAmount(v)
+    setAmountTouched(v !== '')
+  }
+
   const r = assessCapacity({
-    income, monthlyDebts: debts, downAvailable: down, vehiclePrice: price,
-    requestedAmount: amount, apr, termYears: term, maxDtiPct: maxDti,
+    income: digits(income), monthlyDebts: digits(debts), downAvailable: digits(down),
+    vehiclePrice: digits(price), requestedAmount: digits(amountValue),
+    apr, termYears: term, maxDtiPct: maxDti,
   })
   const verdict = r?.verdict ? CAPACITY_VERDICT[r.verdict] : null
   const vt = verdict ? (TONE[verdict.tone] || TONE.slate) : TONE.slate
@@ -1507,11 +1566,20 @@ function CapacityTool({ a }) {
       </div>
 
       <div className="bankx-kv-grid">
-        <F label="Ingreso mensual"><input className="input" inputMode="numeric" value={income} onChange={(e) => setIncome(e.target.value.replace(/[^0-9]/g, ''))} /></F>
-        <F label="Deudas mensuales"><input className="input" inputMode="numeric" value={debts} onChange={(e) => setDebts(e.target.value.replace(/[^0-9]/g, ''))} placeholder="0" /></F>
-        <F label="Inicial disponible"><input className="input" inputMode="numeric" value={down} onChange={(e) => setDown(e.target.value.replace(/[^0-9]/g, ''))} /></F>
-        <F label="Precio del vehículo"><input className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^0-9]/g, ''))} /></F>
-        <F label="Monto a financiar"><input className="input" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))} /></F>
+        <F label="Ingreso mensual"><input className="input" inputMode="numeric" value={income} onChange={(e) => setIncome(fmtMoneyInput(e.target.value))} /></F>
+        <F label="Deudas mensuales"><input className="input" inputMode="numeric" value={debts} onChange={(e) => setDebts(fmtMoneyInput(e.target.value))} placeholder="0" /></F>
+        <F label="Inicial disponible"><input className="input" inputMode="numeric" value={down} onChange={(e) => setDown(fmtMoneyInput(e.target.value))} /></F>
+        <F label="Precio del vehículo"><input className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(fmtMoneyInput(e.target.value))} /></F>
+        <F label="Monto a financiar">
+          <input className="input" inputMode="numeric" value={amountValue} onChange={onAmount} />
+          <span className="tiny muted">
+            {amountTouched
+              ? 'Valor manual — bórralo para volver al cálculo automático.'
+              : derivedAmount != null
+                ? 'Automático: precio − inicial.'
+                : 'Se calcula al llenar el precio del vehículo.'}
+          </span>
+        </F>
         <F label="Tasa (%)"><input className="input" value={apr} onChange={(e) => setApr(e.target.value)} /></F>
         <F label="Plazo (años)"><input className="input" inputMode="numeric" value={term} onChange={(e) => setTerm(e.target.value.replace(/[^0-9]/g, ''))} /></F>
         <F label="Máx. cuota/ingreso (%)"><input className="input" inputMode="numeric" value={maxDti} onChange={(e) => setMaxDti(e.target.value.replace(/[^0-9]/g, ''))} /></F>

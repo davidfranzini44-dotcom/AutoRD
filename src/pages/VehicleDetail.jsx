@@ -320,10 +320,15 @@ export default function VehicleDetail() {
                     <span className="strong ellipsis">{v.dealer}</span>
                     {v.dealerVerified && <BadgeCheck size={16} color="var(--teal-700)" style={{ flex: 'none' }} />}
                   </div>
-                  <div className="tiny muted">{v.dealerVerified ? 'Concesionario verificado' : 'Vendedor particular'}</div>
+                  {/* Unverified is not the same as "not a dealer". Calling a
+                      concesionario with 75 listings a "Vendedor particular"
+                      misdescribes the seller to the buyer. */}
+                  <div className="tiny muted">{v.dealerVerified ? 'Concesionario verificado' : 'Verificación pendiente'}</div>
                 </div>
               </div>
-              <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel="Contactar por WhatsApp" />
+              <div style={{ marginTop: 14 }}>
+                <ContactDealer vehicle={v} block triggerClass="btn btn-outline btn-block" triggerLabel="Contactar por WhatsApp" />
+              </div>
             </div>
 
             {/* Vehicle location (precise coords inherited from the dealer's branch) */}

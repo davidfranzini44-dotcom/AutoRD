@@ -72,8 +72,18 @@ async function captureIdentityImages(admin: any, apiKey: string, sessionId: stri
   const liveUrl = pickUrl(live, ['reference_image', 'image', 'video_frame_image'])
     ?? pickUrl(fm, ['source_image', 'live_image', 'selfie_image'])
 
-  const uploads: Array<{ url: string; base: string; col: 'id_image_path' | 'liveness_image_path' }> = []
+  // The ID portrait — the face printed on the cédula — is what the bank
+  // expediente shows beside the applicant's name. It was never copied into our
+  // bucket, so the panel fell back to Didit's presigned S3 URL. Those expire,
+  // and the face silently disappeared from every expediente once they did.
+  // Extracted separately from idUrl so the existing ID-image behaviour is
+  // untouched; if both resolve to the same asset we simply store it twice.
+  const portraitUrl = pickUrl(idv, ['portrait_image', 'face_image', 'photo'])
+    ?? pickUrl(d, ['portrait_image'])
+
+  const uploads: Array<{ url: string; base: string; col: 'id_image_path' | 'liveness_image_path' | 'portrait_image_path' }> = []
   if (idUrl) uploads.push({ url: idUrl, base: 'id', col: 'id_image_path' })
+  if (portraitUrl) uploads.push({ url: portraitUrl, base: 'portrait', col: 'portrait_image_path' })
   if (liveUrl) uploads.push({ url: liveUrl, base: 'liveness', col: 'liveness_image_path' })
   if (!uploads.length) return
 

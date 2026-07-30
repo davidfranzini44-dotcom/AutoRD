@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { buildChecklist, checklistSummary, CHECK_STATE } from '../data/checklist'
 import { resolveFinancingStatus } from '../data/financingStatus'
-import { vehicleFit } from '../data/finance'
+import { downRequirementLabel, vehicleFit } from '../data/finance'
 import { listVehicles, getOpenInfoRequests } from '../data/api'
 import VehicleCard from '../components/VehicleCard'
 import { kycValidity } from '../data/kyc'
@@ -443,6 +443,7 @@ function MyInterests({ items, onChanged }) {
 function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccepted }) {
   const b = banks.find((x) => x.id === r.bankId) || { id: r.bankId, name: r.bankId || 'Banco', initials: '', color: '#334155' }
   const hasTerms = r.status === 'offer'
+  const downText = downRequirementLabel({ down: r.down, downPct: r.downPct, downRule: r.downRule, money: fmtRD })
   const [open, setOpen] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [acceptErr, setAcceptErr] = useState('')
@@ -479,7 +480,7 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
           <div className="finance-term-grid">
             <Term l="Tasa" v={r.apr ? `${r.apr}%` : '—'} />
             <Term l="Plazo" v={r.term ? `${r.term} años` : '—'} />
-            <Term l="Inicial requerido" v={r.down ? fmtRD(r.down) : '—'} />
+            <Term l="Inicial requerido" v={downText || '—'} />
             <Term l="Cuota mensual" v={r.monthly ? fmtRD(r.monthly) : '—'} />
           </div>
           <div className="row gap-8 wrap" style={{ marginTop: 12 }}>
@@ -510,8 +511,8 @@ function BankResponse({ r, appId, contractToken, accepted, selectedSlug, onAccep
               {r.approvedAmount ? <div className="kv"><span className="k">Monto pre-aprobado</span><span className="v strong">{fmtRD(r.approvedAmount)}</span></div> : null}
               <div className="kv"><span className="k">Tasa anual</span><span className="v">{r.apr ? `${r.apr}%` : '—'}</span></div>
               <div className="kv"><span className="k">Plazo</span><span className="v">{r.term ? `${r.term} años` : '—'}</span></div>
-              <div className="kv"><span className="k">Inicial requerido</span><span className="v">{r.down ? fmtRD(r.down) : '—'}</span></div>
-              <div className="kv"><span className="k">Cuota estimada</span><span className="v">{r.monthly ? `${fmtRD(r.monthly)}/mes` : '—'}</span></div>
+              <div className="kv"><span className="k">Inicial requerido</span><span className="v">{downText || '—'}</span></div>
+              <div className="kv"><span className="k">{r.monthlyManual ? 'Cuota del banco' : 'Cuota estimada'}</span><span className="v">{r.monthly ? `${fmtRD(r.monthly)}/mes` : '—'}</span></div>
               {r.validUntil ? <div className="kv"><span className="k">Vigencia</span><span className="v" style={{ color: r.expired ? 'var(--amber)' : undefined }}>{r.expired ? `Vencida el ${fmtDay(r.validUntil)}` : `Válida hasta ${fmtDay(r.validUntil)}`}</span></div> : null}
               {r.note ? (
                 <div style={{ marginTop: 8 }}><div className="tiny strong" style={{ marginBottom: 2 }}>Condiciones</div><div className="small muted">{r.note}</div></div>

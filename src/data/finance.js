@@ -14,6 +14,17 @@ export function fmtMoneyInput(raw) {
   return 'RD$ ' + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+export function downRequirementLabel({ down = null, downPct = null, downRule = null, money = null } = {}) {
+  if (downRule) return downRule
+  const parts = []
+  const fixed = Number(down)
+  const pct = Number(downPct)
+  if (Number.isFinite(fixed) && fixed > 0) parts.push(money ? money(fixed) : `RD$ ${Math.round(fixed).toLocaleString('es-DO')}`)
+  if (Number.isFinite(pct) && pct > 0) parts.push(`${pct}% del vehiculo`)
+  if (parts.length === 2) return `El mayor entre ${parts[0]} y ${parts[1]}`
+  return parts[0] || ''
+}
+
 // Canonical "Desde RD$X/mes" for a vehicle: 20% down over the car's term, amortized
 // with its APR. Used everywhere a car's headline monthly is shown so they agree.
 export function carDefaultMonthly(v) {

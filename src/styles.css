@@ -4747,18 +4747,30 @@ select.preap-input { padding-right: 16px; }
 .bankx-qactions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
 .bankx-exp { display: grid; gap: 16px; }
 .bankx-exphero { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: stretch; }
-.bankx-exphero-main { border-radius: 18px; padding: 20px; color: #fff; background: radial-gradient(circle at 92% 20%, rgba(20, 184, 166, .28), transparent 28%), linear-gradient(135deg, #10233f 0%, #14365f 52%, var(--bank-accent, #0f766e) 100%); box-shadow: 0 18px 50px rgba(16, 35, 63, .18); }
+.bankx-exphero-main { border: 1px solid #dbe4ee; border-radius: 18px; padding: 20px; color: #10233f; background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%); box-shadow: 0 18px 45px rgba(16, 35, 63, .08); }
 .bankx-exptitle { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
-.bankx-exptitle h2 { margin: 7px 0 6px; font-size: 27px; line-height: 1.05; letter-spacing: -.03em; color: #fff; }
-.bankx-exphero-main p { color: rgba(255, 255, 255, .78); line-height: 1.5; margin: 0; }
-.bankx-exphero-main .pill { background: rgba(255, 255, 255, .15); color: #fff; border-color: rgba(255, 255, 255, .18); }
+.bankx-exptitle h2 { margin: 8px 0 6px; font-size: 28px; line-height: 1.05; letter-spacing: -.035em; color: #0f172a; }
+.bankx-exptitle > .pill { background: #f8fafc !important; color: #0f172a !important; border-color: #dbe4ee !important; box-shadow: none; }
+.bankx-exphero-main p { color: #475569; line-height: 1.5; margin: 0; font-weight: 700; }
+.bankx-exphero-main .pill { background: #f8fafc; color: #334155; border-color: #dbe4ee; }
+.bankx-hero-left { display: grid; gap: 12px; min-width: 0; }
+.bankx-hero-id { width: fit-content; background: #f1f5f9 !important; color: #334155 !important; border-color: #dbe4ee !important; }
+.bankx-hero-flags { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 8px; align-items: start; }
+.bankx-hero-flag { min-height: 34px; border: 1px solid #dbe4ee !important; background: #fff !important; color: #334155 !important; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); font-weight: 850; letter-spacing: -.01em; }
+.bankx-hero-flag.danger,
+.bankx-hero-flag.info,
+.bankx-hero-flag.success,
+.bankx-hero-flag.neutral { background: #fff !important; color: #334155 !important; border-color: #dbe4ee !important; }
 .bankx-expmini-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
-.bankx-expmini { border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .10); border-radius: 13px; padding: 11px; }
-.bankx-expmini span { display: block; font-size: 10px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .64); margin-bottom: 5px; }
-.bankx-expmini b { font-size: 15px; }
+.bankx-expmini { border: 1px solid #dbe4ee; background: #fff; border-radius: 14px; padding: 13px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.bankx-expmini span { display: block; font-size: 10px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+.bankx-expmini b { font-size: 17px; color: #0f172a; font-variant-numeric: tabular-nums; }
 .bankx-readiness { display: grid; gap: 8px; }
 .bankx-readiness-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center; padding: 10px; border: 1px solid #edf2f7; background: #fbfdff; border-radius: 12px; }
 .bankx-expgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+/* Row height follows the taller card, so a short panel beside a tall one leaves
+   dead space. Panels that read fine wide take the whole row instead. */
+.bankx-expgrid > .bankx-full { grid-column: 1 / -1; }
 .bankx-infoline { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid #edf2f7; }
 .bankx-infoline:last-child { border-bottom: 0; padding-bottom: 0; }
 .bankx-infoline span { color: #64748b; font-size: 12px; font-weight: 800; flex: none; }
@@ -4894,7 +4906,12 @@ select.preap-input { padding-right: 16px; }
   .bankx-crow > :nth-child(5) { grid-area: est; justify-self: end; }
   .bankx-crow > :nth-child(6) { grid-area: rsk; justify-self: end; }
   .bankx-expmini-grid { grid-template-columns: 1fr 1fr; }
+  .bankx-exptitle { flex-direction: column; align-items: stretch; gap: 12px; }
+  .bankx-exptitle > .pill { align-self: flex-start; }
   .bankx-exptitle h2 { font-size: 23px; }
+  .bankx-exphero-main { padding: 16px; }
+  .bankx-hero-flags { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .bankx-hero-flag { width: 100%; justify-content: flex-start; white-space: normal; line-height: 1.25; }
   .bankx-capacity-request,
   .bankx-capacity-result,
   .bankx-capacity-scenarios { grid-template-columns: 1fr; }
@@ -5458,6 +5475,6 @@ select.preap-input { padding-right: 16px; }
 /* Cédula photo beside the applicant's name in the expediente hero. Sits on the
    dark gradient, so it needs its own light frame to read as a document. */
 .bankx-heroname { display: flex; align-items: flex-start; gap: 13px; min-width: 0; }
-.bankx-heroname .bankx-face { width: 58px; height: 58px; border-radius: 12px; object-fit: cover; flex: none; border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12); }
-.bankx-heroname .bankx-face-empty { display: inline-flex; align-items: center; justify-content: center; color: rgba(255,255,255,.55); }
+.bankx-heroname .bankx-face { width: 58px; height: 58px; border-radius: 14px; object-fit: cover; flex: none; border: 1px solid #cbd5e1; background: #f8fafc; box-shadow: 0 1px 2px rgba(15,23,42,.06); }
+.bankx-heroname .bankx-face-empty { display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; }
 @media (max-width: 640px) { .bankx-heroname .bankx-face { width: 46px; height: 46px; } }
