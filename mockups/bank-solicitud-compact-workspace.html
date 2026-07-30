@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD - Solicitud compact workspace mockup</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --text: #243449;
+      --muted: #64748b;
+      --line: #dbe4ee;
+      --line2: #edf2f7;
+      --bg: #f4f8fb;
+      --card: #fff;
+      --teal: #0f766e;
+      --teal2: #0b4f4a;
+      --blue: #2563eb;
+      --green: #047857;
+      --red: #be123c;
+      --amber: #b45309;
+      --shadow: 0 20px 55px rgba(15, 23, 42, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 7% 2%, rgba(15,118,110,.10), transparent 26%),
+        linear-gradient(180deg, #eef5f8 0%, #f8fafc 42%, #ffffff 100%);
+      padding: 26px;
+    }
+
+    .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 18px; }
+    .caption { display: flex; justify-content: space-between; gap: 18px; align-items: end; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: -.045em; }
+    .caption p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; max-width: 780px; }
+    .caption .pill { flex: none; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .pill.green { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .pill.blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .pill.amber { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .pill.red { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+    .pill.teal { background: #eef7f6; color: #0b4f4a; border-color: #b7ebe4; }
+
+    .topbar {
+      border: 1px solid #d8e3ec;
+      background: rgba(255,255,255,.76);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+    .topbar-left { display: flex; gap: 12px; align-items: center; min-width: 0; }
+    .avatar {
+      width: 50px; height: 50px; border-radius: 15px; flex: none;
+      background: linear-gradient(135deg, rgba(15,118,110,.18), rgba(37,99,235,.12)), #fff;
+      border: 1px solid #cbd5e1;
+      display: grid; place-items: center;
+      font-weight: 950; color: var(--teal2);
+    }
+    .topbar h2 { margin: 4px 0 2px; font-size: 24px; line-height: 1.06; letter-spacing: -.04em; }
+    .topbar p { margin: 0; color: var(--muted); font-size: 13px; font-weight: 650; }
+    .topbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px;
+      min-width: 0;
+      box-shadow: 0 1px 2px rgba(15,23,42,.035);
+    }
+    .kpi.teal { border-color: #b7ebe4; background: linear-gradient(180deg, #fff, #effaf8); }
+    .kpi.amber { border-color: #fde68a; background: linear-gradient(180deg, #fff, #fffbeb); }
+    .kpi span { display: block; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .09em; font-weight: 950; }
+    .kpi b { display: block; margin-top: 7px; font-size: 18px; letter-spacing: -.035em; overflow-wrap: anywhere; }
+    .kpi small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 14px;
+      align-items: start;
+    }
+    .main-col { display: grid; gap: 12px; min-width: 0; }
+    .side-rail { position: sticky; top: 14px; display: grid; gap: 12px; min-width: 0; }
+
+    .card {
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 1px 2px rgba(15,23,42,.035);
+      overflow: hidden;
+    }
+    .card.pad { padding: 14px; }
+    .section-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      margin-bottom: 10px;
+    }
+    .section-head h3 { margin: 0; font-size: 15px; letter-spacing: -.015em; }
+    .section-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+
+    .compact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .fact-list { display: grid; gap: 0; }
+    .fact {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line2);
+      font-size: 13px;
+    }
+    .fact:last-child { border-bottom: 0; }
+    .fact span { color: #64748b; font-weight: 850; flex: none; }
+    .fact b { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .review-card {
+      border: 1px solid var(--line2);
+      background: #fbfdff;
+      border-radius: 14px;
+      padding: 11px;
+      display: grid;
+      gap: 7px;
+      min-height: 105px;
+    }
+    .review-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .review-title b { font-size: 13px; }
+    .check {
+      width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center;
+      font-size: 13px; font-weight: 950; flex: none;
+    }
+    .check.ok { background: #dcfce7; color: #166534; }
+    .check.warn { background: #fef3c7; color: #b45309; }
+    .check.bad { background: #fee2e2; color: #b91c1c; }
+    .review-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+
+    .capacity-card {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .capacity-score {
+      border-radius: 18px;
+      color: #fff;
+      background: linear-gradient(135deg, #10233f, var(--teal));
+      padding: 16px;
+      display: grid;
+      align-content: center;
+      min-height: 188px;
+    }
+    .capacity-score small { color: rgba(255,255,255,.72); font-weight: 750; }
+    .capacity-score strong { display: block; font-size: 36px; letter-spacing: -.055em; margin: 6px 0; }
+    .capacity-source {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .source-card {
+      border: 1px solid var(--line2);
+      background: #fbfdff;
+      border-radius: 13px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .source-card span {
+      display: block;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .source-card b { display: block; margin-top: 5px; font-size: 13px; overflow-wrap: anywhere; }
+    .source-card small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.3; }
+    .assumption-panel {
+      border: 1px solid #b7ebe4;
+      background: linear-gradient(180deg, #ffffff, #effaf8);
+      border-radius: 15px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .assumption-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .assumption-head b { font-size: 13px; }
+    .assumption-head small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+    .assumption-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .missing-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid #fde68a;
+      background: #fffbeb;
+      color: #92400e;
+      border-radius: 14px;
+      padding: 10px 11px;
+      margin-top: 12px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .bars { display: grid; gap: 10px; }
+    .bar-row { display: grid; grid-template-columns: 112px 1fr 54px; gap: 10px; align-items: center; font-size: 12px; }
+    .bar-row span { color: #64748b; font-weight: 850; }
+    .bar-row b { text-align: right; }
+    .track { height: 10px; background: #eaf1f7; border-radius: 999px; overflow: hidden; }
+    .track i { display: block; height: 100%; background: var(--teal); border-radius: inherit; }
+    .track.amber i { background: var(--amber); }
+    .scenario-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+    .scenario {
+      border: 1px solid var(--line2);
+      border-radius: 13px;
+      padding: 10px;
+      background: #fff;
+      font-size: 12px;
+    }
+    .scenario.active { border-color: #b7ebe4; background: #effaf8; }
+    .scenario b { display: block; }
+    .scenario span { display: block; color: var(--muted); margin-top: 3px; line-height: 1.25; }
+
+    .doc-list, .activity-list, .note-list { display: grid; gap: 8px; }
+    .row-card {
+      border: 1px solid var(--line2);
+      background: #fbfdff;
+      border-radius: 13px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+    }
+    .row-card b { font-size: 13px; }
+    .row-card small { display: block; color: var(--muted); margin-top: 2px; font-size: 11.5px; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--blue); box-shadow: 0 0 0 4px #dbeafe; justify-self: center; }
+    .dot.green { background: var(--green); box-shadow: 0 0 0 4px #d1fae5; }
+    .dot.amber { background: var(--amber); box-shadow: 0 0 0 4px #fef3c7; }
+
+    .btn {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #1f2937;
+      border-radius: 11px;
+      min-height: 34px;
+      padding: 7px 11px;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .btn.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .btn.navy { background: #10233f; color: #fff; border-color: #10233f; }
+    .btn.danger { color: #b91c1c; border-color: #fecaca; background: #fff; }
+
+    .decision-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .field label { display: block; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 5px; }
+    .fake-input, input, textarea {
+      width: 100%;
+      border: 1px solid #dbe4ee;
+      background: #fff;
+      border-radius: 11px;
+      padding: 9px 10px;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      min-height: 36px;
+    }
+    textarea { min-height: 74px; resize: vertical; }
+    .rail-photo {
+      height: 150px;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(15,118,110,.12), rgba(37,99,235,.10)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='260' viewBox='0 0 520 260'%3E%3Crect width='520' height='260' fill='%23e8eef5'/%3E%3Cpath d='M88 173h337l-35-50H149z' fill='%23cbd5e1'/%3E%3Cellipse cx='170' cy='181' rx='36' ry='36' fill='%2394a3b8'/%3E%3Cellipse cx='356' cy='181' rx='36' ry='36' fill='%2394a3b8'/%3E%3Cpath d='M149 123l42-48h134l65 48z' fill='%23f8fafc'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+      border: 1px solid #dbe4ee;
+      margin-bottom: 10px;
+    }
+
+    .mobile-frame {
+      width: 390px;
+      max-width: 100%;
+      margin: 8px auto 0;
+      border: 10px solid #111827;
+      border-radius: 34px;
+      background: var(--bg);
+      padding: 12px;
+      box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+    }
+    .mobile-screen { display: grid; gap: 10px; }
+    .mobile-card { border: 1px solid var(--line); background: #fff; border-radius: 18px; padding: 13px; }
+    .mobile-card h3 { margin: 0 0 8px; font-size: 14px; }
+
+    .mobile-summary { display: grid; gap: 9px; }
+    .mobile-header { display: flex; gap: 10px; align-items: flex-start; }
+    .mobile-header h2 { margin: 4px 0 2px; font-size: 22px; line-height: 1.06; letter-spacing: -.04em; }
+    .mobile-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mobile-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .mobile-nav button { min-height: 36px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-weight: 850; color: #475569; }
+    .mobile-nav button.active { background: #eef7f6; color: var(--teal2); border-color: #b7ebe4; }
+
+    @media (max-width: 980px) {
+      body { padding: 16px; }
+      .caption { display: block; }
+      .workspace { grid-template-columns: 1fr; }
+      .side-rail { position: static; }
+      .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .compact-grid, .capacity-card, .review-grid { grid-template-columns: 1fr; }
+      .capacity-source, .assumption-grid { grid-template-columns: 1fr 1fr; }
+      .scenario-row { grid-template-columns: 1fr; }
+      .topbar { grid-template-columns: 1fr; }
+      .topbar-actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="caption">
+      <div>
+        <h1>Banco Solicitudes - workspace compacto</h1>
+        <p>Mockup para reducir espacios blancos: agrupa revision, documentos, actividad y decision en una pantalla de trabajo mas densa. La informacion se mantiene, pero cada bloque tiene proposito claro.</p>
+      </div>
+      <span class="pill teal">Propuesta UI</span>
+    </header>
+
+    <section class="topbar">
+      <div class="topbar-left">
+        <div class="avatar">DF</div>
+        <div style="min-width:0">
+          <div><span class="pill teal">Solicitud AP-2047</span> <span class="pill green">Pre-aprobada</span></div>
+          <h2>David Enrique Franzini Javier</h2>
+          <p>Toyota Grand Highlander 2024 · Joselito Auto Import · En revision</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="pill red">Vigencia vencida</span>
+        <span class="pill blue">Vehiculo elegido</span>
+        <span class="pill green">Oferta aceptada</span>
+      </div>
+    </section>
+
+    <section class="kpi-strip">
+      <div class="kpi teal"><span>Monto</span><b>RD$ 4,104,000</b><small>Maximo a financiar</small></div>
+      <div class="kpi amber"><span>Inicial</span><b>RD$ 250,000</b><small>o 20% del vehiculo</small></div>
+      <div class="kpi"><span>Ingreso</span><b>RD$ 250,000</b><small>mensual declarado</small></div>
+      <div class="kpi"><span>Cuota estimada</span><b>RD$ 66,920</b><small>9.25% · 7 anos</small></div>
+      <div class="kpi teal"><span>Score interno</span><b>90/100</b><small>margen saludable</small></div>
+    </section>
+
+    <section class="workspace">
+      <div class="main-col">
+        <section class="card pad">
+          <div class="section-head">
+            <div><h3>Revision rapida</h3><p>Lo que el analista necesita saber antes de decidir.</p></div>
+            <span class="pill amber">2 pendientes</span>
+          </div>
+          <div class="review-grid">
+            <div class="review-card"><div class="review-title"><b>KYC DIDIT</b><span class="check ok">✓</span></div><p>Cedula y prueba de vida aprobadas. Nombre confirmado.</p><button class="btn">Ver identidad</button></div>
+            <div class="review-card"><div class="review-title"><b>Consentimiento</b><span class="check ok">✓</span></div><p>Cliente autorizo evaluacion y consulta de credito.</p><button class="btn">Contrato</button></div>
+            <div class="review-card"><div class="review-title"><b>Estados de cuenta</b><span class="check warn">!</span></div><p>Documento recibido, falta validar promedio mensual.</p><button class="btn primary">Revisar</button></div>
+          </div>
+        </section>
+
+        <section class="card pad">
+          <div class="section-head">
+            <div><h3>Cliente y solicitud</h3><p>Datos sensibles compactos, con acciones donde falta informacion.</p></div>
+            <span class="pill green">Verificado</span>
+          </div>
+          <div class="compact-grid">
+            <div class="fact-list">
+              <div class="fact"><span>Cedula</span><b>***-***2518 <button class="btn">Ver</button></b></div>
+              <div class="fact"><span>Telefono</span><b>(809) 555-0184</b></div>
+              <div class="fact"><span>Email</span><b>david@mail.com</b></div>
+              <div class="fact"><span>Direccion</span><b>Santo Domingo Este</b></div>
+            </div>
+            <div class="fact-list">
+              <div class="fact"><span>Ocupacion</span><b>Comerciante</b></div>
+              <div class="fact"><span>Ingreso</span><b>RD$ 250,000</b></div>
+              <div class="fact"><span>Deudas</span><b>RD$ 32,000</b></div>
+              <div class="fact"><span>Inicial disponible</span><b>RD$ 250,000</b></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card pad capacity-card">
+          <div class="capacity-score">
+            <span class="pill green" style="width:max-content">Dentro de regla</span>
+            <strong>29.4%</strong>
+            <small>cuota / ingreso con seguro estimado</small>
+            <div style="margin-top:14px;color:rgba(255,255,255,.82);font-size:12px;line-height:1.45">
+              Calculado con datos del cliente + reglas del banco. No es decision final.
+            </div>
+          </div>
+          <div>
+            <div class="section-head">
+              <div><h3>Capacidad de pago</h3><p>Visual para aprobar, ajustar o pedir soporte.</p></div>
+              <button class="btn">Editar supuestos</button>
+            </div>
+            <div class="capacity-source">
+              <div class="source-card"><span>Cliente</span><b>Ingreso RD$ 250,000</b><small>Desde solicitud/KYC</small></div>
+              <div class="source-card"><span>Solicitud</span><b>Monto RD$ 4,104,000</b><small>Vehiculo elegido</small></div>
+              <div class="source-card"><span>Banco</span><b>35% max cuota</b><small>Politica configurable</small></div>
+            </div>
+            <div class="bars">
+              <div class="bar-row"><span>Cuota actual</span><div class="track"><i style="width:76%"></i></div><b>26.8%</b></div>
+              <div class="bar-row"><span>Con seguro</span><div class="track amber"><i style="width:84%"></i></div><b>29.4%</b></div>
+              <div class="bar-row"><span>Limite banco</span><div class="track"><i style="width:100%"></i></div><b>35%</b></div>
+            </div>
+            <div class="assumption-panel">
+              <div class="assumption-head">
+                <div><b>Supuestos editables</b><small>El banco puede ajustar antes de confiar en el calculo.</small></div>
+                <span class="pill teal">Modo edicion</span>
+              </div>
+              <div class="assumption-grid">
+                <div class="field"><label>Ingreso</label><div class="fake-input">RD$ 250,000</div></div>
+                <div class="field"><label>Deudas</label><div class="fake-input">RD$ 32,000</div></div>
+                <div class="field"><label>Monto</label><div class="fake-input">RD$ 4,104,000</div></div>
+                <div class="field"><label>Inicial</label><div class="fake-input">RD$ 250,000</div></div>
+                <div class="field"><label>Tasa</label><div class="fake-input">9.25%</div></div>
+                <div class="field"><label>Plazo</label><div class="fake-input">7 anos</div></div>
+                <div class="field"><label>Seguro</label><div class="fake-input">RD$ 6,500</div></div>
+                <div class="field"><label>Max cuota</label><div class="fake-input">35%</div></div>
+              </div>
+            </div>
+            <div class="missing-banner">
+              <span>Si falta ingreso, deudas o inicial: mostrar "Faltan datos para calcular".</span>
+              <button class="btn">Pedir info</button>
+            </div>
+            <div class="scenario-row">
+              <div class="scenario active"><b>Aprobar</b><span>RD$ 4.1M · 7 anos</span></div>
+              <div class="scenario"><b>Bajar cuota</b><span>8 anos · RD$ 61.2K</span></div>
+              <div class="scenario"><b>Pedir docs</b><span>Validar ingreso promedio</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="compact-grid">
+          <div class="card pad">
+            <div class="section-head"><div><h3>Documentos</h3><p>Validaciones del expediente.</p></div><button class="btn">Solicitar</button></div>
+            <div class="doc-list">
+              <div class="row-card"><span class="check ok">✓</span><div><b>Cedula</b><small>KYC validado</small></div><button class="btn">Ver</button></div>
+              <div class="row-card"><span class="check warn">!</span><div><b>Estados de cuenta</b><small>Recibido, falta revisar</small></div><button class="btn primary">Abrir</button></div>
+              <div class="row-card"><span class="check ok">✓</span><div><b>Consentimiento</b><small>Firmado digitalmente</small></div><button class="btn">PDF</button></div>
+            </div>
+          </div>
+          <div class="card pad">
+            <div class="section-head"><div><h3>Actividad</h3><p>Banco, dealer y cliente.</p></div><button class="btn primary">WhatsApp</button></div>
+            <div class="activity-list">
+              <div class="row-card"><span class="dot green"></span><div><b>Oferta aceptada</b><small>Hoy 11:42 · Cliente</small></div></div>
+              <div class="row-card"><span class="dot"></span><div><b>Vehiculo elegido</b><small>Hoy 10:18 · Portal</small></div></div>
+              <div class="row-card"><span class="dot amber"></span><div><b>Docs pendientes</b><small>Ayer 5:06 · Banco</small></div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="side-rail">
+        <section class="card pad">
+          <div class="section-head"><div><h3>Vehiculo y dealer</h3><p>Sin abrir otra pagina.</p></div><span class="pill blue">Financiado</span></div>
+          <div class="rail-photo"></div>
+          <div class="fact-list">
+            <div class="fact"><span>Modelo</span><b>Toyota Grand Highlander 2024</b></div>
+            <div class="fact"><span>Precio</span><b>US$ 85,500</b></div>
+            <div class="fact"><span>Monto</span><b>RD$ 4,104,000</b></div>
+            <div class="fact"><span>Dealer</span><b>Joselito Auto Import</b></div>
+            <div class="fact"><span>Contacto</span><b><button class="btn">WhatsApp</button> <button class="btn">Perfil</button></b></div>
+          </div>
+        </section>
+
+        <section class="card pad">
+          <div class="section-head"><div><h3>Registrar respuesta</h3><p>Decision visible sin bajar hasta el fondo.</p></div></div>
+          <div class="decision-buttons">
+            <button class="btn navy">Pre-aprobar</button>
+            <button class="btn">Pedir docs</button>
+            <button class="btn">Evaluacion</button>
+            <button class="btn danger">Rechazar</button>
+          </div>
+          <div class="field-grid">
+            <div class="field"><label>Monto</label><div class="fake-input">RD$ 4,104,000</div></div>
+            <div class="field"><label>Tasa</label><div class="fake-input">9.25%</div></div>
+            <div class="field"><label>Inicial</label><div class="fake-input">RD$ 250,000</div></div>
+            <div class="field"><label>Vence</label><div class="fake-input">05/08/2026</div></div>
+          </div>
+          <div class="field" style="margin-top:10px"><label>Mensaje al cliente</label><textarea>Tu solicitud fue pre-aprobada sujeta a validacion final de ingresos y seguro.</textarea></div>
+          <button class="btn primary" style="width:100%;margin-top:10px">Confirmar y notificar</button>
+        </section>
+
+        <section class="card pad">
+          <div class="section-head"><div><h3>Notas internas</h3><p>Solo banco.</p></div><span class="pill">3</span></div>
+          <div class="note-list">
+            <div class="row-card" style="grid-template-columns:1fr"><div><b>Laura Fernandez</b><small>Buen perfil. Confirmar promedio de estados antes de oferta final.</small></div></div>
+            <div class="field"><label>Nueva nota</label><div class="fake-input">Escribir nota...</div></div>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <section>
+      <div class="caption" style="margin:22px 0 10px">
+        <div><h1 style="font-size:22px">Mobile - misma idea, por pestañas</h1><p>En telefono no debe intentar mostrar todo a la vez. Se mantiene el resumen arriba y se divide en Revision, Cliente, Docs y Decision.</p></div>
+      </div>
+      <div class="mobile-frame">
+        <div class="mobile-screen">
+          <section class="mobile-card mobile-summary">
+            <div class="mobile-header">
+              <div class="avatar">DF</div>
+              <div>
+                <span class="pill teal">AP-2047</span>
+                <h2>David Enrique Franzini Javier</h2>
+                <p style="margin:0;color:#64748b;font-size:12px;font-weight:700">Grand Highlander 2024 · Joselito Auto</p>
+              </div>
+            </div>
+            <div class="mobile-kpis">
+              <div class="kpi teal"><span>Monto</span><b>RD$ 4.1M</b></div>
+              <div class="kpi amber"><span>Inicial</span><b>RD$ 250K</b></div>
+              <div class="kpi"><span>Cuota</span><b>RD$ 66.9K</b></div>
+              <div class="kpi teal"><span>Score</span><b>90/100</b></div>
+            </div>
+          </section>
+          <div class="mobile-nav">
+            <button class="active">Revision</button>
+            <button>Cliente</button>
+            <button>Docs</button>
+            <button>Decision</button>
+          </div>
+          <section class="mobile-card">
+            <h3>Revision rapida</h3>
+            <div class="doc-list">
+              <div class="row-card"><span class="check ok">✓</span><div><b>KYC aprobado</b><small>Cedula + vida</small></div></div>
+              <div class="row-card"><span class="check warn">!</span><div><b>Estados de cuenta</b><small>Falta validar promedio</small></div></div>
+              <div class="row-card"><span class="dot green"></span><div><b>Oferta aceptada</b><small>Cliente ya eligio este banco</small></div></div>
+            </div>
+          </section>
+          <section class="mobile-card">
+            <h3>Capacidad</h3>
+            <div class="capacity-source" style="grid-template-columns:1fr;margin-bottom:10px">
+              <div class="source-card"><span>Datos usados</span><b>Ingreso, deudas, monto, tasa, plazo, seguro</b><small>Editar antes de aprobar si falta algo.</small></div>
+            </div>
+            <div class="bar-row"><span>Cuota</span><div class="track"><i style="width:76%"></i></div><b>26.8%</b></div>
+            <div class="bar-row"><span>Con seguro</span><div class="track amber"><i style="width:84%"></i></div><b>29.4%</b></div>
+            <div class="assumption-panel" style="margin-top:12px">
+              <div class="assumption-head"><div><b>Supuestos</b><small>Tap para editar</small></div><span class="pill teal">8 campos</span></div>
+              <div class="assumption-grid">
+                <div class="field"><label>Ingreso</label><div class="fake-input">250K</div></div>
+                <div class="field"><label>Deudas</label><div class="fake-input">32K</div></div>
+                <div class="field"><label>Tasa</label><div class="fake-input">9.25%</div></div>
+                <div class="field"><label>Seguro</label><div class="fake-input">6.5K</div></div>
+              </div>
+            </div>
+            <button class="btn" style="width:100%;margin-top:10px">Editar supuestos</button>
+            <button class="btn primary" style="width:100%;margin-top:8px">Registrar respuesta</button>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
