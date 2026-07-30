@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import autordLogo from '../assets/autord-logo-reference.png'
 import suv1 from '../assets/cars/suv-1.jpg'
 import suv3 from '../assets/cars/suv-3.jpg'
 import heroSuv from '../assets/cars/hero-suv.jpg'
@@ -44,20 +45,31 @@ export default function CarImage({ tone = '#4b5563', className = '', label, make
 
   return (
     <div className={`vphoto ${className}`}>
-      <svg className="car-illus" viewBox="0 0 260 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={label || 'Vehículo'}>
-        <ellipse cx="130" cy="104" rx="112" ry="9" fill="#000" opacity="0.06" />
-        <path d="M18 84c-2-14 4-20 14-22 8-14 20-28 34-33 20-7 52-7 72 0 12 4 24 12 34 22l30 5c10 2 16 8 18 18 1 6-1 11-8 11H26c-6 0-7-4-8-9Z" fill={tone} />
-        <path d="M74 32c16-5 44-5 60 0 9 3 18 9 25 17H55c5-7 12-13 19-17Z" fill="#fff" opacity="0.82" />
-        <path d="M96 30c10-2 22-2 32 0v19H96V30Z" fill="#cbd5e1" opacity="0.5" />
-        <circle cx="76" cy="86" r="19" fill="#1f2937" /><circle cx="76" cy="86" r="9" fill="#e5e7eb" />
-        <circle cx="188" cy="86" r="19" fill="#1f2937" /><circle cx="188" cy="86" r="9" fill="#e5e7eb" />
-        <rect x="210" y="58" width="16" height="8" rx="2" fill="#fbbf24" opacity="0.9" />
-        <rect x="34" y="60" width="12" height="8" rx="2" fill="#fca5a5" opacity="0.85" />
-      </svg>
+      {/* Placeholder beneath the photo — visible while it loads and if it never
+          arrives. A generic car drawing read as the actual vehicle; the AutoRD
+          mark reads as "no photo yet" and can't be mistaken for the car. */}
+      <div
+        className="car-illus"
+        role="img"
+        aria-label={label || 'Vehículo'}
+        // Fills the frame: `.vphoto .car-illus` sets width 62% and no height,
+        // which an SVG got from its viewBox but a div does not. No background
+        // either — .vphoto's gradient should show through.
+        style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center' }}
+      >
+        <img src={autordLogo} alt="" style={{ width: '38%', maxWidth: 120, opacity: 0.3 }} />
+      </div>
       {src && !dead && (
         <img
           key={src}
-          ref={imgRef}
+          // A cached image can finish loading before React attaches onLoad, and
+          // the mount effect can miss it too — leaving a fully decoded photo at
+          // opacity 0 forever behind the placeholder. Checking here, the moment
+          // the element is attached, closes that gap.
+          ref={(el) => {
+            imgRef.current = el
+            if (el?.complete && el.naturalWidth > 0) setOk(true)
+          }}
           src={src}
           alt={label || 'Vehículo'}
           className="vphoto-img"
