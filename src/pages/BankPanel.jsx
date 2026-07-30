@@ -1037,12 +1037,16 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
             <BankVehicleMarketAnalyticsCard applicationId={a.applicationId} />
           </>)}
         </section>
-        {/* PaymentCapacityTool also rendered here, so the expediente showed two
-            capacity calculators with different assumptions — a hardcoded 9.25%
-            and a 35% ceiling against the application's own APR and 40% — which
-            could reach opposite verdicts on the same file. CapacityTool is the
-            one kept: it runs on assessCapacity, which is advisory by
-            construction and accounts for existing debts and the inicial. */}
+        {/* Both calculators render, by design. They answer different questions:
+            CapacityTool (above) works from precio/inicial/deudas via
+            assessCapacity, while this one works from the financed amount and
+            adds seguro plus a longer-term comparison.
+
+            They do NOT share assumptions — this one hardcodes 9.25% and a 35%
+            cuota/ingreso ceiling, where CapacityTool uses the application's own
+            APR and 40%. On the same file they can therefore disagree, so treat
+            them as two readings rather than one verdict. */}
+        <PaymentCapacityTool app={a} />
       </div>
 
       {/* Documentos + Actividad */}
