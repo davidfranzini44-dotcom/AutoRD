@@ -962,14 +962,16 @@ function Expediente({ a, onAssign, onStage, onAddNote, officers, bank }) {
 
         {/* Full width: a flag list reads fine wide, and at one line it would
             otherwise strand an entire half-row. */}
-        <section className="card pad bankx-full">
+        {/* Short panel: paired with Paquete rather than spanning its own row. */}
+        <section className="card pad" style={{ order: 4 }}>
           <RiskPanel a={a} documents={effectiveDocs} />
         </section>
 
-        <section className="card pad">
+        <section className="card pad" style={{ order: 3 }}>
           <PackagePanel a={a} />
         </section>
-        <section className="card pad">
+        {/* Tall panel (photo + specs): paired with Cliente, the other tall one. */}
+        <section className="card pad" style={{ order: 2 }}>
           <div className="row between center" style={{ marginBottom: 10 }}><h3 style={{ fontSize: 15, margin: 0 }}>Vehículo</h3>{!a.isPreapproval && <span className="pill blue">Financiado</span>}</div>
           {a.isPreapproval ? (
             <div className="tiny muted">Pre-aprobación sin vehículo — el cliente elige el carro después.</div>

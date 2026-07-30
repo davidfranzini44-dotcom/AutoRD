@@ -4777,10 +4777,14 @@ select.preap-input { padding-right: 16px; }
 .bankx-expmini b { font-size: 17px; color: #0f172a; font-variant-numeric: tabular-nums; }
 .bankx-readiness { display: grid; gap: 8px; }
 .bankx-readiness-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center; padding: 10px; border: 1px solid #edf2f7; background: #fbfdff; border-radius: 12px; }
-.bankx-expgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
-/* Row height follows the taller card, so a short panel beside a tall one leaves
-   dead space. Panels that read fine wide take the whole row instead. */
+/* stretch, not start: paired cards match their row height, so a shorter panel
+   grows to fill instead of leaving a gap between it and the next row. */
+.bankx-expgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
 .bankx-expgrid > .bankx-full { grid-column: 1 / -1; }
+/* Visual order pairs tall panels together (Cliente + Vehículo) and short ones
+   together (Paquete + Riesgo). In source order Riesgo came second and, being
+   full width, pushed itself to its own row and left half of row 1 empty. */
+.bankx-expgrid > .bankx-capacity-tool { order: 5; }
 .bankx-infoline { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 10px; border-bottom: 1px solid #edf2f7; }
 .bankx-infoline:last-child { border-bottom: 0; padding-bottom: 0; }
 .bankx-infoline span { color: #64748b; font-size: 12px; font-weight: 800; flex: none; }
