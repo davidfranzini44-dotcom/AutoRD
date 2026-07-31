@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoRD - Super Admin Command Center Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #10233f;
+      --navy2: #19345b;
+      --teal: #0f766e;
+      --teal2: #14b8a6;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #dbe4ee;
+      --line2: #edf2f7;
+      --green: #166534;
+      --greenBg: #dcfce7;
+      --amber: #b45309;
+      --amberBg: #fef3c7;
+      --red: #b91c1c;
+      --redBg: #fee2e2;
+      --blue: #1d4ed8;
+      --blueBg: #dbeafe;
+      --purple: #6d28d9;
+      --purpleBg: #ede9fe;
+      --shadow: 0 18px 55px rgba(16, 35, 63, .10);
+      --softShadow: 0 8px 24px rgba(16, 35, 63, .055);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% -6%, rgba(20,184,166,.16), transparent 30%),
+        linear-gradient(180deg, #e9eff6 0%, #f8fafc 48%, #eef3f8 100%);
+      color: var(--ink);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .mock-page { padding: 28px; overflow-x: auto; }
+    .caption {
+      max-width: 1480px;
+      margin: 0 auto 12px;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+    .frame {
+      width: 1480px;
+      min-height: 980px;
+      margin: 0 auto 42px;
+      background: var(--bg);
+      border: 1px solid #cbd7e5;
+      border-radius: 26px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: 270px 1fr;
+    }
+    .side {
+      background: rgba(255,255,255,.96);
+      border-right: 1px solid var(--line);
+      padding: 22px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; color: var(--navy); font-weight: 900; }
+    .mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, var(--navy), var(--teal));
+      box-shadow: 0 12px 24px rgba(15,118,110,.22);
+      font-size: 13px;
+      letter-spacing: -.02em;
+    }
+    .brand small { display: block; color: var(--muted); font-weight: 750; margin-top: 2px; }
+    .operator-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: linear-gradient(180deg, #fff, #f8fbfd);
+      display: grid;
+      gap: 10px;
+    }
+    .operator-top { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: var(--navy);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      flex: none;
+    }
+    .nav-label {
+      margin: 10px 8px 2px;
+      color: #8aa0b9;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .nav { display: grid; gap: 6px; }
+    .nav button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #334155;
+      text-align: left;
+      border-radius: 13px;
+      padding: 11px 12px;
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .nav button:hover,
+    .nav button.active { background: #eaf7f5; color: var(--teal); }
+    .nav-ic {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: #f1f5f9;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .nav button.active .nav-ic { background: #fff; color: var(--teal); }
+    .nav-count {
+      min-width: 22px;
+      height: 22px;
+      padding: 0 7px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #64748b;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .side-foot {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--line2);
+      display: grid;
+      gap: 9px;
+    }
+    .main { min-width: 0; }
+    .topbar {
+      height: 74px;
+      background: rgba(255,255,255,.88);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px;
+      gap: 18px;
+    }
+    .search { position: relative; width: min(530px, 46vw); }
+    .search input {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #f8fafc;
+      padding: 0 14px 0 42px;
+      outline: 0;
+      color: var(--ink);
+    }
+    .search span { position: absolute; left: 15px; top: 11px; color: #8aa0b9; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .content { padding: 24px 26px 36px; }
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 { color: var(--navy); font-size: 30px; letter-spacing: -.035em; }
+    h2 { color: var(--navy); font-size: 20px; letter-spacing: -.02em; }
+    h3 { color: var(--navy); font-size: 15px; letter-spacing: -.01em; }
+    .small { font-size: 13px; }
+    .tiny { font-size: 12px; }
+    .muted { color: var(--muted); }
+    .strong { font-weight: 850; }
+    .row { display: flex; align-items: center; }
+    .between { justify-content: space-between; }
+    .wrap { flex-wrap: wrap; }
+    .gap6 { gap: 6px; }
+    .gap8 { gap: 8px; }
+    .gap10 { gap: 10px; }
+    .gap12 { gap: 12px; }
+    .col { display: grid; gap: 10px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--softShadow);
+      min-width: 0;
+    }
+    .pad { padding: 16px; }
+    .btn {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--navy);
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; box-shadow: 0 10px 22px rgba(15,118,110,.19); }
+    .btn.navy { background: var(--navy); border-color: var(--navy); color: #fff; }
+    .btn.ghost { background: transparent; }
+    .btn.danger { color: var(--red); border-color: #fecaca; }
+    .btn.sm { min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 10px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 28px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .pill.green { background: var(--greenBg); color: var(--green); }
+    .pill.amber { background: var(--amberBg); color: var(--amber); }
+    .pill.red { background: var(--redBg); color: var(--red); }
+    .pill.blue { background: var(--blueBg); color: var(--blue); }
+    .pill.purple { background: var(--purpleBg); color: var(--purple); }
+    .pill.teal { background: #eaf7f5; color: var(--teal); }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kpi {
+      padding: 15px;
+      min-height: 122px;
+      display: grid;
+      align-content: space-between;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::after {
+      content: "";
+      position: absolute;
+      right: -22px;
+      top: -28px;
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background: rgba(15,118,110,.08);
+    }
+    .kpi-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 850; }
+    .kpi strong { display: block; font-size: 26px; color: var(--navy); letter-spacing: -.035em; }
+    .kpi small { color: var(--muted); font-weight: 750; }
+    .grid { display: grid; gap: 16px; }
+    .command { grid-template-columns: minmax(0, 1.25fr) 420px; align-items: start; }
+    .ops-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .ops-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 14px;
+      padding: 13px;
+      min-height: 118px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .ops-card b { font-size: 25px; color: var(--navy); letter-spacing: -.04em; }
+    .ops-card span { color: var(--muted); line-height: 1.35; }
+    .alert-list, .timeline, .stack { display: grid; gap: 9px; }
+    .alert {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 11px;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .alert-ic {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #eef2f7;
+      color: var(--navy);
+      font-weight: 900;
+    }
+    .alert.red { border-color: #fecaca; background: #fff7f7; }
+    .alert.red .alert-ic { background: var(--redBg); color: var(--red); }
+    .alert.amber { border-color: #fde68a; background: #fffdf3; }
+    .alert.amber .alert-ic { background: var(--amberBg); color: var(--amber); }
+    .alert.green .alert-ic { background: var(--greenBg); color: var(--green); }
+    .work { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 16px; align-items: start; }
+    .rail { position: sticky; top: 92px; display: grid; gap: 12px; min-width: 0; }
+    .table {
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: var(--softShadow);
+    }
+    .table-head, .table-row {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr .72fr .72fr .7fr;
+      gap: 14px;
+      align-items: center;
+      padding: 13px 16px;
+    }
+    .table-head {
+      background: #f8fafc;
+      color: #8aa0b9;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line2);
+    }
+    .table-row {
+      border-bottom: 1px solid var(--line2);
+      font-size: 13px;
+    }
+    .table-row:last-child { border-bottom: 0; }
+    .table-row:hover { background: #fbfefe; }
+    .logo-dot {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--navy);
+      font-size: 12px;
+      font-weight: 900;
+      flex: none;
+    }
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 11px;
+      background: #fff;
+      min-width: 0;
+    }
+    .mini span { display: block; color: var(--muted); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; }
+    .mini b { display: block; margin-top: 4px; font-size: 15px; color: var(--navy); overflow-wrap: anywhere; }
+    .mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+    .detail-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(20,184,166,.12), transparent 34%),
+        #fff;
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      background: #eaf1f7;
+      overflow: hidden;
+    }
+    .progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--teal), var(--teal2)); border-radius: inherit; }
+    .split-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .funnel { display: grid; gap: 10px; margin-top: 12px; }
+    .funnel-row { display: grid; grid-template-columns: 132px 1fr 52px; gap: 10px; align-items: center; font-size: 12px; }
+    .bar { height: 10px; border-radius: 999px; background: #eaf1f7; overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: inherit; background: var(--teal); }
+    .mobile-preview {
+      width: 390px;
+      margin: 28px auto 0;
+      border: 1px solid #cbd7e5;
+      border-radius: 34px;
+      background: #0b1220;
+      padding: 10px;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .phone {
+      border-radius: 26px;
+      overflow: hidden;
+      background: #f4f7fb;
+      min-height: 790px;
+      color: var(--ink);
+    }
+    .phone-top {
+      padding: 16px;
+      background: linear-gradient(135deg, var(--navy), var(--teal));
+      color: #fff;
+    }
+    .phone-top h2 { color: #fff; font-size: 23px; margin-top: 10px; }
+    .phone-content { padding: 14px; display: grid; gap: 12px; }
+    .phone-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .phone-bottom {
+      position: sticky;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      background: rgba(255,255,255,.94);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .phone-bottom button {
+      border: 0;
+      background: transparent;
+      padding: 10px 4px;
+      color: #64748b;
+      font-size: 10px;
+      font-weight: 850;
+      display: grid;
+      gap: 4px;
+      place-items: center;
+    }
+    .phone-bottom button.active { color: var(--teal); }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .screen-enter { animation: fade .14s ease-out; }
+    @keyframes fade { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+    @media (max-width: 900px) {
+      .mock-page { padding: 14px; }
+      .caption { max-width: 390px; }
+      .frame { display: none; }
+      .mobile-preview { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mock-page">
+    <div class="caption">
+      <span>AutoRD Super Admin - Command Center Mockup</span>
+      <span class="pill teal">Desktop principal + mobile fallback</span>
+    </div>
+
+    <div class="frame">
+      <aside class="side">
+        <div class="brand">
+          <div class="mark">AR</div>
+          <div>
+            <div>AutoRD</div>
+            <small>Super Admin</small>
+          </div>
+        </div>
+
+        <div class="operator-card">
+          <div class="operator-top">
+            <div class="avatar">DF</div>
+            <div style="min-width:0">
+              <div class="strong">David Franzini</div>
+              <div class="tiny muted">Owner access · auditado</div>
+            </div>
+          </div>
+          <div class="row between gap8">
+            <span class="pill green">Sistema vivo</span>
+            <span class="tiny muted">31 jul 2026</span>
+          </div>
+        </div>
+
+        <div class="nav-label">Command center</div>
+        <nav class="nav" id="nav">
+          <button class="active" data-screen="inicio"><span class="nav-ic">IN</span><span>Inicio</span><span class="nav-count">12</span></button>
+          <button data-screen="solicitudes"><span class="nav-ic">SO</span><span>Solicitudes</span><span class="nav-count">48</span></button>
+          <button data-screen="dealers"><span class="nav-ic">DE</span><span>Dealers</span><span class="nav-count">7</span></button>
+          <button data-screen="bancos"><span class="nav-ic">BA</span><span>Bancos</span><span class="nav-count">5</span></button>
+          <button data-screen="usuarios"><span class="nav-ic">US</span><span>Usuarios + KYC</span><span class="nav-count">19</span></button>
+          <button data-screen="vehiculos"><span class="nav-ic">VE</span><span>Vehículos</span><span class="nav-count">146</span></button>
+          <button data-screen="facturacion"><span class="nav-ic">FA</span><span>Facturación</span><span class="nav-count">9</span></button>
+          <button data-screen="whatsapp"><span class="nav-ic">WA</span><span>WhatsApp</span><span class="nav-count">3</span></button>
+          <button data-screen="moderacion"><span class="nav-ic">MO</span><span>Moderación</span><span class="nav-count">6</span></button>
+          <button data-screen="ajustes"><span class="nav-ic">AJ</span><span>Ajustes</span><span class="nav-count">1</span></button>
+        </nav>
+
+        <div class="side-foot">
+          <button class="btn navy">Ver auditoría</button>
+          <button class="btn ghost">Salir del panel</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="topbar">
+          <div class="search"><span>⌕</span><input placeholder="Buscar tienda, banco, cliente, cédula, vehículo o solicitud..." /></div>
+          <div class="top-actions">
+            <button class="btn">Exportar</button>
+            <button class="btn">Crear alerta</button>
+            <button class="btn primary">Nueva acción admin</button>
+          </div>
+        </div>
+        <div class="content">
+          <section class="screen active screen-enter" id="inicio">
+            <div class="page-head">
+              <div>
+                <h1>Command Center</h1>
+                <p class="muted small">Vista completa de la salud de AutoRD: dinero, dealers, bancos, KYC, leads y problemas activos.</p>
+              </div>
+              <div class="row gap8 wrap">
+                <span class="pill green">Uptime 99.98%</span>
+                <span class="pill amber">12 requieren atención</span>
+              </div>
+            </div>
+
+            <div class="kpis">
+              <div class="card kpi"><div class="kpi-top">Usuarios <span>US</span></div><strong>3,842</strong><small>+214 este mes</small></div>
+              <div class="card kpi"><div class="kpi-top">Dealers <span>DE</span></div><strong>126</strong><small>87 verificados</small></div>
+              <div class="card kpi"><div class="kpi-top">Bancos <span>BA</span></div><strong>9</strong><small>5 activos hoy</small></div>
+              <div class="card kpi"><div class="kpi-top">Solicitado <span>RD$</span></div><strong>RD$ 182M</strong><small>últimos 30 días</small></div>
+              <div class="card kpi"><div class="kpi-top">Aprobado <span>OK</span></div><strong>RD$ 64M</strong><small>35.1% conversión</small></div>
+              <div class="card kpi"><div class="kpi-top">MRR <span>SAAS</span></div><strong>RD$ 421K</strong><small>+18% vs mes pasado</small></div>
+            </div>
+
+            <div class="grid command">
+              <section class="card pad">
+                <div class="row between gap12">
+                  <div><h2>Cola inteligente</h2><p class="tiny muted">Acciones que mueven dinero o reducen riesgo.</p></div>
+                  <button class="btn sm">Priorizar por impacto</button>
+                </div>
+                <div class="ops-grid">
+                  <div class="ops-card"><span class="pill red">Crítico</span><b>7</b><span>Solicitudes aprobadas sin dealer contactado.</span></div>
+                  <div class="ops-card"><span class="pill amber">KYC</span><b>19</b><span>Identidades pendientes o fallidas para revisar.</span></div>
+                  <div class="ops-card"><span class="pill blue">Bancos</span><b>12</b><span>Respuestas con SLA mayor a 24 horas.</span></div>
+                  <div class="ops-card"><span class="pill teal">Revenue</span><b>RD$ 86K</b><span>Facturas por cobrar esta semana.</span></div>
+                </div>
+              </section>
+
+              <aside class="card pad">
+                <div class="row between gap12" style="margin-bottom:12px">
+                  <div><h2>Alertas activas</h2><p class="tiny muted">Lo que el admin debe mirar primero.</p></div>
+                  <span class="pill amber">12 abiertas</span>
+                </div>
+                <div class="alert-list">
+                  <div class="alert red"><div class="alert-ic">!</div><div><b class="small">WhatsApp con 3 mensajes fallidos</b><div class="tiny muted">OTP y respuesta de banco sin entregar.</div></div><button class="btn sm danger">Revisar</button></div>
+                  <div class="alert amber"><div class="alert-ic">K</div><div><b class="small">Joselito Auto Import sin RNC</b><div class="tiny muted">Dealer vende, pero verificación incompleta.</div></div><button class="btn sm">Pedir</button></div>
+                  <div class="alert green"><div class="alert-ic">B</div><div><b class="small">Banco Caribe mejoró respuesta</b><div class="tiny muted">SLA promedio bajó a 4h 18m.</div></div><button class="btn sm">Ver</button></div>
+                </div>
+              </aside>
+            </div>
+
+            <div class="work" style="margin-top:16px">
+              <section class="table">
+                <div class="table-head"><span>Actividad</span><span>Entidad</span><span>Tipo</span><span>Impacto</span><span>Estado</span></div>
+                <div class="table-row"><div><b>Pre-aprobación AP-2091</b><div class="tiny muted">Cliente aceptó oferta y eligió vehículo.</div></div><span>Banco BHD</span><span>Solicitud</span><b>RD$ 3.4M</b><span class="pill green">Listo</span></div>
+                <div class="table-row"><div><b>Dealer nuevo pendiente</b><div class="tiny muted">Necesita logo, RNC y dirección confirmada.</div></div><span>Premium Motors</span><span>Dealer</span><b>Alto</b><span class="pill amber">Pendiente</span></div>
+                <div class="table-row"><div><b>Precio fuera de mercado</b><div class="tiny muted">Toyota RAV4 2021 18% sobre referencia.</div></div><span>Auto San Pedro</span><span>Inventario</span><b>Medio</b><span class="pill blue">Sugerir</span></div>
+                <div class="table-row"><div><b>Factura vencida</b><div class="tiny muted">Plan Dealer Pro, 6 días vencida.</div></div><span>Nava Auto</span><span>Billing</span><b>RD$ 9,500</b><span class="pill red">Cobrar</span></div>
+              </section>
+
+              <aside class="rail">
+                <div class="detail-card">
+                  <div class="row between gap10"><h2>Funnel de financiamiento</h2><span class="pill teal">30 días</span></div>
+                  <div class="funnel">
+                    <div class="funnel-row"><span class="tiny strong">Visitantes</span><div class="bar"><i style="width:100%"></i></div><b>18.4K</b></div>
+                    <div class="funnel-row"><span class="tiny strong">Leads</span><div class="bar"><i style="width:68%"></i></div><b>2.1K</b></div>
+                    <div class="funnel-row"><span class="tiny strong">KYC</span><div class="bar"><i style="width:44%"></i></div><b>924</b></div>
+                    <div class="funnel-row"><span class="tiny strong">Pre-aprobados</span><div class="bar"><i style="width:29%"></i></div><b>418</b></div>
+                    <div class="funnel-row"><span class="tiny strong">Vendidos</span><div class="bar"><i style="width:12%"></i></div><b>73</b></div>
+                  </div>
+                </div>
+                <div class="detail-card">
+                  <h2>Mejor próxima acción</h2>
+                  <p class="small muted">Contactar dealers con más leads aprobados sin seguimiento. Hay 11 clientes que ya califican y todavía no tienen respuesta del dealer.</p>
+                  <button class="btn primary">Abrir lista</button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="solicitudes">
+            <div class="page-head"><div><h1>Solicitudes globales</h1><p class="muted small">Todas las aplicaciones, bancos, dealers, documentos, KYC y aprobaciones en un solo lugar.</p></div><button class="btn primary">Crear reporte</button></div>
+            <div class="kpis">
+              <div class="card kpi"><div class="kpi-top">Nuevas hoy <span>SO</span></div><strong>48</strong><small>17 con vehículo</small></div>
+              <div class="card kpi"><div class="kpi-top">En banco <span>BA</span></div><strong>132</strong><small>SLA promedio 8h</small></div>
+              <div class="card kpi"><div class="kpi-top">Faltan docs <span>DOC</span></div><strong>39</strong><small>WhatsApp enviado</small></div>
+              <div class="card kpi"><div class="kpi-top">Pre-aprobadas <span>OK</span></div><strong>418</strong><small>RD$ 64M</small></div>
+              <div class="card kpi"><div class="kpi-top">Expiran <span>EX</span></div><strong>21</strong><small>próximos 7 días</small></div>
+              <div class="card kpi"><div class="kpi-top">Sin dealer <span>DIR</span></div><strong>74</strong><small>pre-aprobación directa</small></div>
+            </div>
+            <div class="work">
+              <section class="table">
+                <div class="table-head"><span>Cliente</span><span>Vehículo</span><span>Banco</span><span>Monto</span><span>Estado</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">NF</div><div><b>Nashla Figueroa</b><div class="tiny muted">KYC aprobado · Cédula terminada 4411</div></div></div><span>Toyota RAV4 2022</span><span>BHD</span><b>RD$ 3.3M</b><span class="pill green">Pre-aprobada</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">DF</div><div><b>David Franzini</b><div class="tiny muted">Docs recibidos · esperando banco</div></div></div><span>Highlander 2024</span><span>Popular</span><b>RD$ 4.1M</b><span class="pill amber">En revisión</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">MR</div><div><b>Miguel Reyes</b><div class="tiny muted">Sin vehículo · WhatsApp verificado</div></div></div><span>Pre-aprobación</span><span>3 bancos</span><b>RD$ 2.0M</b><span class="pill blue">Comparando</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">AL</div><div><b>Ana López</b><div class="tiny muted">Banco pidió income proof</div></div></div><span>Kia Sportage 2021</span><span>Caribe</span><b>RD$ 2.7M</b><span class="pill red">Faltan docs</span></div>
+              </section>
+              <aside class="rail">
+                <div class="detail-card">
+                  <div class="row between gap10"><h2>Solicitud AP-2047</h2><span class="pill green">Pre-aprobada</span></div>
+                  <div class="mini-grid">
+                    <div class="mini"><span>Monto</span><b>RD$ 4.1M</b></div>
+                    <div class="mini"><span>Inicial</span><b>RD$ 450K</b></div>
+                    <div class="mini"><span>SLA</span><b>9h</b></div>
+                  </div>
+                  <div class="stack">
+                    <div class="alert green"><div class="alert-ic">K</div><div><b class="small">KYC aprobado</b><div class="tiny muted">Nombre extraído de cédula.</div></div><button class="btn sm">Ver</button></div>
+                    <div class="alert amber"><div class="alert-ic">D</div><div><b class="small">Documento opcional</b><div class="tiny muted">Banco puede pedir dirección laboral.</div></div><button class="btn sm">Pedir</button></div>
+                  </div>
+                  <button class="btn navy">Abrir expediente completo</button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="dealers">
+            <div class="page-head"><div><h1>Dealers</h1><p class="muted small">Control de tiendas, sucursales, verificación, usuarios, inventario, leads y facturación.</p></div><button class="btn primary">Verificar dealer</button></div>
+            <div class="work">
+              <section class="table">
+                <div class="table-head"><span>Dealer</span><span>Inventario</span><span>Leads</span><span>Billing</span><span>Verificación</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">JA</div><div><b>Joselito Auto Import</b><div class="tiny muted">Santo Domingo · 3 usuarios</div></div></div><b>42 carros</b><span>88 leads</span><b>RD$ 19,500</b><span class="pill green">Verificado</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">PC</div><div><b>Premium Cars RD</b><div class="tiny muted">Santiago · RNC pendiente</div></div></div><b>19 carros</b><span>31 leads</span><b>Trial</b><span class="pill amber">Falta RNC</span></div>
+                <div class="table-row"><div class="row gap10"><div class="logo-dot">NA</div><div><b>Nava Auto</b><div class="tiny muted">La Vega · pago vencido</div></div></div><b>11 carros</b><span>9 leads</span><b>RD$ 9,500</b><span class="pill red">Vencido</span></div>
+              </section>
+              <aside class="rail">
+                <div class="detail-card">
+                  <h2>Dealer health</h2>
+                  <div class="row between"><span class="small strong">Joselito Auto Import</span><span class="pill green">92/100</span></div>
+                  <div class="progress"><i style="width:92%"></i></div>
+                  <div class="split-card">
+                    <div class="mini"><span>Lead response</span><b>14 min</b></div>
+                    <div class="mini"><span>Fotos buenas</span><b>96%</b></div>
+                    <div class="mini"><span>Financiamiento</span><b>34 apps</b></div>
+                    <div class="mini"><span>Cierres</span><b>11</b></div>
+                  </div>
+                  <button class="btn primary">Abrir perfil admin</button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="bancos">
+            <div class="page-head"><div><h1>Bancos</h1><p class="muted small">Performance, oficiales, respuestas, productos financieros, tasas y SLA por banco.</p></div><button class="btn primary">Crear banco</button></div>
+            <div class="split-card">
+              <div class="card pad">
+                <h2>Ranking por respuesta</h2>
+                <div class="funnel">
+                  <div class="funnel-row"><span>BHD</span><div class="bar"><i style="width:94%"></i></div><b>3h</b></div>
+                  <div class="funnel-row"><span>Caribe</span><div class="bar"><i style="width:84%"></i></div><b>4h</b></div>
+                  <div class="funnel-row"><span>Popular</span><div class="bar"><i style="width:63%"></i></div><b>9h</b></div>
+                  <div class="funnel-row"><span>Banreservas</span><div class="bar"><i style="width:42%"></i></div><b>18h</b></div>
+                </div>
+              </div>
+              <div class="card pad">
+                <h2>Configuración por banco</h2>
+                <div class="stack" style="margin-top:12px">
+                  <div class="alert"><div class="alert-ic">%</div><div><b class="small">Tasas y plazos</b><div class="tiny muted">Rangos por vehículo, inicial, score y salario.</div></div><button class="btn sm">Editar</button></div>
+                  <div class="alert"><div class="alert-ic">D</div><div><b class="small">Documentos requeridos</b><div class="tiny muted">Ingreso, dirección, referencias, seguro.</div></div><button class="btn sm">Editar</button></div>
+                  <div class="alert"><div class="alert-ic">O</div><div><b class="small">Oficiales</b><div class="tiny muted">Asignación, carga y permisos.</div></div><button class="btn sm">Ver</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="screen" id="usuarios">
+            <div class="page-head"><div><h1>Usuarios + KYC</h1><p class="muted small">Clientes, cuentas creadas por OTP, DIDIT, documentos, consentimiento y auditoría de identidad.</p></div><button class="btn primary">Revisar KYC</button></div>
+            <div class="work">
+              <section class="table">
+                <div class="table-head"><span>Usuario</span><span>Login</span><span>KYC</span><span>Solicitud</span><span>Riesgo</span></div>
+                <div class="table-row"><div><b>Nashla Figueroa</b><div class="tiny muted">Cédula termina 4411 · cuenta auto-creada</div></div><span>WhatsApp OTP</span><span class="pill green">Aprobado</span><span>AP-2091</span><span class="pill green">Bajo</span></div>
+                <div class="table-row"><div><b>wa18294201557</b><div class="tiny muted">Nombre pendiente de KYC</div></div><span>WhatsApp OTP</span><span class="pill amber">Pendiente</span><span>Sin app</span><span class="pill amber">Medio</span></div>
+                <div class="table-row"><div><b>Ana López</b><div class="tiny muted">Selfie no coincide claramente</div></div><span>Google</span><span class="pill red">Manual</span><span>AP-2030</span><span class="pill red">Alto</span></div>
+              </section>
+              <aside class="rail">
+                <div class="detail-card">
+                  <h2>Centro de identidad</h2>
+                  <p class="small muted">Super Admin puede ver datos sensibles solo con permiso y queda registro de auditoría.</p>
+                  <div class="mini-grid">
+                    <div class="mini"><span>Pendiente</span><b>19</b></div>
+                    <div class="mini"><span>Fallidos</span><b>6</b></div>
+                    <div class="mini"><span>Manual</span><b>4</b></div>
+                  </div>
+                  <button class="btn navy">Abrir revisión segura</button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="vehiculos">
+            <div class="page-head"><div><h1>Vehículos</h1><p class="muted small">Inventario global, calidad de publicación, precio vs mercado, fotos, VIN/chasis y fit de financiamiento.</p></div><button class="btn primary">Crear regla de calidad</button></div>
+            <div class="kpis">
+              <div class="card kpi"><div class="kpi-top">Publicados <span>VE</span></div><strong>1,428</strong><small>+86 esta semana</small></div>
+              <div class="card kpi"><div class="kpi-top">Sin precio <span>!</span></div><strong>18</strong><small>bloquean leads</small></div>
+              <div class="card kpi"><div class="kpi-top">Fotos débiles <span>PH</span></div><strong>74</strong><small>menos de 5 fotos</small></div>
+              <div class="card kpi"><div class="kpi-top">Buen precio <span>$</span></div><strong>62%</strong><small>contra referencia</small></div>
+              <div class="card kpi"><div class="kpi-top">Guardados <span>SV</span></div><strong>2,884</strong><small>intención alta</small></div>
+              <div class="card kpi"><div class="kpi-top">Calculadora <span>CU</span></div><strong>5,204</strong><small>uso mensual</small></div>
+            </div>
+            <section class="table">
+              <div class="table-head"><span>Vehículo</span><span>Dealer</span><span>Precio</span><span>Analytics</span><span>Calidad</span></div>
+              <div class="table-row"><div><b>Toyota RAV4 2022</b><div class="tiny muted">VIN completo · 12 fotos</div></div><span>Joselito</span><b>US$ 31,900</b><span>384 vistas · 21 leads</span><span class="pill green">Excelente</span></div>
+              <div class="table-row"><div><b>Hyundai Tucson 2020</b><div class="tiny muted">Falta chasis · 4 fotos</div></div><span>Premium Cars</span><b>RD$ 1.58M</b><span>92 vistas · 2 leads</span><span class="pill amber">Mejorar</span></div>
+              <div class="table-row"><div><b>Honda CR-V 2021</b><div class="tiny muted">18% sobre mercado</div></div><span>Nava Auto</span><b>US$ 34,500</b><span>188 vistas · 0 leads</span><span class="pill red">Precio alto</span></div>
+            </section>
+          </section>
+
+          <section class="screen" id="facturacion">
+            <div class="page-head"><div><h1>Facturación y planes</h1><p class="muted small">MRR, trials, add-ons, facturas vencidas, pagos manuales y futuros fees por financiamiento.</p></div><button class="btn primary">Enviar cobros</button></div>
+            <div class="split-card">
+              <div class="card pad">
+                <h2>Ingresos SaaS</h2>
+                <div class="mini-grid" style="margin-top:12px">
+                  <div class="mini"><span>MRR</span><b>RD$ 421K</b></div>
+                  <div class="mini"><span>Past due</span><b>RD$ 86K</b></div>
+                  <div class="mini"><span>Trials</span><b>18</b></div>
+                </div>
+                <div class="funnel">
+                  <div class="funnel-row"><span>Dealer Basic</span><div class="bar"><i style="width:74%"></i></div><b>71</b></div>
+                  <div class="funnel-row"><span>Dealer Pro</span><div class="bar"><i style="width:42%"></i></div><b>39</b></div>
+                  <div class="funnel-row"><span>Banco</span><div class="bar"><i style="width:10%"></i></div><b>9</b></div>
+                </div>
+              </div>
+              <div class="card pad">
+                <h2>Facturas que requieren acción</h2>
+                <div class="stack" style="margin-top:12px">
+                  <div class="alert red"><div class="alert-ic">$</div><div><b class="small">Nava Auto</b><div class="tiny muted">6 días vencida · Dealer Pro</div></div><button class="btn sm">Cobrar</button></div>
+                  <div class="alert amber"><div class="alert-ic">T</div><div><b class="small">Premium Cars</b><div class="tiny muted">Trial termina mañana</div></div><button class="btn sm">Convertir</button></div>
+                  <div class="alert"><div class="alert-ic">+</div><div><b class="small">Marketplace sponsor</b><div class="tiny muted">3 dealers candidatos a add-on.</div></div><button class="btn sm">Ofrecer</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="screen" id="whatsapp">
+            <div class="page-head"><div><h1>WhatsApp y notificaciones</h1><p class="muted small">Gateway, OTP, mensajes fallidos, plantillas, respuestas de banco y enlaces de cliente.</p></div><button class="btn primary">Enviar prueba</button></div>
+            <div class="work">
+              <section class="card pad">
+                <div class="row between gap12"><h2>Estado de entrega</h2><span class="pill amber">Revisar</span></div>
+                <div class="ops-grid">
+                  <div class="ops-card"><span>En cola</span><b>12</b><span>mensajes pendientes.</span></div>
+                  <div class="ops-card"><span>Fallidos 1h</span><b>3</b><span>requieren reintento.</span></div>
+                  <div class="ops-card"><span>OTP usados</span><b>71%</b><span>últimos 15 min.</span></div>
+                  <div class="ops-card"><span>Gateway</span><b>OK</b><span>Reparando worker.</span></div>
+                </div>
+              </section>
+              <aside class="rail">
+                <div class="detail-card">
+                  <h2>Plantillas críticas</h2>
+                  <div class="stack">
+                    <div class="mini"><span>OTP login</span><b>Activo</b></div>
+                    <div class="mini"><span>Banco pidió docs</span><b>Activo</b></div>
+                    <div class="mini"><span>Oferta aprobada</span><b>Activo</b></div>
+                  </div>
+                  <button class="btn navy">Editar plantillas</button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="moderacion">
+            <div class="page-head"><div><h1>Moderación y confianza</h1><p class="muted small">Reportes, duplicados, precios falsos, dealers sospechosos, vehículos incompletos y reglas de plataforma.</p></div><button class="btn danger">Suspender entidad</button></div>
+            <div class="work">
+              <section class="table">
+                <div class="table-head"><span>Caso</span><span>Entidad</span><span>Tipo</span><span>Riesgo</span><span>Acción</span></div>
+                <div class="table-row"><div><b>Precio sospechoso</b><div class="tiny muted">BMW X5 publicado 42% bajo referencia.</div></div><span>Dealer nuevo</span><span>Vehículo</span><span class="pill red">Alto</span><button class="btn sm">Revisar</button></div>
+                <div class="table-row"><div><b>Duplicado posible</b><div class="tiny muted">Misma placa/fotos en dos dealers.</div></div><span>2 dealers</span><span>Inventario</span><span class="pill amber">Medio</span><button class="btn sm">Unificar</button></div>
+                <div class="table-row"><div><b>Cliente reportó dealer</b><div class="tiny muted">No responde tras aprobación.</div></div><span>Auto Centro</span><span>Lead</span><span class="pill amber">Medio</span><button class="btn sm">Contactar</button></div>
+              </section>
+              <aside class="rail">
+                <div class="detail-card">
+                  <h2>Trust score plataforma</h2>
+                  <div class="row between"><span class="small strong">Salud general</span><span class="pill green">88/100</span></div>
+                  <div class="progress"><i style="width:88%"></i></div>
+                  <p class="small muted">El mayor riesgo actual es inventario incompleto y dealers sin documentos completos.</p>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="screen" id="ajustes">
+            <div class="page-head"><div><h1>Ajustes de plataforma</h1><p class="muted small">Reglas globales para dealers, bancos, clientes, KYC, WhatsApp, fees y campos obligatorios.</p></div><button class="btn primary">Guardar reglas</button></div>
+            <div class="split-card">
+              <div class="card pad">
+                <h2>Reglas de onboarding</h2>
+                <div class="stack" style="margin-top:12px">
+                  <div class="alert"><div class="alert-ic">D</div><div><b class="small">Dealer</b><div class="tiny muted">Logo, RNC, dirección, WhatsApp y usuario owner.</div></div><span class="pill green">Activo</span></div>
+                  <div class="alert"><div class="alert-ic">B</div><div><b class="small">Banco</b><div class="tiny muted">Oficial owner, tasas, documentos y SLA.</div></div><span class="pill green">Activo</span></div>
+                  <div class="alert"><div class="alert-ic">V</div><div><b class="small">Vehículo</b><div class="tiny muted">Precio, fotos, VIN/chasis, mileage, ubicación.</div></div><span class="pill amber">Mejorar</span></div>
+                </div>
+              </div>
+              <div class="card pad">
+                <h2>Permisos Super Admin</h2>
+                <div class="stack" style="margin-top:12px">
+                  <div class="mini"><span>Identidad sensible</span><b>Solo owner + auditoría</b></div>
+                  <div class="mini"><span>Suspensiones</span><b>Owner + soporte senior</b></div>
+                  <div class="mini"><span>Billing</span><b>Owner + finanzas</b></div>
+                  <div class="mini"><span>Configuración bancos</span><b>Owner + partnerships</b></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div class="mobile-preview">
+      <div class="phone">
+        <div class="phone-top">
+          <div class="row between"><span class="pill teal">Super Admin</span><span class="tiny">AutoRD</span></div>
+          <h2>Qué necesita atención</h2>
+          <p class="tiny" style="opacity:.78;margin-top:6px">Resumen móvil para revisar salud, alertas y dinero sin entrar al escritorio completo.</p>
+        </div>
+        <div class="phone-content">
+          <div class="phone-kpis">
+            <div class="card pad"><div class="tiny muted">Solicitudes</div><h2>48</h2><span class="pill amber">12 SLA</span></div>
+            <div class="card pad"><div class="tiny muted">MRR</div><h2>RD$421K</h2><span class="pill green">+18%</span></div>
+            <div class="card pad"><div class="tiny muted">KYC pendiente</div><h2>19</h2><span class="pill amber">Revisar</span></div>
+            <div class="card pad"><div class="tiny muted">Dealers</div><h2>126</h2><span class="pill green">87 OK</span></div>
+          </div>
+          <div class="card pad">
+            <div class="row between" style="margin-bottom:10px"><h3>Alertas</h3><span class="pill red">3 críticas</span></div>
+            <div class="stack">
+              <div class="alert red"><div class="alert-ic">!</div><div><b class="small">WhatsApp fallando</b><div class="tiny muted">3 mensajes sin entregar</div></div></div>
+              <div class="alert amber"><div class="alert-ic">D</div><div><b class="small">Dealer incompleto</b><div class="tiny muted">Falta RNC y logo</div></div></div>
+              <div class="alert"><div class="alert-ic">$</div><div><b class="small">Factura vencida</b><div class="tiny muted">Nava Auto · RD$9,500</div></div></div>
+            </div>
+          </div>
+          <div class="card pad">
+            <h3>Funnel</h3>
+            <div class="funnel">
+              <div class="funnel-row"><span>Leads</span><div class="bar"><i style="width:80%"></i></div><b>2.1K</b></div>
+              <div class="funnel-row"><span>KYC</span><div class="bar"><i style="width:45%"></i></div><b>924</b></div>
+              <div class="funnel-row"><span>Ventas</span><div class="bar"><i style="width:14%"></i></div><b>73</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-bottom">
+          <button class="active"><span>IN</span>Inicio</button>
+          <button><span>SO</span>Apps</button>
+          <button><span>DE</span>Dealers</button>
+          <button><span>KY</span>KYC</button>
+          <button><span>+</span>Más</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll('#nav button');
+    const screens = document.querySelectorAll('.screen');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.screen;
+        buttons.forEach((b) => b.classList.toggle('active', b === btn));
+        screens.forEach((screen) => {
+          const on = screen.id === id;
+          screen.classList.toggle('active', on);
+          screen.classList.toggle('screen-enter', on);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

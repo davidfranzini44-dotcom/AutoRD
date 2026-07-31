@@ -21,7 +21,388 @@ const STATUS_META = {
   disconnected: { label: 'Desconectado',       cls: '' },
 }
 
+const ADMIN_NAV = [
+  { id: 'inicio', label: 'Inicio', ic: 'IN', count: 12 },
+  { id: 'solicitudes', label: 'Solicitudes', ic: 'SO', count: 48 },
+  { id: 'dealers', label: 'Dealers', ic: 'DE', count: 7 },
+  { id: 'bancos', label: 'Bancos', ic: 'BA', count: 5 },
+  { id: 'usuarios', label: 'Usuarios + KYC', ic: 'US', count: 19 },
+  { id: 'vehiculos', label: 'Vehículos', ic: 'VE', count: 146 },
+  { id: 'facturacion', label: 'Facturación', ic: 'FA', count: 9 },
+  { id: 'whatsapp', label: 'WhatsApp', ic: 'WA', count: 3 },
+  { id: 'moderacion', label: 'Moderación', ic: 'MO', count: 6 },
+  { id: 'ajustes', label: 'Ajustes', ic: 'AJ', count: 1 },
+]
+
+const moneyRows = [
+  { label: 'Usuarios', value: '3,842', sub: '+214 este mes' },
+  { label: 'Dealers', value: '126', sub: '87 verificados' },
+  { label: 'Bancos', value: '9', sub: '5 activos hoy' },
+  { label: 'Solicitado', value: 'RD$ 182M', sub: 'últimos 30 días' },
+  { label: 'Aprobado', value: 'RD$ 64M', sub: '35.1% conversión' },
+  { label: 'MRR', value: 'RD$ 421K', sub: '+18% vs mes pasado' },
+]
+
 export default function AdminPanel() {
+  const [view, setView] = useState('inicio')
+  const current = ADMIN_NAV.find((n) => n.id === view) || ADMIN_NAV[0]
+
+  return (
+    <main className="sa-page">
+      <aside className="sa-side">
+        <Link to="/" className="sa-brand">
+          <span className="sa-mark">AR</span>
+          <span><b>AutoRD</b><small>Super Admin</small></span>
+        </Link>
+
+        <div className="sa-operator">
+          <div className="row center gap-10">
+            <span className="sa-avatar">DF</span>
+            <span style={{ minWidth: 0 }}>
+              <b className="small">David Franzini</b>
+              <small className="muted">Owner access · auditado</small>
+            </span>
+          </div>
+          <div className="row between center gap-8">
+            <span className="chip chip-green">Sistema vivo</span>
+            <span className="tiny muted">31 jul 2026</span>
+          </div>
+        </div>
+
+        <div className="sa-nav-label">Command center</div>
+        <nav className="sa-nav" aria-label="Super admin">
+          {ADMIN_NAV.map((n) => (
+            <button key={n.id} className={view === n.id ? 'active' : ''} onClick={() => setView(n.id)}>
+              <span className="sa-nav-ic">{n.ic}</span>
+              <span>{n.label}</span>
+              <span className="sa-nav-count">{n.count}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="sa-side-foot">
+          <button className="btn btn-navy">Ver auditoría</button>
+          <Link to="/" className="btn btn-outline">Volver al sitio</Link>
+        </div>
+      </aside>
+
+      <section className="sa-main">
+        <div className="sa-topbar">
+          <div className="sa-search">
+            <span>⌕</span>
+            <input placeholder="Buscar tienda, banco, cliente, cédula, vehículo o solicitud..." />
+          </div>
+          <div className="row center gap-8">
+            <button className="btn btn-outline btn-sm">Exportar</button>
+            <button className="btn btn-outline btn-sm">Crear alerta</button>
+            <button className="btn btn-primary btn-sm">Nueva acción admin</button>
+          </div>
+        </div>
+
+        <div className="sa-content">
+          <div className="admin-head sa-head">
+            <div>
+              <div className="tiny strong muted">SUPER ADMIN · {current.label.toUpperCase()}</div>
+              <h1>{current.label === 'Inicio' ? 'Command Center' : current.label}</h1>
+              <p className="muted small">{subtitleFor(view)}</p>
+            </div>
+            <span className="chip chip-teal"><ShieldCheck size={14} /> Solo owner</span>
+          </div>
+          <SuperAdminScreen view={view} />
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function subtitleFor(view) {
+  return {
+    inicio: 'Salud completa de AutoRD: dinero, dealers, bancos, KYC, leads y problemas activos.',
+    solicitudes: 'Todas las aplicaciones, bancos, dealers, documentos, KYC y aprobaciones en un solo lugar.',
+    dealers: 'Control de tiendas, sucursales, verificación, usuarios, inventario, leads y facturación.',
+    bancos: 'Performance, oficiales, respuestas, productos financieros, tasas, SLA y bancos socios.',
+    usuarios: 'Clientes, cuentas creadas por OTP, DIDIT, documentos, consentimiento y auditoría de identidad.',
+    vehiculos: 'Inventario global, calidad de publicación, precio vs mercado, fotos, VIN/chasis y fit de financiamiento.',
+    facturacion: 'MRR, trials, add-ons, facturas vencidas, pagos manuales y futuros fees por financiamiento.',
+    whatsapp: 'Gateway, OTP, mensajes fallidos, plantillas, respuestas de banco y enlaces de cliente.',
+    moderacion: 'Reportes, duplicados, precios falsos, dealers sospechosos, vehículos incompletos y reglas de plataforma.',
+    ajustes: 'Reglas globales para dealers, bancos, clientes, KYC, WhatsApp, fees y campos obligatorios.',
+  }[view] || ''
+}
+
+function SuperAdminScreen({ view }) {
+  if (view === 'solicitudes') return <SolicitudesAdmin />
+  if (view === 'dealers') return <DealersAdmin />
+  if (view === 'bancos') return <BancosAdmin />
+  if (view === 'usuarios') return <UsuariosAdmin />
+  if (view === 'vehiculos') return <VehiculosAdmin />
+  if (view === 'facturacion') return <FacturacionAdmin />
+  if (view === 'whatsapp') return <WhatsAppAdmin />
+  if (view === 'moderacion') return <ModeracionAdmin />
+  if (view === 'ajustes') return <AjustesAdmin />
+  return <InicioAdmin />
+}
+
+function KpiGrid({ rows = moneyRows }) {
+  return (
+    <div className="sa-kpis">
+      {rows.map((k) => (
+        <div className="metric-card sa-kpi" key={k.label}>
+          <div className="tiny strong muted">{k.label}</div>
+          <div className="mc-v">{k.value}</div>
+          <div className="mc-l">{k.sub}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Mini({ label, value, tone }) {
+  return <div className={`sa-mini ${tone || ''}`}><span>{label}</span><b>{value}</b></div>
+}
+
+function AlertRow({ tone = '', ic = '!', title, sub, action = 'Ver' }) {
+  return (
+    <div className={`sa-alert ${tone}`}>
+      <span className="sa-alert-ic">{ic}</span>
+      <span style={{ minWidth: 0 }}><b className="small">{title}</b><small className="muted">{sub}</small></span>
+      <button className={`btn btn-sm ${tone === 'red' ? 'btn-outline' : 'btn-ghost'}`}>{action}</button>
+    </div>
+  )
+}
+
+function Funnel() {
+  const rows = [
+    ['Visitantes', '18.4K', 100],
+    ['Leads', '2.1K', 68],
+    ['KYC', '924', 44],
+    ['Pre-aprobados', '418', 29],
+    ['Vendidos', '73', 12],
+  ]
+  return <div className="sa-funnel">{rows.map(([label, value, pct]) => <div className="sa-funnel-row" key={label}><span>{label}</span><i><b style={{ width: `${pct}%` }} /></i><strong>{value}</strong></div>)}</div>
+}
+
+function InicioAdmin() {
+  return (
+    <div className="col gap-16">
+      <KpiGrid />
+      <div className="sa-command">
+        <section className="card card-pad">
+          <div className="sa-splitline"><div><h2>Cola inteligente</h2><p className="tiny muted">Acciones que mueven dinero o reducen riesgo.</p></div><button className="btn btn-sm">Priorizar por impacto</button></div>
+          <div className="sa-action-grid">
+            <Mini label="Crítico" value="7" tone="red" />
+            <Mini label="KYC pendiente" value="19" tone="amber" />
+            <Mini label="SLA bancos" value="12" tone="blue" />
+            <Mini label="Por cobrar" value="RD$ 86K" tone="teal" />
+          </div>
+        </section>
+        <section className="card card-pad">
+          <div className="sa-splitline" style={{ marginBottom: 12 }}><div><h2>Alertas activas</h2><p className="tiny muted">Lo que debes mirar primero.</p></div><span className="chip chip-amber">12 abiertas</span></div>
+          <div className="col gap-8">
+            <AlertRow tone="red" ic="!" title="WhatsApp con 3 mensajes fallidos" sub="OTP y respuesta de banco sin entregar." action="Revisar" />
+            <AlertRow tone="amber" ic="K" title="Joselito Auto Import sin RNC" sub="Dealer vende, pero verificación incompleta." action="Pedir" />
+            <AlertRow tone="green" ic="B" title="Banco Caribe mejoró respuesta" sub="SLA promedio bajó a 4h 18m." action="Ver" />
+          </div>
+        </section>
+      </div>
+      <div className="sa-work">
+        <section className="card">
+          <AdminTable
+            cols={['Actividad', 'Entidad', 'Tipo', 'Impacto', 'Estado']}
+            rows={[
+              ['Pre-aprobación AP-2091|Cliente aceptó oferta y eligió vehículo.', 'Banco BHD', 'Solicitud', 'RD$ 3.4M', 'Listo'],
+              ['Dealer nuevo pendiente|Necesita logo, RNC y dirección confirmada.', 'Premium Motors', 'Dealer', 'Alto', 'Pendiente'],
+              ['Precio fuera de mercado|Toyota RAV4 2021 18% sobre referencia.', 'Auto San Pedro', 'Inventario', 'Medio', 'Sugerir'],
+              ['Factura vencida|Plan Dealer Pro, 6 días vencida.', 'Nava Auto', 'Billing', 'RD$ 9,500', 'Cobrar'],
+            ]}
+          />
+        </section>
+        <aside className="sa-rail">
+          <section className="card card-pad">
+            <div className="sa-splitline"><h2>Funnel de financiamiento</h2><span className="chip chip-teal">30 días</span></div>
+            <Funnel />
+          </section>
+          <section className="card card-pad">
+            <h2>Mejor próxima acción</h2>
+            <p className="small muted" style={{ margin: '8px 0 12px' }}>Contactar dealers con leads aprobados sin seguimiento. Hay 11 clientes que ya califican y todavía no tienen respuesta.</p>
+            <button className="btn btn-primary">Abrir lista</button>
+          </section>
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function AdminTable({ cols, rows }) {
+  return (
+    <div className="sa-table">
+      <div className="sa-table-head">{cols.map((c) => <span key={c}>{c}</span>)}</div>
+      {rows.map((r, idx) => (
+        <div className="sa-table-row" key={idx}>
+          {r.map((cell, i) => {
+            const [title, sub] = String(cell).split('|')
+            const tone = /Listo|Verificado|Aprobada|Excelente|Activo|Bajo/.test(title) ? 'green' : /Pendiente|Mejorar|Medio|Faltan|Revisar|Trial|Sugerir/.test(title) ? 'amber' : /Cobrar|Vencido|Alto|Manual/.test(title) ? 'red' : ''
+            return i === r.length - 1
+              ? <span className={`chip ${tone ? `chip-${tone}` : ''}`} key={i}>{title}</span>
+              : <span key={i} style={{ minWidth: 0 }}>{i === 0 ? <><b>{title}</b>{sub && <small className="muted">{sub}</small>}</> : title}</span>
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SolicitudesAdmin() {
+  return (
+    <div className="col gap-16">
+      <KpiGrid rows={[
+        { label: 'Nuevas hoy', value: '48', sub: '17 con vehículo' },
+        { label: 'En banco', value: '132', sub: 'SLA promedio 8h' },
+        { label: 'Faltan docs', value: '39', sub: 'WhatsApp enviado' },
+        { label: 'Pre-aprobadas', value: '418', sub: 'RD$ 64M' },
+        { label: 'Expiran', value: '21', sub: 'próximos 7 días' },
+        { label: 'Sin dealer', value: '74', sub: 'pre-aprobación directa' },
+      ]} />
+      <div className="sa-work">
+        <section className="card">
+          <AdminTable cols={['Cliente', 'Vehículo', 'Banco', 'Monto', 'Estado']} rows={[
+            ['Nashla Figueroa|KYC aprobado · Cédula terminada 4411', 'Toyota RAV4 2022', 'BHD', 'RD$ 3.3M', 'Pre-aprobada'],
+            ['David Franzini|Docs recibidos · esperando banco', 'Highlander 2024', 'Popular', 'RD$ 4.1M', 'En revisión'],
+            ['Miguel Reyes|Sin vehículo · WhatsApp verificado', 'Pre-aprobación', '3 bancos', 'RD$ 2.0M', 'Comparando'],
+            ['Ana López|Banco pidió income proof', 'Kia Sportage 2021', 'Caribe', 'RD$ 2.7M', 'Faltan docs'],
+          ]} />
+        </section>
+        <aside className="sa-rail">
+          <section className="card card-pad">
+            <div className="sa-splitline"><h2>Solicitud AP-2047</h2><span className="chip chip-green">Pre-aprobada</span></div>
+            <div className="sa-action-grid two" style={{ marginTop: 12 }}>
+              <Mini label="Monto" value="RD$ 4.1M" />
+              <Mini label="Inicial" value="RD$ 450K" />
+              <Mini label="SLA" value="9h" />
+              <Mini label="Score" value="90/100" tone="teal" />
+            </div>
+            <div className="col gap-8" style={{ marginTop: 12 }}>
+              <AlertRow tone="green" ic="K" title="KYC aprobado" sub="Nombre extraído de cédula." action="Ver" />
+              <AlertRow tone="amber" ic="D" title="Documento opcional" sub="Banco puede pedir dirección laboral." action="Pedir" />
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function DealersAdmin() {
+  return (
+    <div className="sa-work">
+      <section className="card">
+        <AdminTable cols={['Dealer', 'Inventario', 'Leads', 'Billing', 'Verificación']} rows={[
+          ['Joselito Auto Import|Santo Domingo · 3 usuarios', '42 carros', '88 leads', 'RD$ 19,500', 'Verificado'],
+          ['Premium Cars RD|Santiago · RNC pendiente', '19 carros', '31 leads', 'Trial', 'Pendiente'],
+          ['Nava Auto|La Vega · pago vencido', '11 carros', '9 leads', 'RD$ 9,500', 'Vencido'],
+        ]} />
+      </section>
+      <aside className="sa-rail"><section className="card card-pad"><h2>Dealer health</h2><div className="sa-splitline" style={{ marginTop: 12 }}><span className="small strong">Joselito Auto Import</span><span className="chip chip-green">92/100</span></div><div className="sa-progress"><i style={{ width: '92%' }} /></div><div className="sa-action-grid two"><Mini label="Lead response" value="14 min" /><Mini label="Fotos buenas" value="96%" /><Mini label="Apps" value="34" /><Mini label="Cierres" value="11" /></div></section></aside>
+    </div>
+  )
+}
+
+function BancosAdmin() {
+  return (
+    <div className="col gap-16">
+      <div className="sa-split">
+        <section className="card card-pad"><h2>Ranking por respuesta</h2><Funnel /></section>
+        <section className="card card-pad"><h2>Configuración por banco</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="%" title="Tasas y plazos" sub="Rangos por vehículo, inicial, score y salario." action="Editar" /><AlertRow ic="D" title="Documentos requeridos" sub="Ingreso, dirección, referencias, seguro." action="Editar" /><AlertRow ic="O" title="Oficiales" sub="Asignación, carga y permisos." action="Ver" /></div></section>
+      </div>
+      <EnrollBankCard />
+    </div>
+  )
+}
+
+function UsuariosAdmin() {
+  return (
+    <div className="col gap-16">
+      <div className="sa-work">
+        <section className="card"><AdminTable cols={['Usuario', 'Login', 'KYC', 'Solicitud', 'Riesgo']} rows={[
+          ['Nashla Figueroa|Cédula termina 4411 · cuenta auto-creada', 'WhatsApp OTP', 'Aprobado', 'AP-2091', 'Bajo'],
+          ['wa18294201557|Nombre pendiente de KYC', 'WhatsApp OTP', 'Pendiente', 'Sin app', 'Medio'],
+          ['Ana López|Selfie no coincide claramente', 'Google', 'Manual', 'AP-2030', 'Alto'],
+        ]} /></section>
+        <aside className="sa-rail"><section className="card card-pad"><h2>Centro de identidad</h2><p className="small muted" style={{ margin: '8px 0 12px' }}>Super Admin puede ver datos sensibles solo con permiso y queda registro de auditoría.</p><div className="sa-action-grid two"><Mini label="Pendiente" value="19" tone="amber" /><Mini label="Fallidos" value="6" tone="red" /><Mini label="Manual" value="4" tone="blue" /><Mini label="Aprobados" value="812" tone="green" /></div></section></aside>
+      </div>
+      <KycPortraitBackfillCard />
+      <VerifiedWithoutApplicationCard />
+    </div>
+  )
+}
+
+function VehiculosAdmin() {
+  return (
+    <div className="col gap-16">
+      <KpiGrid rows={[
+        { label: 'Publicados', value: '1,428', sub: '+86 esta semana' },
+        { label: 'Sin precio', value: '18', sub: 'bloquean leads' },
+        { label: 'Fotos débiles', value: '74', sub: 'menos de 5 fotos' },
+        { label: 'Buen precio', value: '62%', sub: 'contra referencia' },
+        { label: 'Guardados', value: '2,884', sub: 'intención alta' },
+        { label: 'Calculadora', value: '5,204', sub: 'uso mensual' },
+      ]} />
+      <section className="card"><AdminTable cols={['Vehículo', 'Dealer', 'Precio', 'Analytics', 'Calidad']} rows={[
+        ['Toyota RAV4 2022|VIN completo · 12 fotos', 'Joselito', 'US$ 31,900', '384 vistas · 21 leads', 'Excelente'],
+        ['Hyundai Tucson 2020|Falta chasis · 4 fotos', 'Premium Cars', 'RD$ 1.58M', '92 vistas · 2 leads', 'Mejorar'],
+        ['Honda CR-V 2021|18% sobre mercado', 'Nava Auto', 'US$ 34,500', '188 vistas · 0 leads', 'Alto'],
+      ]} /></section>
+    </div>
+  )
+}
+
+function FacturacionAdmin() {
+  return (
+    <div className="sa-split">
+      <section className="card card-pad"><h2>Ingresos SaaS</h2><div className="sa-action-grid" style={{ marginTop: 12 }}><Mini label="MRR" value="RD$ 421K" /><Mini label="Past due" value="RD$ 86K" tone="red" /><Mini label="Trials" value="18" tone="amber" /><Mini label="Add-ons" value="RD$ 54K" tone="teal" /></div><Funnel /></section>
+      <section className="card card-pad"><h2>Facturas que requieren acción</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow tone="red" ic="$" title="Nava Auto" sub="6 días vencida · Dealer Pro" action="Cobrar" /><AlertRow tone="amber" ic="T" title="Premium Cars" sub="Trial termina mañana" action="Convertir" /><AlertRow ic="+" title="Marketplace sponsor" sub="3 dealers candidatos a add-on." action="Ofrecer" /></div></section>
+    </div>
+  )
+}
+
+function WhatsAppAdmin() {
+  return (
+    <div className="col gap-16">
+      <div className="sa-split">
+        <section className="card card-pad"><h2>Estado de entrega</h2><div className="sa-action-grid" style={{ marginTop: 12 }}><Mini label="En cola" value="12" tone="amber" /><Mini label="Fallidos 1h" value="3" tone="red" /><Mini label="OTP usados" value="71%" tone="green" /><Mini label="Gateway" value="OK" tone="teal" /></div></section>
+        <section className="card card-pad"><h2>Plantillas críticas</h2><div className="col gap-8" style={{ marginTop: 12 }}><Mini label="OTP login" value="Activo" /><Mini label="Banco pidió docs" value="Activo" /><Mini label="Oferta aprobada" value="Activo" /></div></section>
+      </div>
+      <div className="sa-live-tools"><AdminLiveTools /></div>
+    </div>
+  )
+}
+
+function ModeracionAdmin() {
+  return (
+    <div className="sa-work">
+      <section className="card"><AdminTable cols={['Caso', 'Entidad', 'Tipo', 'Riesgo', 'Acción']} rows={[
+        ['Precio sospechoso|BMW X5 publicado 42% bajo referencia.', 'Dealer nuevo', 'Vehículo', 'Alto', 'Revisar'],
+        ['Duplicado posible|Misma placa/fotos en dos dealers.', '2 dealers', 'Inventario', 'Medio', 'Unificar'],
+        ['Cliente reportó dealer|No responde tras aprobación.', 'Auto Centro', 'Lead', 'Medio', 'Contactar'],
+      ]} /></section>
+      <aside className="sa-rail"><section className="card card-pad"><h2>Trust score plataforma</h2><div className="sa-splitline" style={{ marginTop: 12 }}><span className="small strong">Salud general</span><span className="chip chip-green">88/100</span></div><div className="sa-progress"><i style={{ width: '88%' }} /></div><p className="small muted">El mayor riesgo actual es inventario incompleto y dealers sin documentos completos.</p></section></aside>
+    </div>
+  )
+}
+
+function AjustesAdmin() {
+  return (
+    <div className="col gap-16">
+      <div className="sa-split">
+        <section className="card card-pad"><h2>Reglas de onboarding</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="D" title="Dealer" sub="Logo, RNC, dirección, WhatsApp y usuario owner." action="Activo" /><AlertRow ic="B" title="Banco" sub="Oficial owner, tasas, documentos y SLA." action="Activo" /><AlertRow tone="amber" ic="V" title="Vehículo" sub="Precio, fotos, VIN/chasis, mileage, ubicación." action="Mejorar" /></div></section>
+        <section className="card card-pad"><h2>Permisos Super Admin</h2><div className="col gap-8" style={{ marginTop: 12 }}><Mini label="Identidad sensible" value="Owner + auditoría" /><Mini label="Suspensiones" value="Owner + soporte senior" /><Mini label="Billing" value="Owner + finanzas" /><Mini label="Bancos" value="Owner + partnerships" /></div></section>
+      </div>
+      <UsdRateCard />
+    </div>
+  )
+}
+
+function AdminLiveTools() {
   const [wa, setWa] = useState(null)
   const [gw, setGw] = useState(null) // gateway status (reuse Reparando's worker)
   const [busy, setBusy] = useState(false)
