@@ -45,7 +45,36 @@ const moneyRows = [
 
 export default function AdminPanel() {
   const [view, setView] = useState('inicio')
+  const [drawer, setDrawer] = useState(null)
+  const [toast, setToast] = useState('')
+  const [actionLog, setActionLog] = useState([
+    { title: 'Banco Caribe SLA actualizado', status: 'Resuelto', when: 'Hace 8 min' },
+    { title: 'Premium Cars marcado para verificacion', status: 'Pendiente', when: 'Hace 19 min' },
+    { title: 'Factura Nava Auto enviada por WhatsApp', status: 'En revision', when: 'Hace 31 min' },
+  ])
   const current = ADMIN_NAV.find((n) => n.id === view) || ADMIN_NAV[0]
+  const openAction = (payload = {}) => {
+    setDrawer({
+      title: payload.title || 'Nueva accion admin',
+      sub: payload.sub || 'Registra una accion, seguimiento o cambio operacional.',
+      type: payload.type || current.label,
+      source: payload.source || current.label,
+      action: payload.action || 'Revisar',
+      status: payload.status || 'Pendiente',
+      priority: payload.priority || 'Media',
+      owner: payload.owner || 'David Franzini',
+      note: payload.note || '',
+    })
+  }
+  const saveAction = (next) => {
+    setActionLog((rows) => [
+      { title: next.title || 'Accion admin', status: next.status, when: 'Ahora' },
+      ...rows,
+    ].slice(0, 6))
+    setToast(`${next.title || 'Accion'} guardado`)
+    setDrawer(null)
+    window.setTimeout(() => setToast(''), 1800)
+  }
 
   return (
     <main className="sa-page">
@@ -93,9 +122,9 @@ export default function AdminPanel() {
             <input placeholder="Buscar tienda, banco, cliente, cédula, vehículo o solicitud..." />
           </div>
           <div className="row center gap-8">
-            <button className="btn btn-outline btn-sm">Exportar</button>
-            <button className="btn btn-outline btn-sm">Crear alerta</button>
-            <button className="btn btn-primary btn-sm">Nueva acción admin</button>
+            <button className="btn btn-outline btn-sm" onClick={() => openAction({ title: 'Exportar reporte', sub: `Preparar exportacion de ${current.label}.`, type: 'Reporte', action: 'Exportar', priority: 'Baja' })}>Exportar</button>
+            <button className="btn btn-outline btn-sm" onClick={() => openAction({ title: 'Crear alerta operacional', sub: 'Define que debe vigilar AutoRD y quien responde.', type: 'Alerta', action: 'Crear alerta', priority: 'Alta' })}>Crear alerta</button>
+            <button className="btn btn-primary btn-sm" onClick={() => openAction({ title: 'Nueva accion admin', sub: 'Asignar seguimiento manual desde Super Admin.', type: 'Accion', action: 'Crear' })}>Nueva acción admin</button>
           </div>
         </div>
 
@@ -108,8 +137,10 @@ export default function AdminPanel() {
             </div>
             <span className="chip chip-teal"><ShieldCheck size={14} /> Solo owner</span>
           </div>
-          <SuperAdminScreen view={view} />
+          <SuperAdminScreen view={view} openAction={openAction} actionLog={actionLog} />
         </div>
+        {toast && <div className="sa-toast">{toast}</div>}
+        <AdminActionDrawer item={drawer} onClose={() => setDrawer(null)} onSave={saveAction} />
       </section>
     </main>
   )
@@ -130,17 +161,17 @@ function subtitleFor(view) {
   }[view] || ''
 }
 
-function SuperAdminScreen({ view }) {
-  if (view === 'solicitudes') return <SolicitudesAdmin />
-  if (view === 'dealers') return <DealersAdmin />
-  if (view === 'bancos') return <BancosAdmin />
-  if (view === 'usuarios') return <UsuariosAdmin />
-  if (view === 'vehiculos') return <VehiculosAdmin />
-  if (view === 'facturacion') return <FacturacionAdmin />
-  if (view === 'whatsapp') return <WhatsAppAdmin />
-  if (view === 'moderacion') return <ModeracionAdmin />
-  if (view === 'ajustes') return <AjustesAdmin />
-  return <InicioAdmin />
+function SuperAdminScreen({ view, openAction, actionLog }) {
+  if (view === 'solicitudes') return <SolicitudesAdmin openAction={openAction} />
+  if (view === 'dealers') return <DealersAdmin openAction={openAction} />
+  if (view === 'bancos') return <BancosAdmin openAction={openAction} />
+  if (view === 'usuarios') return <UsuariosAdmin openAction={openAction} />
+  if (view === 'vehiculos') return <VehiculosAdmin openAction={openAction} />
+  if (view === 'facturacion') return <FacturacionAdmin openAction={openAction} />
+  if (view === 'whatsapp') return <WhatsAppAdmin openAction={openAction} />
+  if (view === 'moderacion') return <ModeracionAdmin openAction={openAction} />
+  if (view === 'ajustes') return <AjustesAdmin openAction={openAction} />
+  return <InicioAdmin openAction={openAction} actionLog={actionLog} />
 }
 
 function KpiGrid({ rows = moneyRows }) {
@@ -157,16 +188,18 @@ function KpiGrid({ rows = moneyRows }) {
   )
 }
 
-function Mini({ label, value, tone }) {
-  return <div className={`sa-mini ${tone || ''}`}><span>{label}</span><b>{value}</b></div>
+function Mini({ label, value, tone, onClick }) {
+  const content = <><span>{label}</span><b>{value}</b></>
+  if (onClick) return <button type="button" className={`sa-mini sa-mini-btn ${tone || ''}`} onClick={onClick}>{content}</button>
+  return <div className={`sa-mini ${tone || ''}`}>{content}</div>
 }
 
-function AlertRow({ tone = '', ic = '!', title, sub, action = 'Ver' }) {
+function AlertRow({ tone = '', ic = '!', title, sub, action = 'Ver', onOpen }) {
   return (
     <div className={`sa-alert ${tone}`}>
       <span className="sa-alert-ic">{ic}</span>
       <span style={{ minWidth: 0 }}><b className="small">{title}</b><small className="muted">{sub}</small></span>
-      <button className={`btn btn-sm ${tone === 'red' ? 'btn-outline' : 'btn-ghost'}`}>{action}</button>
+      <button className={`btn btn-sm ${tone === 'red' ? 'btn-outline' : 'btn-ghost'}`} onClick={() => onOpen?.({ title, sub, action, type: 'Alerta', priority: tone === 'red' ? 'Critica' : tone === 'amber' ? 'Alta' : 'Media' })}>{action}</button>
     </div>
   )
 }
@@ -182,26 +215,26 @@ function Funnel() {
   return <div className="sa-funnel">{rows.map(([label, value, pct]) => <div className="sa-funnel-row" key={label}><span>{label}</span><i><b style={{ width: `${pct}%` }} /></i><strong>{value}</strong></div>)}</div>
 }
 
-function InicioAdmin() {
+function InicioAdmin({ openAction, actionLog = [] }) {
   return (
     <div className="col gap-16">
       <KpiGrid />
       <div className="sa-command">
         <section className="card card-pad">
-          <div className="sa-splitline"><div><h2>Cola inteligente</h2><p className="tiny muted">Acciones que mueven dinero o reducen riesgo.</p></div><button className="btn btn-sm">Priorizar por impacto</button></div>
+          <div className="sa-splitline"><div><h2>Cola inteligente</h2><p className="tiny muted">Acciones que mueven dinero o reducen riesgo.</p></div><button className="btn btn-sm" onClick={() => openAction?.({ title: 'Priorizar cola inteligente', sub: 'Reordenar acciones por dinero, riesgo y SLA.', type: 'Operacion', action: 'Priorizar', priority: 'Alta' })}>Priorizar por impacto</button></div>
           <div className="sa-action-grid">
-            <Mini label="Crítico" value="7" tone="red" />
-            <Mini label="KYC pendiente" value="19" tone="amber" />
-            <Mini label="SLA bancos" value="12" tone="blue" />
-            <Mini label="Por cobrar" value="RD$ 86K" tone="teal" />
+            <Mini label="Crítico" value="7" tone="red" onClick={() => openAction?.({ title: 'Casos criticos', sub: '7 acciones requieren revision owner hoy.', type: 'Riesgo', priority: 'Critica' })} />
+            <Mini label="KYC pendiente" value="19" tone="amber" onClick={() => openAction?.({ title: 'KYC pendiente', sub: 'Identidades esperando revision o reintento.', type: 'KYC', priority: 'Alta' })} />
+            <Mini label="SLA bancos" value="12" tone="blue" onClick={() => openAction?.({ title: 'SLA bancos atrasado', sub: '12 solicitudes exceden el tiempo esperado de respuesta.', type: 'Banco', priority: 'Alta' })} />
+            <Mini label="Por cobrar" value="RD$ 86K" tone="teal" onClick={() => openAction?.({ title: 'Cobros pendientes', sub: 'Facturas vencidas y trials por convertir.', type: 'Billing', priority: 'Media' })} />
           </div>
         </section>
         <section className="card card-pad">
           <div className="sa-splitline" style={{ marginBottom: 12 }}><div><h2>Alertas activas</h2><p className="tiny muted">Lo que debes mirar primero.</p></div><span className="chip chip-amber">12 abiertas</span></div>
           <div className="col gap-8">
-            <AlertRow tone="red" ic="!" title="WhatsApp con 3 mensajes fallidos" sub="OTP y respuesta de banco sin entregar." action="Revisar" />
-            <AlertRow tone="amber" ic="K" title="Joselito Auto Import sin RNC" sub="Dealer vende, pero verificación incompleta." action="Pedir" />
-            <AlertRow tone="green" ic="B" title="Banco Caribe mejoró respuesta" sub="SLA promedio bajó a 4h 18m." action="Ver" />
+            <AlertRow tone="red" ic="!" title="WhatsApp con 3 mensajes fallidos" sub="OTP y respuesta de banco sin entregar." action="Revisar" onOpen={openAction} />
+            <AlertRow tone="amber" ic="K" title="Joselito Auto Import sin RNC" sub="Dealer vende, pero verificación incompleta." action="Pedir" onOpen={openAction} />
+            <AlertRow tone="green" ic="B" title="Banco Caribe mejoró respuesta" sub="SLA promedio bajó a 4h 18m." action="Ver" onOpen={openAction} />
           </div>
         </section>
       </div>
@@ -215,6 +248,7 @@ function InicioAdmin() {
               ['Precio fuera de mercado|Toyota RAV4 2021 18% sobre referencia.', 'Auto San Pedro', 'Inventario', 'Medio', 'Sugerir'],
               ['Factura vencida|Plan Dealer Pro, 6 días vencida.', 'Nava Auto', 'Billing', 'RD$ 9,500', 'Cobrar'],
             ]}
+            onOpen={openAction}
           />
         </section>
         <aside className="sa-rail">
@@ -225,7 +259,18 @@ function InicioAdmin() {
           <section className="card card-pad">
             <h2>Mejor próxima acción</h2>
             <p className="small muted" style={{ margin: '8px 0 12px' }}>Contactar dealers con leads aprobados sin seguimiento. Hay 11 clientes que ya califican y todavía no tienen respuesta.</p>
-            <button className="btn btn-primary">Abrir lista</button>
+            <button className="btn btn-primary" onClick={() => openAction?.({ title: 'Leads aprobados sin seguimiento', sub: '11 clientes califican y necesitan respuesta del dealer.', type: 'Leads', action: 'Abrir lista', priority: 'Alta' })}>Abrir lista</button>
+          </section>
+          <section className="card card-pad">
+            <div className="sa-splitline"><h2>Ultimas acciones admin</h2><span className="chip">Editable</span></div>
+            <div className="col gap-8" style={{ marginTop: 12 }}>
+              {actionLog.map((row, idx) => (
+                <button key={`${row.title}-${idx}`} className="sa-log-row" onClick={() => openAction?.({ title: row.title, sub: `Guardado ${row.when}.`, type: 'Historial', action: 'Editar', status: row.status })}>
+                  <span><b>{row.title}</b><small className="muted">{row.when}</small></span>
+                  <span className="chip chip-teal">{row.status}</span>
+                </button>
+              ))}
+            </div>
           </section>
         </aside>
       </div>
@@ -233,12 +278,15 @@ function InicioAdmin() {
   )
 }
 
-function AdminTable({ cols, rows }) {
+function AdminTable({ cols, rows, onOpen }) {
   return (
     <div className="sa-table">
       <div className="sa-table-head">{cols.map((c) => <span key={c}>{c}</span>)}</div>
       {rows.map((r, idx) => (
-        <div className="sa-table-row" key={idx}>
+        <button type="button" className="sa-table-row" key={idx} onClick={() => {
+          const [title, sub] = String(r[0] || '').split('|')
+          onOpen?.({ title, sub, source: r[1], type: r[2] || cols[0], action: r[r.length - 1], status: r[r.length - 1] })
+        }}>
           {r.map((cell, i) => {
             const [title, sub] = String(cell).split('|')
             const tone = /Listo|Verificado|Aprobada|Excelente|Activo|Bajo/.test(title) ? 'green' : /Pendiente|Mejorar|Medio|Faltan|Revisar|Trial|Sugerir/.test(title) ? 'amber' : /Cobrar|Vencido|Alto|Manual/.test(title) ? 'red' : ''
@@ -246,13 +294,13 @@ function AdminTable({ cols, rows }) {
               ? <span className={`chip ${tone ? `chip-${tone}` : ''}`} key={i}>{title}</span>
               : <span key={i} style={{ minWidth: 0 }}>{i === 0 ? <><b>{title}</b>{sub && <small className="muted">{sub}</small>}</> : title}</span>
           })}
-        </div>
+        </button>
       ))}
     </div>
   )
 }
 
-function SolicitudesAdmin() {
+function SolicitudesAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <KpiGrid rows={[
@@ -270,7 +318,7 @@ function SolicitudesAdmin() {
             ['David Franzini|Docs recibidos · esperando banco', 'Highlander 2024', 'Popular', 'RD$ 4.1M', 'En revisión'],
             ['Miguel Reyes|Sin vehículo · WhatsApp verificado', 'Pre-aprobación', '3 bancos', 'RD$ 2.0M', 'Comparando'],
             ['Ana López|Banco pidió income proof', 'Kia Sportage 2021', 'Caribe', 'RD$ 2.7M', 'Faltan docs'],
-          ]} />
+          ]} onOpen={openAction} />
         </section>
         <aside className="sa-rail">
           <section className="card card-pad">
@@ -282,8 +330,8 @@ function SolicitudesAdmin() {
               <Mini label="Score" value="90/100" tone="teal" />
             </div>
             <div className="col gap-8" style={{ marginTop: 12 }}>
-              <AlertRow tone="green" ic="K" title="KYC aprobado" sub="Nombre extraído de cédula." action="Ver" />
-              <AlertRow tone="amber" ic="D" title="Documento opcional" sub="Banco puede pedir dirección laboral." action="Pedir" />
+              <AlertRow tone="green" ic="K" title="KYC aprobado" sub="Nombre extraído de cédula." action="Ver" onOpen={openAction} />
+              <AlertRow tone="amber" ic="D" title="Documento opcional" sub="Banco puede pedir dirección laboral." action="Pedir" onOpen={openAction} />
             </div>
           </section>
         </aside>
@@ -292,7 +340,7 @@ function SolicitudesAdmin() {
   )
 }
 
-function DealersAdmin() {
+function DealersAdmin({ openAction }) {
   return (
     <div className="sa-work">
       <section className="card">
@@ -300,26 +348,26 @@ function DealersAdmin() {
           ['Joselito Auto Import|Santo Domingo · 3 usuarios', '42 carros', '88 leads', 'RD$ 19,500', 'Verificado'],
           ['Premium Cars RD|Santiago · RNC pendiente', '19 carros', '31 leads', 'Trial', 'Pendiente'],
           ['Nava Auto|La Vega · pago vencido', '11 carros', '9 leads', 'RD$ 9,500', 'Vencido'],
-        ]} />
+        ]} onOpen={openAction} />
       </section>
       <aside className="sa-rail"><section className="card card-pad"><h2>Dealer health</h2><div className="sa-splitline" style={{ marginTop: 12 }}><span className="small strong">Joselito Auto Import</span><span className="chip chip-green">92/100</span></div><div className="sa-progress"><i style={{ width: '92%' }} /></div><div className="sa-action-grid two"><Mini label="Lead response" value="14 min" /><Mini label="Fotos buenas" value="96%" /><Mini label="Apps" value="34" /><Mini label="Cierres" value="11" /></div></section></aside>
     </div>
   )
 }
 
-function BancosAdmin() {
+function BancosAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <div className="sa-split">
         <section className="card card-pad"><h2>Ranking por respuesta</h2><Funnel /></section>
-        <section className="card card-pad"><h2>Configuración por banco</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="%" title="Tasas y plazos" sub="Rangos por vehículo, inicial, score y salario." action="Editar" /><AlertRow ic="D" title="Documentos requeridos" sub="Ingreso, dirección, referencias, seguro." action="Editar" /><AlertRow ic="O" title="Oficiales" sub="Asignación, carga y permisos." action="Ver" /></div></section>
+        <section className="card card-pad"><h2>Configuración por banco</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="%" title="Tasas y plazos" sub="Rangos por vehículo, inicial, score y salario." action="Editar" onOpen={openAction} /><AlertRow ic="D" title="Documentos requeridos" sub="Ingreso, dirección, referencias, seguro." action="Editar" onOpen={openAction} /><AlertRow ic="O" title="Oficiales" sub="Asignación, carga y permisos." action="Ver" onOpen={openAction} /></div></section>
       </div>
       <EnrollBankCard />
     </div>
   )
 }
 
-function UsuariosAdmin() {
+function UsuariosAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <div className="sa-work">
@@ -327,7 +375,7 @@ function UsuariosAdmin() {
           ['Nashla Figueroa|Cédula termina 4411 · cuenta auto-creada', 'WhatsApp OTP', 'Aprobado', 'AP-2091', 'Bajo'],
           ['wa18294201557|Nombre pendiente de KYC', 'WhatsApp OTP', 'Pendiente', 'Sin app', 'Medio'],
           ['Ana López|Selfie no coincide claramente', 'Google', 'Manual', 'AP-2030', 'Alto'],
-        ]} /></section>
+        ]} onOpen={openAction} /></section>
         <aside className="sa-rail"><section className="card card-pad"><h2>Centro de identidad</h2><p className="small muted" style={{ margin: '8px 0 12px' }}>Super Admin puede ver datos sensibles solo con permiso y queda registro de auditoría.</p><div className="sa-action-grid two"><Mini label="Pendiente" value="19" tone="amber" /><Mini label="Fallidos" value="6" tone="red" /><Mini label="Manual" value="4" tone="blue" /><Mini label="Aprobados" value="812" tone="green" /></div></section></aside>
       </div>
       <KycPortraitBackfillCard />
@@ -336,7 +384,7 @@ function UsuariosAdmin() {
   )
 }
 
-function VehiculosAdmin() {
+function VehiculosAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <KpiGrid rows={[
@@ -351,21 +399,21 @@ function VehiculosAdmin() {
         ['Toyota RAV4 2022|VIN completo · 12 fotos', 'Joselito', 'US$ 31,900', '384 vistas · 21 leads', 'Excelente'],
         ['Hyundai Tucson 2020|Falta chasis · 4 fotos', 'Premium Cars', 'RD$ 1.58M', '92 vistas · 2 leads', 'Mejorar'],
         ['Honda CR-V 2021|18% sobre mercado', 'Nava Auto', 'US$ 34,500', '188 vistas · 0 leads', 'Alto'],
-      ]} /></section>
+      ]} onOpen={openAction} /></section>
     </div>
   )
 }
 
-function FacturacionAdmin() {
+function FacturacionAdmin({ openAction }) {
   return (
     <div className="sa-split">
       <section className="card card-pad"><h2>Ingresos SaaS</h2><div className="sa-action-grid" style={{ marginTop: 12 }}><Mini label="MRR" value="RD$ 421K" /><Mini label="Past due" value="RD$ 86K" tone="red" /><Mini label="Trials" value="18" tone="amber" /><Mini label="Add-ons" value="RD$ 54K" tone="teal" /></div><Funnel /></section>
-      <section className="card card-pad"><h2>Facturas que requieren acción</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow tone="red" ic="$" title="Nava Auto" sub="6 días vencida · Dealer Pro" action="Cobrar" /><AlertRow tone="amber" ic="T" title="Premium Cars" sub="Trial termina mañana" action="Convertir" /><AlertRow ic="+" title="Marketplace sponsor" sub="3 dealers candidatos a add-on." action="Ofrecer" /></div></section>
+      <section className="card card-pad"><h2>Facturas que requieren acción</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow tone="red" ic="$" title="Nava Auto" sub="6 días vencida · Dealer Pro" action="Cobrar" onOpen={openAction} /><AlertRow tone="amber" ic="T" title="Premium Cars" sub="Trial termina mañana" action="Convertir" onOpen={openAction} /><AlertRow ic="+" title="Marketplace sponsor" sub="3 dealers candidatos a add-on." action="Ofrecer" onOpen={openAction} /></div></section>
     </div>
   )
 }
 
-function WhatsAppAdmin() {
+function WhatsAppAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <div className="sa-split">
@@ -377,28 +425,103 @@ function WhatsAppAdmin() {
   )
 }
 
-function ModeracionAdmin() {
+function ModeracionAdmin({ openAction }) {
   return (
     <div className="sa-work">
       <section className="card"><AdminTable cols={['Caso', 'Entidad', 'Tipo', 'Riesgo', 'Acción']} rows={[
         ['Precio sospechoso|BMW X5 publicado 42% bajo referencia.', 'Dealer nuevo', 'Vehículo', 'Alto', 'Revisar'],
         ['Duplicado posible|Misma placa/fotos en dos dealers.', '2 dealers', 'Inventario', 'Medio', 'Unificar'],
         ['Cliente reportó dealer|No responde tras aprobación.', 'Auto Centro', 'Lead', 'Medio', 'Contactar'],
-      ]} /></section>
+      ]} onOpen={openAction} /></section>
       <aside className="sa-rail"><section className="card card-pad"><h2>Trust score plataforma</h2><div className="sa-splitline" style={{ marginTop: 12 }}><span className="small strong">Salud general</span><span className="chip chip-green">88/100</span></div><div className="sa-progress"><i style={{ width: '88%' }} /></div><p className="small muted">El mayor riesgo actual es inventario incompleto y dealers sin documentos completos.</p></section></aside>
     </div>
   )
 }
 
-function AjustesAdmin() {
+function AjustesAdmin({ openAction }) {
   return (
     <div className="col gap-16">
       <div className="sa-split">
-        <section className="card card-pad"><h2>Reglas de onboarding</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="D" title="Dealer" sub="Logo, RNC, dirección, WhatsApp y usuario owner." action="Activo" /><AlertRow ic="B" title="Banco" sub="Oficial owner, tasas, documentos y SLA." action="Activo" /><AlertRow tone="amber" ic="V" title="Vehículo" sub="Precio, fotos, VIN/chasis, mileage, ubicación." action="Mejorar" /></div></section>
+        <section className="card card-pad"><h2>Reglas de onboarding</h2><div className="col gap-8" style={{ marginTop: 12 }}><AlertRow ic="D" title="Dealer" sub="Logo, RNC, dirección, WhatsApp y usuario owner." action="Activo" onOpen={openAction} /><AlertRow ic="B" title="Banco" sub="Oficial owner, tasas, documentos y SLA." action="Activo" onOpen={openAction} /><AlertRow tone="amber" ic="V" title="Vehículo" sub="Precio, fotos, VIN/chasis, mileage, ubicación." action="Mejorar" onOpen={openAction} /></div></section>
         <section className="card card-pad"><h2>Permisos Super Admin</h2><div className="col gap-8" style={{ marginTop: 12 }}><Mini label="Identidad sensible" value="Owner + auditoría" /><Mini label="Suspensiones" value="Owner + soporte senior" /><Mini label="Billing" value="Owner + finanzas" /><Mini label="Bancos" value="Owner + partnerships" /></div></section>
       </div>
       <UsdRateCard />
     </div>
+  )
+}
+
+function AdminActionDrawer({ item, onClose, onSave }) {
+  const [form, setForm] = useState({ status: 'Pendiente', priority: 'Media', owner: 'David Franzini', note: '' })
+
+  useEffect(() => {
+    if (!item) return
+    setForm({
+      status: item.status || 'Pendiente',
+      priority: item.priority || 'Media',
+      owner: item.owner || 'David Franzini',
+      note: item.note || '',
+    })
+  }, [item])
+
+  if (!item) return null
+
+  const update = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }))
+  const save = () => onSave?.({ ...item, ...form })
+
+  return (
+    <>
+      <button className="sa-drawer-backdrop" type="button" aria-label="Cerrar panel" onClick={onClose} />
+      <aside className="sa-drawer" aria-label="Accion admin editable">
+        <div className="sa-drawer-head">
+          <div>
+            <div className="tiny strong muted">SUPER ADMIN ACTION</div>
+            <h2>{item.title}</h2>
+            <p className="small muted">{item.sub}</p>
+          </div>
+          <button className="sa-drawer-x" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+
+        <div className="sa-drawer-meta">
+          <Mini label="Tipo" value={item.type || 'Accion'} tone="blue" />
+          <Mini label="Origen" value={item.source || 'AutoRD'} />
+          <Mini label="Accion" value={item.action || 'Revisar'} tone="teal" />
+        </div>
+
+        <div className="sa-edit-grid">
+          <label>
+            <span>Estado</span>
+            <select value={form.status} onChange={update('status')}>
+              <option>Pendiente</option>
+              <option>En revision</option>
+              <option>Resuelto</option>
+              <option>Bloqueado</option>
+            </select>
+          </label>
+          <label>
+            <span>Prioridad</span>
+            <select value={form.priority} onChange={update('priority')}>
+              <option>Baja</option>
+              <option>Media</option>
+              <option>Alta</option>
+              <option>Critica</option>
+            </select>
+          </label>
+          <label className="sa-edit-wide">
+            <span>Responsable</span>
+            <input value={form.owner} onChange={update('owner')} placeholder="Asignar responsable" />
+          </label>
+          <label className="sa-edit-wide">
+            <span>Nota interna</span>
+            <textarea value={form.note} onChange={update('note')} placeholder="Escribe que se hizo, que falta o quien debe responder..." rows={5} />
+          </label>
+        </div>
+
+        <div className="sa-drawer-actions">
+          <button className="btn btn-outline" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={save}>Guardar accion</button>
+        </div>
+      </aside>
+    </>
   )
 }
 
